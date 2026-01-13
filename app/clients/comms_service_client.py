@@ -1,0 +1,373 @@
+"""
+Comms Service Client - API delegation for signal_service
+
+Replaces app/services/email_integration.py with proper service-to-service API calls.
+Follows Architecture v3.0 - API Delegation Era patterns from CLAUDE.md
+"""
+import asyncio
+import json
+from typing import Dict, List, Optional, Any, Callable
+from datetime import datetime
+import aiohttp
+import logging
+
+from app.core.config import settings
+from app.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+class CommsServiceClient:
+    """
+    Client for delegating email/communication operations to dedicated comms_service.
+    
+    Replaces the 553-line email_integration.py with API delegation pattern.
+    Uses Internal API Key for service-to-service authentication.
+    """
+    
+    def __init__(self, comms_service_url: str = None):
+        self.comms_service_url = comms_service_url or self._get_comms_service_url()
+        self.internal_api_key = self._get_internal_api_key()
+        self.session: Optional[aiohttp.ClientSession] = None
+        
+        logger.info(f"CommsServiceClient initialized with URL: {self.comms_service_url}")
+    
+    def _get_comms_service_url(self) -> str:
+        """Get comms service URL from config service"""
+        # Use config service to get comms_service URL
+        # Fallback to standard naming convention if not available
+        return getattr(settings, 'COMMS_SERVICE_URL', 'http://comms-service:8086')
+    
+    def _get_internal_api_key(self) -> str:
+        """Get internal API key for service-to-service authentication"""
+        # From CLAUDE.md: Internal API Key for all service-to-service auth
+        api_key = getattr(settings, 'internal_api_key', None)
+        if not api_key:
+            raise ValueError("INTERNAL_API_KEY not configured in settings - required for service-to-service authentication")
+        return api_key
+    
+    async def ensure_session(self):
+        """Ensure HTTP session is created"""
+        if not self.session:
+            self.session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30),
+                headers={'X-Internal-API-Key': self.internal_api_key}
+            )
+    
+    async def send_signal_email(
+        self,
+        to_email: str,
+        signal_data: Dict[str, Any],
+        template: str = "signal_notification",
+        priority: str = "normal"
+    ) -> Dict[str, Any]:
+        """
+        Send signal notification email via comms_service API.
+        
+        Replaces direct SMTP sending with API delegation.
+        """
+        await self.ensure_session()
+        
+        try:
+            # Transform signal data to comms_service format
+            email_request = {
+                "to": [to_email],
+                "template": template,
+                "priority": priority,
+                "template_data": {
+                    "signal_type": signal_data.get("signal_type", "Signal"),
+                    "symbol": signal_data.get("symbol", "Unknown"),
+                    "instrument_key": signal_data.get("instrument_key"),
+                    "message": signal_data.get("message", "Signal notification"),
+                    "value": signal_data.get("value"),
+                    "timestamp": signal_data.get("timestamp", datetime.utcnow().isoformat()),
+                    "priority": priority,
+                    "user_id": signal_data.get("user_id"),
+                    "signal_id": signal_data.get("signal_id")
+                },
+                "metadata": {
+                    "source": "signal_service",
+                    "type": "signal_notification",
+                    "signal_id": signal_data.get("signal_id")
+                }
+            }
+            
+            async with self.session.post(
+                f"{self.comms_service_url}/api/v1/email/send",
+                json=email_request
+            ) as response:
+                if response.status == 200 or response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Signal email sent successfully to {to_email}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to send email: {response.status} - {error_text}")
+                    return {"success": False, "error": f"HTTP {response.status}"}
+                    
+        except Exception as e:
+            logger.error(f"Error sending signal email: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def send_bulk_signal_emails(
+        self,
+        email_list: List[Dict[str, Any]],
+        template: str = "signal_notification"
+    ) -> Dict[str, Any]:
+        """Send multiple signal emails efficiently via comms_service bulk API"""
+        await self.ensure_session()
+        
+        try:
+            # Transform to comms_service bulk format
+            bulk_request = {
+                "emails": [
+                    {
+                        "to": [email.get("to_email")],
+                        "template": template,
+                        "template_data": email.get("template_data", {}),
+                        "metadata": {
+                            "source": "signal_service",
+                            "batch_id": email.get("batch_id"),
+                            "signal_id": email.get("signal_id")
+                        }
+                    }
+                    for email in email_list
+                ]
+            }
+            
+            async with self.session.post(
+                f"{self.comms_service_url}/api/v1/email/bulk",
+                json=bulk_request
+            ) as response:
+                if response.status == 200 or response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Sent {len(email_list)} bulk signal emails successfully")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to send bulk emails: {response.status} - {error_text}")
+                    return {"success": False, "error": f"HTTP {response.status}"}
+                    
+        except Exception as e:
+            logger.error(f"Error sending bulk signal emails: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def send_command_response_email(
+        self,
+        to_email: str,
+        command: str,
+        result: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Send command response email via comms_service"""
+        await self.ensure_session()
+        
+        try:
+            email_request = {
+                "to": [to_email],
+                "template": "command_response",
+                "template_data": {
+                    "command": command,
+                    "success": result.get("success", False),
+                    "message": result.get("message", "Command processed"),
+                    "result_data": result
+                },
+                "metadata": {
+                    "source": "signal_service",
+                    "type": "command_response"
+                }
+            }
+            
+            async with self.session.post(
+                f"{self.comms_service_url}/api/v1/email/send",
+                json=email_request
+            ) as response:
+                if response.status == 200 or response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Command response email sent to {to_email}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to send command response: {response.status} - {error_text}")
+                    return {"success": False, "error": f"HTTP {response.status}"}
+                    
+        except Exception as e:
+            logger.error(f"Error sending command response email: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_email_templates(self) -> Dict[str, Any]:
+        """Get available email templates from comms_service"""
+        await self.ensure_session()
+        
+        try:
+            async with self.session.get(
+                f"{self.comms_service_url}/api/v1/email/templates"
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.warning(f"Failed to get email templates: {response.status}")
+                    return {"templates": []}
+                    
+        except Exception as e:
+            logger.error(f"Error getting email templates: {e}")
+            return {"templates": []}
+    
+    async def validate_email_address(self, email: str) -> Dict[str, Any]:
+        """Validate email address via comms_service"""
+        await self.ensure_session()
+        
+        try:
+            async with self.session.post(
+                f"{self.comms_service_url}/api/v1/email/validate",
+                json={"email": email}
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.warning(f"Failed to validate email: {response.status}")
+                    return {"valid": False, "error": "Validation service unavailable"}
+                    
+        except Exception as e:
+            logger.error(f"Error validating email: {e}")
+            return {"valid": False, "error": str(e)}
+    
+    async def get_email_delivery_status(self, email_id: str) -> Optional[Dict[str, Any]]:
+        """Get email delivery status from comms_service"""
+        await self.ensure_session()
+        
+        try:
+            async with self.session.get(
+                f"{self.comms_service_url}/api/v1/email/status/{email_id}"
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    error_msg = f"Failed to get email status: {response.status}"
+                    logger.error(error_msg)
+                    from app.errors import CommsServiceError
+                    raise CommsServiceError(error_msg, status_code=response.status)
+                    
+        except Exception as e:
+            logger.error(f"Error getting email status: {e}")
+            from app.errors import CommsServiceError
+            raise CommsServiceError(f"Email status retrieval failed: {str(e)}") from e
+    
+    async def process_inbound_email_webhook(
+        self,
+        webhook_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Process inbound email webhook - delegate to comms_service for parsing,
+        then handle signal-specific commands locally.
+        """
+        try:
+            # Extract basic email info
+            from_email = webhook_data.get("from_email")
+            subject = webhook_data.get("subject", "")
+            body = webhook_data.get("body_plain", "")
+            
+            # Simple command extraction (replace complex parsing logic)
+            command = self._extract_command(subject, body)
+            
+            if command:
+                logger.info(f"Processing email command: {command} from {from_email}")
+                
+                # Handle signal-specific commands
+                if command.startswith(("subscribe", "unsubscribe", "status", "help")):
+                    result = await self._handle_signal_command(command, from_email, webhook_data)
+                    
+                    # Send response via comms_service
+                    await self.send_command_response_email(from_email, command, result)
+                    
+                    return {"success": True, "command": command, "result": result}
+            
+            logger.info(f"No valid command found in email from {from_email}")
+            return {"success": False, "error": "No valid command found"}
+            
+        except Exception as e:
+            logger.error(f"Error processing inbound email: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _extract_command(self, subject: str, body: str) -> Optional[str]:
+        """Extract command from email subject and body"""
+        text = f"{subject} {body}".lower()
+        
+        # Simple command detection
+        commands = ["subscribe", "unsubscribe", "status", "help", "pause", "resume"]
+        for command in commands:
+            if command in text:
+                return command
+        
+        return None
+    
+    async def _handle_signal_command(
+        self,
+        command: str,
+        email: str,
+        webhook_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle signal-specific email commands"""
+        try:
+            if command == "help":
+                return {
+                    "success": True,
+                    "message": "Available commands: subscribe, unsubscribe, status, help",
+                    "commands": ["subscribe <signal_id>", "unsubscribe <signal_id>", "status", "help"]
+                }
+            elif command == "status":
+                return {
+                    "success": True,
+                    "message": "Signal service is running",
+                    "status": "active"
+                }
+            else:
+                # For other commands, we'd typically query signal_service APIs
+                return {
+                    "success": False,
+                    "message": f"Command {command} not fully implemented in API delegation mode"
+                }
+                
+        except Exception as e:
+            logger.error(f"Error handling signal command: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def health_check(self) -> bool:
+        """Check if comms_service is healthy"""
+        await self.ensure_session()
+        
+        try:
+            async with self.session.get(
+                f"{self.comms_service_url}/health"
+            ) as response:
+                return response.status == 200
+        except Exception as e:
+            logger.warning(f"Comms service health check failed: {e}")
+            return False
+    
+    async def close(self):
+        """Close HTTP session"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+
+
+# Singleton instance for application use
+_comms_client = None
+
+def get_comms_service_client() -> CommsServiceClient:
+    """Get singleton comms service client instance"""
+    global _comms_client
+    if _comms_client is None:
+        _comms_client = CommsServiceClient()
+    return _comms_client
+
+
+# Compatibility function to replace email_integration service
+async def get_email_integration_service():
+    """
+    Compatibility function that returns comms service client.
+    
+    This replaces the original get_email_integration_service() function
+    to maintain API compatibility while delegating to comms_service.
+    """
+    return get_comms_service_client()

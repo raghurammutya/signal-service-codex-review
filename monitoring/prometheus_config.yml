@@ -1,0 +1,199 @@
+# Prometheus Configuration for Signal Service Production Monitoring
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'production'
+    environment: 'prod'
+
+rule_files:
+  - "signal_service_alerts.yml"
+
+scrape_configs:
+  # Signal Service Main Metrics
+  - job_name: 'signal-service'
+    static_configs:
+      - targets: ['signal-service:8003']
+    metrics_path: '/monitoring/metrics/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: signal-service:8003
+
+  # Signal Service Health Metrics  
+  - job_name: 'signal-service-health'
+    static_configs:
+      - targets: ['signal-service:8003']
+    metrics_path: '/health/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Signal Service Enhanced Metrics (New)
+  - job_name: 'signal-service-enhanced'
+    static_configs:
+      - targets: ['signal-service:8003'] 
+    metrics_path: '/monitoring/enhanced-metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'signal_service_.*'
+        action: keep
+
+  # External Service Health Monitoring
+  - job_name: 'signal-service-dependencies'
+    static_configs:
+      - targets: ['signal-service:8003']
+    metrics_path: '/monitoring/dependencies'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    params:
+      check_external: ['true']
+
+  # Circuit Breaker Detailed Metrics
+  - job_name: 'signal-service-circuit-breakers'
+    static_configs:
+      - targets: ['signal-service:8003']
+    metrics_path: '/monitoring/circuit-breakers'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Business Metrics (Lower Frequency)
+  - job_name: 'signal-service-business'
+    static_configs:
+      - targets: ['signal-service:8003']
+    metrics_path: '/monitoring/business-metrics'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+
+  # Resource Usage Monitoring
+  - job_name: 'signal-service-resources'
+    static_configs:
+      - targets: ['signal-service:8003']
+    metrics_path: '/monitoring/resources'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 10s
+      api_version: v2
+
+# Remote storage for long-term retention
+remote_write:
+  - url: "http://prometheus-remote-storage:8086/api/v1/write"
+    queue_config:
+      capacity: 10000
+      max_samples_per_send: 1000
+      batch_send_deadline: 5s
+      min_backoff: 30ms
+      max_backoff: 100ms
+
+# Recording Rules for Complex Calculations
+recording_rules:
+  - name: signal_service.performance
+    interval: 30s
+    rules:
+      # SLA Compliance
+      - record: signal_service:sla_compliance_5m
+        expr: |
+          (
+            sum(rate(signal_service_api_requests_total{status_code=~"2.."}[5m])) /
+            sum(rate(signal_service_api_requests_total[5m]))
+          ) * 100
+
+      # Efficiency Metrics  
+      - record: signal_service:vectorization_efficiency_5m
+        expr: |
+          rate(signal_service_greeks_calculation_seconds_count{vectorized="true"}[5m]) /
+          rate(signal_service_greeks_calculation_seconds_count[5m])
+
+      # Cost Optimization
+      - record: signal_service:cost_per_calculation_5m
+        expr: |
+          rate(signal_service_calculation_cost_total[5m]) /
+          rate(signal_service_greeks_calculation_seconds_count[5m])
+
+      # Queue Health
+      - record: signal_service:queue_health_score
+        expr: |
+          (
+            1 - (
+              signal_service_queue_size{priority="critical"} / 1000 +
+              signal_service_queue_size{priority="high"} / 5000
+            )
+          ) * 100
+
+      # External Service Dependency Score
+      - record: signal_service:dependency_health_score
+        expr: |
+          avg(signal_service_external_service_health) * 100
+
+  - name: signal_service.capacity 
+    interval: 60s
+    rules:
+      # Resource Utilization Trend
+      - record: signal_service:cpu_utilization_trend_1h
+        expr: |
+          increase(
+            rate(process_cpu_seconds_total{job="signal-service"}[5m])[1h:5m]
+          )
+
+      # Memory Growth Rate
+      - record: signal_service:memory_growth_rate_1h
+        expr: |
+          increase(
+            process_resident_memory_bytes{job="signal-service"}[1h]
+          ) / 3600
+
+      # Scaling Recommendation Score
+      - record: signal_service:scaling_recommendation
+        expr: |
+          (
+            rate(process_cpu_seconds_total{job="signal-service"}[5m]) * 0.4 +
+            (process_resident_memory_bytes{job="signal-service"} / 1024/1024/1024) / 8 * 0.3 +
+            signal_service_queue_size{priority="critical"} / 1000 * 0.3
+          )
+
+  - name: signal_service.business
+    interval: 300s  # 5 minutes
+    rules:
+      # Revenue Impact Score
+      - record: signal_service:revenue_impact_score_5m
+        expr: |
+          (
+            sum(signal_service_active_subscriptions{user_tier="premium"}) * 10 +
+            sum(signal_service_active_subscriptions{user_tier="professional"}) * 5 +
+            sum(signal_service_active_subscriptions{user_tier="standard"}) * 1
+          )
+
+      # User Experience Score
+      - record: signal_service:user_experience_score_5m
+        expr: |
+          (
+            (1 - rate(signal_service_api_requests_total{status_code!~"2.."}[5m]) / rate(signal_service_api_requests_total[5m])) * 50 +
+            (1 - histogram_quantile(0.95, rate(signal_service_api_request_duration_seconds_bucket[5m])) / 10) * 50
+          )
+
+# Retention Policies
+retention_policies:
+  - name: "high_frequency_metrics"
+    retention: "7d"
+    metric_regex: "signal_service_(api_request|greeks_calculation)_.*"
+    
+  - name: "business_metrics"
+    retention: "90d" 
+    metric_regex: "signal_service_(active_subscriptions|revenue_impact)_.*"
+    
+  - name: "health_metrics"
+    retention: "30d"
+    metric_regex: "signal_service_(health|circuit_breaker)_.*"

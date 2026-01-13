@@ -1,0 +1,50 @@
+# Dockerfile for Signal Service Metrics Aggregator
+FROM prom/prometheus:latest AS prometheus
+
+FROM grafana/grafana:latest AS grafana
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Prometheus
+COPY --from=prometheus /bin/prometheus /bin/prometheus
+COPY --from=prometheus /bin/promtool /bin/promtool
+COPY --from=prometheus /etc/prometheus /etc/prometheus
+COPY --from=prometheus /usr/share/prometheus /usr/share/prometheus
+
+# Copy Grafana
+COPY --from=grafana /usr/share/grafana /usr/share/grafana
+COPY --from=grafana /etc/grafana /etc/grafana
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir prometheus-client==0.19.0
+
+# Copy metrics exporter
+COPY app/monitoring/metrics_exporter.py /app/
+
+# Copy configurations
+COPY docker/prometheus.yml /etc/prometheus/prometheus.yml
+COPY docker/grafana-datasources.yml /etc/grafana/provisioning/datasources/
+COPY docker/grafana-dashboards.yml /etc/grafana/provisioning/dashboards/
+COPY docker/dashboards /var/lib/grafana/dashboards
+
+# Copy supervisor config
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create necessary directories
+RUN mkdir -p /prometheus /var/lib/grafana
+
+# Expose ports
+EXPOSE 9090 3000 8008
+
+# Run supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

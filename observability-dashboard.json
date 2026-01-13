@@ -1,0 +1,344 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Signal Service Production Observability",
+    "tags": ["signal-service", "production", "greeks", "options"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "signal_service_health_status",
+            "legendFormat": "Health Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.5},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Circuit Breaker States",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "signal_service_circuit_breaker_state",
+            "legendFormat": "{{type}} Breaker"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"options": {"0": {"text": "CLOSED", "color": "green"}}},
+              {"options": {"1": {"text": "HALF_OPEN", "color": "yellow"}}},
+              {"options": {"2": {"text": "OPEN", "color": "red"}}}
+            ]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Greeks Calculation Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(signal_service_greeks_calculations_total[5m])",
+            "legendFormat": "Total Calculations/sec"
+          },
+          {
+            "expr": "rate(signal_service_vectorized_calculations_total[5m])",
+            "legendFormat": "Vectorized Calculations/sec"
+          },
+          {
+            "expr": "rate(signal_service_individual_calculations_total[5m])",
+            "legendFormat": "Individual Calculations/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Calculations per Second",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Average Calculation Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "signal_service_avg_calculation_time_ms{type=\"vectorized\"}",
+            "legendFormat": "Vectorized Avg Time (ms)"
+          },
+          {
+            "expr": "signal_service_avg_calculation_time_ms{type=\"individual\"}",
+            "legendFormat": "Individual Avg Time (ms)"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Time (milliseconds)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Circuit Breaker Failure Rates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "signal_service_circuit_breaker_failure_rate",
+            "legendFormat": "{{type}} Failure Rate"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Failure Rate (0-1)",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.1],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "1m", "now"]
+              },
+              "reducer": {
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Failure Rate Alert",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 6,
+        "title": "Model Configuration Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "signal_service_model_configuration_errors_total",
+            "legendFormat": "Configuration Errors"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Request Volume by Endpoint",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{service=\"signal_service\"}[5m])",
+            "legendFormat": "{{endpoint}} {{method}}"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Error Rate Trends",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(signal_service_model_configuration_errors_total[5m])",
+            "legendFormat": "Configuration Errors/sec"
+          },
+          {
+            "expr": "rate(signal_service_calculation_timeouts_total[5m])",
+            "legendFormat": "Calculation Timeouts/sec"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "System Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{job=\"signal_service\"}",
+            "legendFormat": "Memory Usage"
+          },
+          {
+            "expr": "rate(process_cpu_seconds_total{job=\"signal_service\"}[5m])",
+            "legendFormat": "CPU Usage"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Recent Alerts",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{service=\"signal_service\", level=\"error\"}",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  },
+  "alerting": {
+    "rules": [
+      {
+        "alert": "CircuitBreakerOpen",
+        "expr": "signal_service_circuit_breaker_state == 2",
+        "for": "1m",
+        "labels": {
+          "severity": "critical"
+        },
+        "annotations": {
+          "summary": "Signal Service circuit breaker is OPEN",
+          "description": "The {{$labels.type}} circuit breaker has been OPEN for more than 1 minute, indicating service failure."
+        }
+      },
+      {
+        "alert": "HighFailureRate",
+        "expr": "signal_service_circuit_breaker_failure_rate > 0.1",
+        "for": "2m",
+        "labels": {
+          "severity": "warning"
+        },
+        "annotations": {
+          "summary": "High failure rate detected in Signal Service",
+          "description": "The {{$labels.type}} calculation type is showing {{$value}}% failure rate."
+        }
+      },
+      {
+        "alert": "SlowCalculations",
+        "expr": "signal_service_avg_calculation_time_ms > 1000",
+        "for": "5m",
+        "labels": {
+          "severity": "warning"
+        },
+        "annotations": {
+          "summary": "Greeks calculations are running slowly",
+          "description": "Average calculation time for {{$labels.type}} is {{$value}}ms."
+        }
+      },
+      {
+        "alert": "ModelConfigurationError",
+        "expr": "increase(signal_service_model_configuration_errors_total[5m]) > 0",
+        "for": "0m",
+        "labels": {
+          "severity": "critical"
+        },
+        "annotations": {
+          "summary": "Model configuration error in Signal Service",
+          "description": "{{$value}} model configuration errors in the last 5 minutes."
+        }
+      },
+      {
+        "alert": "ServiceDown",
+        "expr": "up{job=\"signal_service\"} == 0",
+        "for": "30s",
+        "labels": {
+          "severity": "critical"
+        },
+        "annotations": {
+          "summary": "Signal Service is down",
+          "description": "Signal Service has been down for more than 30 seconds."
+        }
+      }
+    ]
+  },
+  "logging": {
+    "structured_logs": {
+      "format": "json",
+      "fields": [
+        "timestamp",
+        "level",
+        "service",
+        "request_id",
+        "operation",
+        "duration_ms",
+        "message"
+      ]
+    },
+    "log_levels": {
+      "production": "INFO",
+      "debug": "DEBUG"
+    },
+    "retention": "30d"
+  },
+  "metrics": {
+    "collection_interval": "15s",
+    "retention": "15d",
+    "aggregation_rules": [
+      {
+        "source_labels": ["__name__"],
+        "regex": "signal_service_.*",
+        "target_label": "service",
+        "replacement": "signal_service"
+      }
+    ]
+  },
+  "health_checks": {
+    "endpoints": [
+      {
+        "name": "basic_health",
+        "url": "/health",
+        "interval": "30s",
+        "timeout": "5s",
+        "expected_status": 200
+      },
+      {
+        "name": "detailed_health",
+        "url": "/health/detailed",
+        "interval": "60s",
+        "timeout": "10s",
+        "expected_status": 200
+      },
+      {
+        "name": "model_configuration",
+        "url": "/monitoring/model-configuration",
+        "interval": "120s",
+        "timeout": "10s",
+        "expected_status": 200
+      }
+    ]
+  },
+  "deployment": {
+    "docker_labels": {
+      "prometheus.io/scrape": "true",
+      "prometheus.io/path": "/monitoring/metrics/prometheus",
+      "prometheus.io/port": "8003"
+    },
+    "environment_variables": {
+      "LOG_LEVEL": "INFO",
+      "ENABLE_METRICS": "true",
+      "METRICS_PORT": "8003"
+    }
+  }
+}

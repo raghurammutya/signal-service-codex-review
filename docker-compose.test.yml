@@ -1,0 +1,205 @@
+services:
+  # Test PostgreSQL with TimescaleDB
+  test-timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: signal-service-test-db
+    environment:
+      POSTGRES_DB: signal_service_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      TIMESCALEDB_TELEMETRY: off
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_db_data:/var/lib/postgresql/data
+      - ./test/fixtures/sql:/docker-entrypoint-initdb.d
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d signal_service_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test Redis for caching and streams
+  test-redis:
+    image: redis:7-alpine
+    container_name: signal-service-test-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - test_redis_data:/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # WireMock for config service
+  mock-config-service:
+    image: wiremock/wiremock:latest
+    container_name: signal-service-mock-config
+    ports:
+      - "8101:8080"
+    volumes:
+      - ./test/mocks/config-service:/home/wiremock
+    networks:
+      - test-network
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # WireMock for ticker service
+  mock-ticker-service:
+    image: wiremock/wiremock:latest
+    container_name: signal-service-mock-ticker
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./test/mocks/ticker-service:/home/wiremock
+    networks:
+      - test-network
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+  # Test execution environment
+  signal-service-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: signal-service-test-runner
+    environment:
+      # Test database configuration
+      DATABASE_URL: postgresql://test_user:test_password@test-timescaledb:5432/signal_service_test
+      REDIS_URL: redis://test-redis:6379/0
+      
+      # Mock service URLs
+      CONFIG_SERVICE_URL: http://mock-config-service:8080
+      TICKER_SERVICE_URL: http://mock-ticker-service:8080
+      
+      # Test environment flags
+      TESTING: "true"
+      LOG_LEVEL: INFO
+      
+      # Performance test settings
+      PERFORMANCE_TEST_ENABLED: "true"
+      BENCHMARK_ITERATIONS: 10
+      
+      # Coverage settings
+      COVERAGE_FAIL_UNDER: 95
+      
+      
+    volumes:
+      - .:/app
+      - test_coverage:/app/coverage
+      - test_reports:/app/test-reports
+      - performance_reports:/app/performance-reports
+    depends_on:
+      test-timescaledb:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+      mock-config-service:
+        condition: service_healthy
+      mock-ticker-service:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: tail -f /dev/null  # Keep container running for interactive testing
+
+  # Load testing service
+  locust-master:
+    image: locustio/locust:latest
+    container_name: signal-service-locust-master
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./test/performance:/mnt/locust
+    environment:
+      LOCUST_MODE: master
+      LOCUST_MASTER_BIND_HOST: "0.0.0.0"
+      LOCUST_MASTER_BIND_PORT: 5557
+    networks:
+      - test-network
+    command: -f /mnt/locust/test_load_greeks.py --host=http://signal-service-test:8003
+
+  # Load testing workers
+  locust-worker:
+    image: locustio/locust:latest
+    environment:
+      LOCUST_MODE: worker
+      LOCUST_MASTER_HOST: locust-master
+      LOCUST_MASTER_PORT: 5557
+    volumes:
+      - ./test/performance:/mnt/locust
+    networks:
+      - test-network
+    depends_on:
+      - locust-master
+    deploy:
+      replicas: 2
+    command: -f /mnt/locust/test_load_greeks.py --host=http://signal-service-test:8003
+
+  # Test monitoring and metrics
+  prometheus-test:
+    image: prom/prometheus:latest
+    container_name: signal-service-test-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./test/fixtures/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - test-network
+
+  # Test log aggregation
+  elasticsearch-test:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: signal-service-test-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9201:9200"
+    volumes:
+      - test_elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - test-network
+
+volumes:
+  test_db_data:
+    driver: local
+  test_redis_data:
+    driver: local
+  test_coverage:
+    driver: local
+  test_reports:
+    driver: local
+  performance_reports:
+    driver: local
+  test_elasticsearch_data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/16

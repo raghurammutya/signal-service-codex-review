@@ -1,0 +1,339 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Signal Service - Production Operations Dashboard",
+    "tags": ["signal-service", "production", "trading"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "🚨 Critical Health Status",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"signal-service\"}",
+            "refId": "A",
+            "legendFormat": "Service Up"
+          },
+          {
+            "expr": "rate(signal_service_api_requests_total{status_code!~\"2..\"}[5m]) / rate(signal_service_api_requests_total[5m])",
+            "refId": "B", 
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.95},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "📊 Signal Generation Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(signal_service_signal_generation_seconds_bucket[5m]))",
+            "refId": "A",
+            "legendFormat": "p50 Generation Time"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(signal_service_signal_generation_seconds_bucket[5m]))",
+            "refId": "B",
+            "legendFormat": "p95 Generation Time"
+          },
+          {
+            "expr": "rate(signal_service_signal_generation_seconds_count[5m])",
+            "refId": "C",
+            "legendFormat": "Signals/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Time (seconds)", "min": 0},
+          {"label": "Rate (ops/sec)", "min": 0}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "⚡ Greeks Calculation Efficiency",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(signal_service_greeks_calculation_seconds_bucket{vectorized=\"true\"}[5m]))",
+            "refId": "A",
+            "legendFormat": "p95 Vectorized"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(signal_service_greeks_calculation_seconds_bucket{vectorized=\"false\"}[5m]))",
+            "refId": "B",
+            "legendFormat": "p95 Individual"
+          },
+          {
+            "expr": "rate(signal_service_greeks_calculation_seconds_count{vectorized=\"true\"}[5m]) / rate(signal_service_greeks_calculation_seconds_count[5m])",
+            "refId": "C",
+            "legendFormat": "Vectorization Ratio"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "💰 Business KPIs",
+        "type": "stat", 
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(signal_service_active_subscriptions)",
+            "refId": "A",
+            "legendFormat": "Active Subscriptions"
+          },
+          {
+            "expr": "rate(signal_service_api_requests_total[5m]) * 60",
+            "refId": "B",
+            "legendFormat": "API Requests/min"
+          },
+          {
+            "expr": "sum(rate(signal_service_calculation_cost_total[5m]))",
+            "refId": "C",
+            "legendFormat": "Compute Cost/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "🎯 Cache Performance",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 16},
+        "targets": [
+          {
+            "expr": "signal_service_cache_hit_ratio{cache_type=\"greeks\"}",
+            "refId": "A",
+            "legendFormat": "Greeks Cache Hit Rate"
+          },
+          {
+            "expr": "signal_service_cache_hit_ratio{cache_type=\"indicators\"}",
+            "refId": "B", 
+            "legendFormat": "Indicators Cache Hit Rate"
+          },
+          {
+            "expr": "rate(signal_service_cache_operations_total{operation=\"miss\"}[5m])",
+            "refId": "C",
+            "legendFormat": "Cache Misses/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Hit Ratio", "min": 0, "max": 1},
+          {"label": "Misses/sec", "min": 0}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "🔄 Queue Status",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 16},
+        "targets": [
+          {
+            "expr": "signal_service_queue_size{priority=\"critical\"}",
+            "refId": "A",
+            "legendFormat": "Critical Queue"
+          },
+          {
+            "expr": "signal_service_queue_size{priority=\"high\"}",
+            "refId": "B",
+            "legendFormat": "High Queue"
+          },
+          {
+            "expr": "signal_service_queue_processing_rate_per_second",
+            "refId": "C",
+            "legendFormat": "Processing Rate"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "🌐 External Service Health",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 22},
+        "targets": [
+          {
+            "expr": "signal_service_external_service_health{service_name=\"ticker_service\"}",
+            "refId": "A",
+            "legendFormat": "Ticker Service"
+          },
+          {
+            "expr": "signal_service_external_service_health{service_name=\"marketplace_service\"}",
+            "refId": "B",
+            "legendFormat": "Marketplace Service"
+          },
+          {
+            "expr": "signal_service_external_service_health{service_name=\"config_service\"}",
+            "refId": "C",
+            "legendFormat": "Config Service"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "mappings": [
+              {"value": 0, "text": "DOWN", "color": "red"},
+              {"value": 1, "text": "UP", "color": "green"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "⚡ Circuit Breaker Status",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 22},
+        "targets": [
+          {
+            "expr": "signal_service_circuit_breaker_state",
+            "refId": "A",
+            "legendFormat": "{{ service_name }}/{{ operation }}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"value": 0, "text": "CLOSED", "color": "green"},
+              {"value": 1, "text": "OPEN", "color": "red"}, 
+              {"value": 2, "text": "HALF-OPEN", "color": "yellow"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "📈 API Performance by Endpoint",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(signal_service_api_request_duration_seconds_bucket{endpoint=~\"/api/v2/signals/.*\"}[5m])) by (endpoint)",
+            "refId": "A",
+            "legendFormat": "{{ endpoint }} p95"
+          }
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": ["current", "max"]
+        }
+      },
+      {
+        "id": 10,
+        "title": "🏆 Top Users by Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "topk(10, rate(signal_service_api_requests_total[5m])) by (user_tier)",
+            "refId": "A",
+            "legendFormat": "{{ user_tier }} tier"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "🔧 Resource Utilization",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total{job=\"signal-service\"}[5m])",
+            "refId": "A",
+            "legendFormat": "CPU Usage"
+          },
+          {
+            "expr": "process_resident_memory_bytes{job=\"signal-service\"} / 1024/1024/1024",
+            "refId": "B",
+            "legendFormat": "Memory (GB)"
+          },
+          {
+            "expr": "signal_service_memory_usage_bytes{operation_type=\"greeks_calculation\"} / 1024/1024",
+            "refId": "C",
+            "legendFormat": "Greeks Memory (MB)"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "💾 Database Performance", 
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(signal_service_database_query_seconds_bucket[5m])) by (query_type)",
+            "refId": "A",
+            "legendFormat": "{{ query_type }} p95"
+          },
+          {
+            "expr": "rate(signal_service_database_query_seconds_count[5m])",
+            "refId": "B",
+            "legendFormat": "Queries/sec"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up{job=\"signal-service\"}, instance)",
+          "refresh": 1
+        },
+        {
+          "name": "user_tier",
+          "type": "query", 
+          "query": "label_values(signal_service_api_requests_total, user_tier)",
+          "refresh": 1
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "signal_service_deployment_timestamp",
+          "iconColor": "green",
+          "textFormat": "Deployed {{ version }}"
+        },
+        {
+          "name": "Alerts",
+          "datasource": "Prometheus", 
+          "expr": "ALERTS{job=\"signal-service\"}",
+          "iconColor": "red",
+          "textFormat": "{{ alertname }}: {{ summary }}"
+        }
+      ]
+    }
+  }
+}

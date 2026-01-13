@@ -1,0 +1,58 @@
+# Prometheus alert rules for signal service testing
+groups:
+  - name: signal_service_test_alerts
+    rules:
+      # High error rate during testing
+      - alert: HighErrorRateDuringTests
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: signal_service
+        annotations:
+          summary: "High error rate detected during testing"
+          description: "Error rate is {{ $value }} errors per second for {{ $labels.instance }}"
+          
+      # High response time during testing
+      - alert: HighResponseTimeDuringTests
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+          component: signal_service
+        annotations:
+          summary: "High response time detected during testing"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.instance }}"
+          
+      # Memory usage too high during tests
+      - alert: HighMemoryUsageDuringTests
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 500
+        for: 5m
+        labels:
+          severity: critical
+          component: signal_service
+        annotations:
+          summary: "High memory usage during testing"
+          description: "Memory usage is {{ $value }}MB for {{ $labels.instance }}"
+          
+      # Database connection issues during tests
+      - alert: DatabaseConnectionIssuesDuringTests
+        expr: rate(database_connection_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection issues during testing"
+          description: "Database connection errors detected at {{ $value }} per second"
+          
+      # Test infrastructure health
+      - alert: TestInfrastructureDown
+        expr: up{job="test-infrastructure"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: test_infrastructure
+        annotations:
+          summary: "Test infrastructure component is down"
+          description: "{{ $labels.instance }} in test infrastructure is not responding"

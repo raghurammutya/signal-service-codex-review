@@ -1,0 +1,39 @@
+# FastAPI and web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+httpx>=0.24.0  # Config service client dependency
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Redis
+redis==5.0.1
+hiredis==2.2.3
+
+# Data processing (numpy 2.x compatible versions)
+pandas>=2.2.0
+numpy>=2.2.6
+
+# Shared architecture
+# stocksblitz-shared==1.0.0  # TODO: Uncomment after PyPI publication
+
+# Service-specific packages for signals/analytics
+pandas-ta>=0.4.67b0  # Technical analysis indicators (requires Python 3.12+, numpy 2.x)
+scipy>=1.14.0        # numpy 2.x compatible
+scikit-learn>=1.5.0  # numpy 2.x compatible
+
+# Options Greeks calculation (REQUIRED)
+py_vollib>=1.0.1              # Black-Scholes Greeks calculations
+py-vollib-vectorized==0.1.1   # Vectorized Greeks for numpy arrays and pandas (10-100x faster)
+
+# Smart Indicator Library - Advanced Technical Analysis
+# NOTE: smartmoneyconcepts has unresolvable dependency conflicts:
+#   - Requires pandas==2.0.2 (exact), but pandas-ta requires pandas>=2.3.2
+#   - Requires numba<0.60.0, but pandas-ta requires numba==0.61.2
+# Until these conflicts are resolved upstream, smartmoneyconcepts is OPTIONAL
+# smartmoneyconcepts>=0.0.20  # Smart Money Concepts (BOS, CHoCH, Order Blocks, FVG) - OPTIONAL
+findpeaks>=2.4.0            # Persistent homology peak detection
+trendln>=0.1.4              # Automated trendline detection

@@ -1,0 +1,59 @@
+FROM python:3.12-slim as test-base
+
+# Install system dependencies for testing
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    redis-tools \
+    curl \
+    jq \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create test user
+RUN useradd -m -s /bin/bash testuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements
+COPY requirements.txt requirements-dev.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install test dependencies
+RUN pip install --no-cache-dir \
+    pytest==7.4.* \
+    pytest-cov==4.1.* \
+    pytest-asyncio==0.21.* \
+    pytest-xdist==3.3.* \
+    pytest-benchmark==4.0.* \
+    pytest-html==3.2.* \
+    pytest-mock==3.11.* \
+    pytest-timeout==2.1.* \
+    coverage==7.3.* \
+    locust==2.17.* \
+    testcontainers==3.7.* \
+    wiremock==2.6.* \
+    factory-boy==3.3.* \
+    faker==19.6.* \
+    freezegun==1.2.* \
+    responses==0.23.*
+
+# Copy source code
+COPY . .
+
+# Create test artifacts directories
+RUN mkdir -p /app/test-results /app/coverage-reports /app/performance-reports
+
+# Set test environment variables
+ENV PYTHONPATH=/app
+ENV ENVIRONMENT=test
+ENV PYTEST_CURRENT_TEST=""
+
+# Switch to test user for security
+USER testuser
+
+# Default command runs all tests
+CMD ["pytest", "--cov=app", "--cov-report=html:/app/coverage-reports", "--html=/app/test-results/report.html", "--junitxml=/app/test-results/junit.xml", "-v"]

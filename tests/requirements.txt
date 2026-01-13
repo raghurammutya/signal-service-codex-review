@@ -1,0 +1,42 @@
+# Testing dependencies for Signal Service
+pytest==7.4.2
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-xdist==3.3.1
+pytest-mock==3.11.1
+pytest-benchmark==4.0.0
+pytest-timeout==2.1.0
+pytest-html==3.2.0
+pytest-json-report==1.5.0
+
+# HTTP testing
+httpx==0.24.1
+requests==2.31.0
+responses==0.23.3
+
+# WebSocket testing
+websockets==11.0.3
+python-socketio==5.8.0
+
+# Performance testing
+locust==2.17.0
+memory-profiler==0.61.0
+psutil==5.9.5
+
+# Mocking and fixtures
+factory-boy==3.3.0
+faker==19.6.2
+responses==0.23.3
+
+# Database testing
+pytest-postgresql==5.0.0
+pytest-redis==3.0.2
+alembic==1.12.0
+
+# Load testing utilities
+asyncio-throttle==1.0.2
+aiofiles==23.2.1
+
+# Utilities
+freezegun==1.2.2  # For time-based testing
+testcontainers==3.7.1  # For Docker container testing

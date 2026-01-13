@@ -1,0 +1,23 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/instruments/.*"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "instrument_token": 256265,
+          "tradingsymbol": "TESTSYM",
+          "name": "Test Symbol",
+          "exchange": "NSE",
+          "segment": "NSE",
+          "instrument_type": "EQ",
+          "lot_size": 1,
+          "tick_size": 0.05
+        }
+      }
+    }
+  ]
+}

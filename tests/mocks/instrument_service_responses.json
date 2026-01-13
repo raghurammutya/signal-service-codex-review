@@ -1,0 +1,42 @@
+{
+  "moneyness_configuration": {
+    "atm_threshold": 0.02,
+    "otm_thresholds": {
+      "5delta": 0.05,
+      "10delta": 0.10,
+      "25delta": 0.25
+    },
+    "itm_thresholds": {
+      "5delta": 0.05,
+      "10delta": 0.10,
+      "25delta": 0.25
+    }
+  },
+  "strikes_by_moneyness": {
+    "NIFTY_ATM_2025-07-10": [21450, 21500, 21550],
+    "NIFTY_OTM5delta_2025-07-10": [21600, 21650, 21700],
+    "NIFTY_ITM5delta_2025-07-10": [21300, 21350, 21400],
+    "BANKNIFTY_ATM_2025-07-10": [45000, 45100, 45200],
+    "BANKNIFTY_OTM5delta_2025-07-10": [45500, 45600, 45700]
+  },
+  "instrument_metadata": {
+    "NSE@NIFTY@equity_options@2025-07-10@call@21500": {
+      "instrument_key": "NSE@NIFTY@equity_options@2025-07-10@call@21500",
+      "lot_size": 25,
+      "tick_size": 0.05,
+      "expiry_date": "2025-07-10",
+      "underlying": "NIFTY",
+      "strike_price": 21500,
+      "option_type": "call"
+    },
+    "NSE@BANKNIFTY@equity_options@2025-07-10@call@45000": {
+      "instrument_key": "NSE@BANKNIFTY@equity_options@2025-07-10@call@45000",
+      "lot_size": 15,
+      "tick_size": 0.05,
+      "expiry_date": "2025-07-10",
+      "underlying": "BANKNIFTY",
+      "strike_price": 45000,
+      "option_type": "call"
+    }
+  }
+}

@@ -1,0 +1,365 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signal-service-scaling-config
+  namespace: trading-platform
+data:
+  scaling.yaml: |
+    pod:
+      capacity: 1000  # Max instruments per pod
+      workers: 8      # Worker threads per pod
+      
+    load_shedding:
+      enabled: true
+      policies:
+        critical:
+          start_at: 1.0    # Never shed
+          max_ratio: 0.0
+        high:
+          start_at: 0.9
+          max_ratio: 0.2
+        medium:
+          start_at: 0.7
+          max_ratio: 0.5
+        low:
+          start_at: 0.5
+          max_ratio: 0.8
+          
+    rebalancing:
+      threshold: 0.3       # 30% load difference
+      cooldown: 300        # 5 minutes
+      min_interval: 60     # 1 minute
+      
+    backpressure:
+      scale_up_cooldown: 60      # 1 minute
+      scale_down_cooldown: 300   # 5 minutes
+      critical_threshold: 0.3    # 30% pods critical
+      high_threshold: 0.5        # 50% pods high
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signal-service
+  namespace: trading-platform
+  labels:
+    app: signal-service
+    version: v2
+spec:
+  replicas: 3  # Initial replicas
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 0  # Zero downtime
+  selector:
+    matchLabels:
+      app: signal-service
+  template:
+    metadata:
+      labels:
+        app: signal-service
+        version: v2
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8003"
+        prometheus.io/path: "/metrics"
+    spec:
+      affinity:
+        # Spread pods across nodes
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - signal-service
+              topologyKey: kubernetes.io/hostname
+              
+      containers:
+      - name: signal-service
+        image: signal-service:v2
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8003
+          name: http
+          protocol: TCP
+          
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_CAPACITY
+          value: "1000"
+        - name: WORKER_THREADS
+          value: "8"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: url
+        - name: TIMESCALEDB_URL
+          valueFrom:
+            secretKeyRef:
+              name: timescaledb-secret
+              key: url
+              
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+            
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8003
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          
+        volumeMounts:
+        - name: scaling-config
+          mountPath: /app/config/scaling.yaml
+          subPath: scaling.yaml
+          
+      volumes:
+      - name: scaling-config
+        configMap:
+          name: signal-service-scaling-config
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: signal-service-hpa
+  namespace: trading-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: signal-service
+    
+  minReplicas: 3
+  maxReplicas: 50
+  
+  # Scaling behavior configuration
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60  # 1 minute
+      policies:
+      - type: Percent
+        value: 100  # Double the pods
+        periodSeconds: 60
+      - type: Pods
+        value: 5    # Add max 5 pods at once
+        periodSeconds: 60
+      selectPolicy: Max  # Use the policy that scales up most
+      
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 5 minutes
+      policies:
+      - type: Percent
+        value: 10   # Remove 10% of pods
+        periodSeconds: 120
+      - type: Pods
+        value: 2    # Remove max 2 pods at once
+        periodSeconds: 120
+      selectPolicy: Min  # Use the policy that scales down least
+  
+  # Metrics for scaling decisions
+  metrics:
+  
+  # CPU utilization
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+        
+  # Memory utilization
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+        
+  # Custom metric: Queue depth per pod
+  - type: Pods
+    pods:
+      metric:
+        name: signal_service_queue_depth
+      target:
+        type: AverageValue
+        averageValue: "800"  # Target 800 items per pod
+        
+  # Custom metric: Computation latency (p99)
+  - type: Pods
+    pods:
+      metric:
+        name: signal_service_computation_latency_p99
+      target:
+        type: AverageValue
+        averageValue: "100"  # Target 100ms p99 latency
+        
+  # Custom metric: Backpressure level
+  - type: Pods
+    pods:
+      metric:
+        name: signal_service_backpressure_level
+      target:
+        type: AverageValue
+        averageValue: "2.5"  # Scale when average > MEDIUM (2.5)
+        
+  # Custom metric: Error rate
+  - type: Pods
+    pods:
+      metric:
+        name: signal_service_error_rate
+      target:
+        type: AverageValue
+        averageValue: "0.01"  # Scale if error rate > 1%
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signal-service
+  namespace: trading-platform
+  labels:
+    app: signal-service
+spec:
+  selector:
+    app: signal-service
+  ports:
+  - name: http
+    port: 8003
+    targetPort: 8003
+    protocol: TCP
+  type: ClusterIP
+  sessionAffinity: None  # No session affinity for better load distribution
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: signal-service-pdb
+  namespace: trading-platform
+spec:
+  selector:
+    matchLabels:
+      app: signal-service
+  minAvailable: 2  # Always keep at least 2 pods running
+  
+---
+# ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: signal-service
+  namespace: trading-platform
+  labels:
+    app: signal-service
+spec:
+  selector:
+    matchLabels:
+      app: signal-service
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+
+---
+# PrometheusRule for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: signal-service-alerts
+  namespace: trading-platform
+spec:
+  groups:
+  - name: signal-service
+    interval: 30s
+    rules:
+    
+    # High backpressure alert
+    - alert: SignalServiceHighBackpressure
+      expr: |
+        avg(signal_service_backpressure_level) > 3
+      for: 2m
+      labels:
+        severity: warning
+        service: signal-service
+      annotations:
+        summary: "Signal Service experiencing high backpressure"
+        description: "Average backpressure level {{ $value }} is above HIGH threshold"
+        
+    # Critical backpressure alert
+    - alert: SignalServiceCriticalBackpressure
+      expr: |
+        count(signal_service_backpressure_level == 4) / count(signal_service_backpressure_level) > 0.3
+      for: 1m
+      labels:
+        severity: critical
+        service: signal-service
+      annotations:
+        summary: "Signal Service at critical backpressure"
+        description: "{{ $value | humanizePercentage }} of pods at CRITICAL backpressure"
+        
+    # High error rate alert
+    - alert: SignalServiceHighErrorRate
+      expr: |
+        rate(signal_service_computation_errors_total[5m]) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+        service: signal-service
+      annotations:
+        summary: "Signal Service high error rate"
+        description: "Error rate {{ $value | humanizePercentage }} exceeds 5%"
+        
+    # Load imbalance alert
+    - alert: SignalServiceLoadImbalance
+      expr: |
+        signal_service_load_imbalance_ratio > 3
+      for: 5m
+      labels:
+        severity: warning
+        service: signal-service
+      annotations:
+        summary: "Signal Service load imbalance detected"
+        description: "Load imbalance ratio {{ $value }} indicates uneven distribution"
+        
+    # Pod count anomaly
+    - alert: SignalServicePodCountAnomaly
+      expr: |
+        abs(delta(count(up{job="signal-service"})[5m])) > 5
+      labels:
+        severity: warning
+        service: signal-service
+      annotations:
+        summary: "Rapid change in Signal Service pod count"
+        description: "Pod count changed by {{ $value }} in 5 minutes"

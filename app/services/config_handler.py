@@ -1,0 +1,361 @@
+"""Configuration handler for managing signal configurations"""
+import asyncio
+import json
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+import logging
+
+from app.utils.logging_utils import log_info, log_exception, log_warning
+
+from app.core.config import settings
+from app.errors import ConfigurationError, InvalidConfigurationError, MissingConfigurationError
+from app.schemas.config_schema import SignalConfigData, ConfigurationMessage
+
+
+class ConfigHandler:
+    """
+    Manages the lifecycle of signal service configurations:
+    - Validates incoming configurations
+    - Caches configurations in Redis
+    - Manages scheduled tasks for configurations
+    - Handles configuration updates and deletions
+    """
+    
+    def __init__(self, redis_client):
+        self.redis_client = redis_client
+        self.active_tasks = {}  # {config_key: asyncio.Task}
+        self.current_configs = {}  # In-memory cache of active configs
+        
+        log_info("ConfigHandler initialized")
+    
+    async def process_config_update(self, config_data: Dict, action: str):
+        """Process a configuration update message"""
+        try:
+            # Validate action
+            if action not in ['create', 'update', 'delete']:
+                raise InvalidConfigurationError(f"Invalid action: {action}")
+            
+            if action == 'delete':
+                await self.delete_config(config_data)
+            else:
+                # Validate configuration
+                validated_config = await self.validate_config(config_data)
+                
+                if action == 'create':
+                    await self.create_config(validated_config)
+                elif action == 'update':
+                    await self.update_config(validated_config)
+                    
+            log_info(f"Successfully processed config {action}: {config_data.get('instrument_key')}")
+            
+        except Exception as e:
+            log_exception(f"Failed to process config update: {e}")
+            raise ConfigurationError(f"Configuration processing failed: {str(e)}")
+    
+    async def validate_config(self, config_data: Dict) -> SignalConfigData:
+        """Validate configuration data using Pydantic schema"""
+        try:
+            return SignalConfigData(**config_data)
+        except Exception as e:
+            raise InvalidConfigurationError(f"Configuration validation failed: {str(e)}")
+    
+    async def create_config(self, config: SignalConfigData):
+        """Create a new configuration"""
+        config_key = self.get_config_key(config)
+        
+        try:
+            # Store in Redis
+            await self.store_config(config_key, config)
+            
+            # Add to in-memory cache
+            self.current_configs[config_key] = config.dict()
+            
+            # Apply configuration (start scheduled tasks if needed)
+            await self.apply_config(config)
+            
+            log_info(f"Created configuration: {config_key}")
+            
+        except Exception as e:
+            log_exception(f"Failed to create config {config_key}: {e}")
+            raise
+    
+    async def update_config(self, config: SignalConfigData):
+        """Update an existing configuration"""
+        config_key = self.get_config_key(config)
+        
+        try:
+            # Cancel existing tasks
+            await self.cancel_config_tasks(config_key)
+            
+            # Store updated config in Redis
+            await self.store_config(config_key, config)
+            
+            # Update in-memory cache
+            self.current_configs[config_key] = config.dict()
+            
+            # Apply updated configuration
+            await self.apply_config(config)
+            
+            # Invalidate related cache
+            await self.invalidate_cache_for_config(config)
+            
+            log_info(f"Updated configuration: {config_key}")
+            
+        except Exception as e:
+            log_exception(f"Failed to update config {config_key}: {e}")
+            raise
+    
+    async def delete_config(self, config_data: Dict):
+        """Delete a configuration"""
+        # Extract key info for deletion
+        instrument_key = config_data.get('instrument_key')
+        interval = config_data.get('interval')
+        frequency = config_data.get('frequency')
+        
+        if not all([instrument_key, interval, frequency]):
+            raise MissingConfigurationError("Missing required fields for config deletion")
+        
+        config_key = settings.get_config_cache_key(instrument_key, interval, frequency)
+        
+        try:
+            # Cancel existing tasks
+            await self.cancel_config_tasks(config_key)
+            
+            # Remove from Redis
+            await self.redis_client.delete(config_key)
+            
+            # Remove from in-memory cache
+            self.current_configs.pop(config_key, None)
+            
+            # Invalidate related cache
+            await self.invalidate_cache_for_instrument(instrument_key, interval, frequency)
+            
+            log_info(f"Deleted configuration: {config_key}")
+            
+        except Exception as e:
+            log_exception(f"Failed to delete config {config_key}: {e}")
+            raise
+    
+    async def store_config(self, config_key: str, config: SignalConfigData):
+        """Store configuration in Redis"""
+        try:
+            config_json = config.json()
+            await self.redis_client.setex(
+                config_key, 
+                settings.CONFIG_CACHE_TTL_SECONDS, 
+                config_json
+            )
+        except Exception as e:
+            log_exception(f"Failed to store config in Redis: {e}")
+            raise
+    
+    async def apply_config(self, config: SignalConfigData):
+        """Apply configuration by setting up scheduled tasks"""
+        config_key = self.get_config_key(config)
+        
+        try:
+            # Set up scheduled tasks based on frequency
+            if config.frequency.value in ['every_interval', 'on_close']:
+                await self.setup_scheduled_tasks(config_key, config)
+            
+            log_info(f"Applied configuration: {config_key}")
+            
+        except Exception as e:
+            log_exception(f"Failed to apply config {config_key}: {e}")
+            raise
+    
+    async def setup_scheduled_tasks(self, config_key: str, config: SignalConfigData):
+        """Set up scheduled tasks for configuration"""
+        try:
+            # Cancel existing task if any
+            await self.cancel_config_tasks(config_key)
+            
+            # Create new task based on frequency
+            if config.frequency.value == 'every_interval':
+                # Determine interval in seconds
+                interval_seconds = self.parse_interval_to_seconds(config.interval.value)
+                
+                if interval_seconds:
+                    task = asyncio.create_task(
+                        self.execute_periodic_computation(config, interval_seconds)
+                    )
+                    self.active_tasks[config_key] = task
+                    log_info(f"Started periodic task for {config_key} (every {interval_seconds}s)")
+            
+            elif config.frequency.value == 'on_close':
+                # Set up market close detection task
+                task = asyncio.create_task(
+                    self.execute_on_close_computation(config)
+                )
+                self.active_tasks[config_key] = task
+                log_info(f"Started on-close task for {config_key}")
+                
+        except Exception as e:
+            log_exception(f"Failed to setup scheduled tasks for {config_key}: {e}")
+            raise
+    
+    async def execute_periodic_computation(self, config: SignalConfigData, interval_seconds: int):
+        """Execute computation periodically"""
+        config_key = self.get_config_key(config)
+        
+        while config_key in self.active_tasks:
+            try:
+                # Wait for the interval
+                await asyncio.sleep(interval_seconds)
+                
+                # Check if task is still active (config not deleted)
+                if config_key not in self.active_tasks:
+                    break
+                
+                # Execute computations (this would be called via signal processor)
+                log_info(f"Executing periodic computation for {config_key}")
+                
+                # Note: Actual computation execution will be handled by SignalProcessor
+                # This is just the scheduling mechanism
+                
+            except asyncio.CancelledError:
+                log_info(f"Periodic task cancelled for {config_key}")
+                break
+            except Exception as e:
+                log_exception(f"Error in periodic computation for {config_key}: {e}")
+                # Continue running despite errors
+                await asyncio.sleep(5)
+    
+    async def execute_on_close_computation(self, config: SignalConfigData):
+        """Execute computation on market close"""
+        config_key = self.get_config_key(config)
+        
+        while config_key in self.active_tasks:
+            try:
+                # Wait until market close (simplified logic)
+                # In reality, this would integrate with market schedule
+                await asyncio.sleep(3600)  # Check every hour
+                
+                current_time = datetime.now()
+                if self.is_market_close_time(current_time):
+                    log_info(f"Executing on-close computation for {config_key}")
+                    # Execute computation
+                    
+            except asyncio.CancelledError:
+                log_info(f"On-close task cancelled for {config_key}")
+                break
+            except Exception as e:
+                log_exception(f"Error in on-close computation for {config_key}: {e}")
+                await asyncio.sleep(60)
+    
+    async def cancel_config_tasks(self, config_key: str):
+        """Cancel all tasks for a configuration"""
+        if config_key in self.active_tasks:
+            task = self.active_tasks[config_key]
+            task.cancel()
+            
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            
+            del self.active_tasks[config_key]
+            log_info(f"Cancelled tasks for {config_key}")
+    
+    async def get_active_configs(self) -> Dict[str, Dict]:
+        """Get all active configurations"""
+        return self.current_configs.copy()
+    
+    async def get_configs_for_instrument(self, instrument_key: str) -> List[SignalConfigData]:
+        """Get all configurations for a specific instrument"""
+        configs = []
+        
+        for config_key, config_data in self.current_configs.items():
+            if config_data.get('instrument_key') == instrument_key:
+                try:
+                    config = SignalConfigData(**config_data)
+                    configs.append(config)
+                except Exception as e:
+                    log_exception(f"Failed to parse config {config_key}: {e}")
+        
+        return configs
+    
+    async def invalidate_cache_for_config(self, config: SignalConfigData):
+        """Invalidate cached data related to configuration"""
+        await self.invalidate_cache_for_instrument(
+            config.instrument_key, 
+            config.interval.value, 
+            config.frequency.value
+        )
+    
+    async def invalidate_cache_for_instrument(self, instrument_key: str, interval: str, frequency: str):
+        """Invalidate cached data for instrument"""
+        try:
+            # Invalidate aggregated data cache
+            agg_cache_key = settings.get_aggregated_data_cache_key(instrument_key, interval)
+            await self.redis_client.delete(agg_cache_key)
+            
+            # Invalidate TA results cache
+            ta_cache_key = settings.get_ta_results_cache_key(instrument_key, interval, frequency)
+            await self.redis_client.delete(ta_cache_key)
+            
+            # Invalidate computed data (keep recent entries, clear old ones)
+            computed_key = settings.get_computed_data_key(instrument_key)
+            await self.redis_client.ltrim(computed_key, 0, 99)  # Keep last 100 entries
+            
+            log_info(f"Invalidated cache for {instrument_key}:{interval}:{frequency}")
+            
+        except Exception as e:
+            log_exception(f"Failed to invalidate cache: {e}")
+    
+    def get_config_key(self, config: SignalConfigData) -> str:
+        """Generate cache key for configuration"""
+        return settings.get_config_cache_key(
+            config.instrument_key, 
+            config.interval.value, 
+            config.frequency.value
+        )
+    
+    def parse_interval_to_seconds(self, interval: str) -> Optional[int]:
+        """Parse interval string to seconds"""
+        try:
+            if interval.endswith('minute'):
+                minutes = int(interval.replace('minute', ''))
+                return minutes * 60
+            elif interval.endswith('hour'):
+                hours = int(interval.replace('hour', ''))
+                return hours * 3600
+            elif interval.endswith('day'):
+                days = int(interval.replace('day', ''))
+                return days * 86400
+            else:
+                log_warning(f"Unknown interval format: {interval}")
+                return None
+        except ValueError:
+            log_warning(f"Failed to parse interval: {interval}")
+            return None
+    
+    def is_market_close_time(self, current_time: datetime) -> bool:
+        """Check if current time is market close (simplified)"""
+        # Simplified logic - in reality would integrate with market calendar
+        # Indian market typically closes at 3:30 PM
+        hour = current_time.hour
+        minute = current_time.minute
+        
+        # Check if it's around 3:30 PM (15:30)
+        return hour == 15 and 25 <= minute <= 35
+    
+    async def cleanup(self):
+        """Cleanup all active tasks"""
+        try:
+            for config_key in list(self.active_tasks.keys()):
+                await self.cancel_config_tasks(config_key)
+            log_info("ConfigHandler cleanup completed")
+        except Exception as e:
+            log_exception(f"Error during ConfigHandler cleanup: {e}")
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get configuration handler metrics"""
+        return {
+            "active_configs": len(self.current_configs),
+            "active_tasks": len(self.active_tasks),
+            "task_status": {
+                config_key: "running" if not task.done() else "completed"
+                for config_key, task in self.active_tasks.items()
+            }
+        }

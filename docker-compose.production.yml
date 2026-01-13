@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  signal-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: signal-service-prod
+    environment:
+      # MINIMAL ENVIRONMENT VARIABLES - All other config from config_service
+      - CONFIG_SERVICE_URL=http://config-service:8100
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - SERVICE_NAME=signal_service
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
+      
+      # Emergency fallbacks (only used if config_service unavailable)
+      - DATABASE_URL=${DATABASE_URL:-}
+      - REDIS_URL=${REDIS_URL:-}
+      
+      # Container-specific overrides (not in config_service)
+      - PORT=${SIGNAL_SERVICE_PORT:-8003}
+      - WORKER_ID=${WORKER_ID:-signal-worker-1}
+      
+    ports:
+      - "${SIGNAL_SERVICE_PORT:-8003}:${SIGNAL_SERVICE_PORT:-8003}"
+    depends_on:
+      - config-service
+      - postgres
+      - redis
+    networks:
+      - stocksblitz-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SIGNAL_SERVICE_PORT:-8003}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+networks:
+  stocksblitz-network:
+    external: true
+
+# Note: postgres, redis, and config-service are defined in main docker-compose.yml

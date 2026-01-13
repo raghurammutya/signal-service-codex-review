@@ -1,0 +1,40 @@
+# Prometheus configuration for signal service testing
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Rules files
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Signal service metrics
+  - job_name: 'signal-service-test'
+    static_configs:
+      - targets: ['signal-service-test:8003']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    
+  # Test infrastructure monitoring
+  - job_name: 'test-infrastructure'
+    static_configs:
+      - targets: 
+          - 'test-timescaledb:5432'
+          - 'test-redis:6379'
+          - 'mock-config-service:8080'
+          - 'mock-ticker-service:8080'
+    scrape_interval: 30s
+    
+  # Locust load testing metrics
+  - job_name: 'locust'
+    static_configs:
+      - targets: ['locust-master:8089']
+    scrape_interval: 5s
+    metrics_path: /stats/requests
+    
+  # Node exporter (if available)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 30s

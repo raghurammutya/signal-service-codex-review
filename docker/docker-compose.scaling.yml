@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # Signal Service - Scalable instances
+  signal-service:
+    image: signal-service:v2
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    deploy:
+      replicas: 3  # Initial replicas, can scale with: docker-compose up --scale signal-service=10
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    environment:
+      - SERVICE_NAME=signal-service
+      - POD_NAME={{.Task.Name}}  # Docker swarm task name
+      - POD_ID={{.Task.Slot}}    # Task slot number
+      - NODE_NAME={{.Node.Hostname}}
+      - POD_CAPACITY=1000
+      - WORKER_THREADS=8
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_password={password}
+      - TIMESCALEDB_HOST=${TIMESCALEDB_HOST:-timescaledb}
+      - TIMESCALEDB_PORT=${TIMESCALEDB_PORT:-5432}
+      - TIMESCALEDB_USER=${TIMESCALEDB_USER:-signal_user}
+      - TIMESCALEDB_password={password}
+      - TIMESCALEDB_DB=${TIMESCALEDB_DB:-signal_db}
+      # Scaling configuration
+      - ENABLE_SCALING=true
+      - MIN_INSTANCES=3
+      - MAX_INSTANCES=20
+      - SCALE_UP_THRESHOLD=0.7
+      - SCALE_DOWN_THRESHOLD=0.3
+    volumes:
+      - ./config:/app/config:ro
+      - signal-logs:/app/logs
+    networks:
+      - stocksblitz-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Signal Service Orchestrator - Manages scaling
+  signal-orchestrator:
+    image: signal-orchestrator:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.orchestrator
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
+      - SERVICE_NAME=signal-service
+      - MIN_INSTANCES=3
+      - MAX_INSTANCES=20
+      - CHECK_INTERVAL=30
+      - SCALE_COOLDOWN=60
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker socket for scaling
+      - ./config:/app/config:ro
+    networks:
+      - stocksblitz-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Load Balancer for Signal Service
+  signal-lb:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "8003:8003"  # Expose signal service
+    networks:
+      - stocksblitz-network
+    depends_on:
+      - signal-service
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Metrics Aggregator
+  signal-metrics:
+    image: signal-metrics:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.metrics
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - PROMETHEUS_PORT=9090
+      - GRAFANA_PORT=3000
+    volumes:
+      - prometheus-data:/prometheus
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "9090:9090"  # Prometheus
+      - "3001:3000"  # Grafana (3001 to avoid conflict)
+    networks:
+      - stocksblitz-network
+
+volumes:
+  signal-logs:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  stocksblitz-network:
+    external: true

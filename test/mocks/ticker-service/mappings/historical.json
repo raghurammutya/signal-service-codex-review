@@ -1,0 +1,64 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/v2/historical/ohlcv"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "data": [
+            {
+              "timestamp": "2024-01-01T09:15:00Z",
+              "open": 20000.0,
+              "high": 20100.0,
+              "low": 19950.0,
+              "close": 20050.0,
+              "volume": 100000
+            },
+            {
+              "timestamp": "2024-01-01T09:20:00Z",
+              "open": 20050.0,
+              "high": 20120.0,
+              "low": 20000.0,
+              "close": 20080.0,
+              "volume": 120000
+            },
+            {
+              "timestamp": "2024-01-01T09:25:00Z",
+              "open": 20080.0,
+              "high": 20150.0,
+              "low": 20070.0,
+              "close": 20140.0,
+              "volume": 95000
+            }
+          ],
+          "metadata": {
+            "instrument_token": "{{request.query.instrument_token}}",
+            "interval": "{{request.query.interval}}",
+            "total_records": 3
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/v2/historical/ohlcv",
+        "queryParameters": {
+          "instrument_token": {
+            "equalTo": "invalid"
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "jsonBody": {
+          "error": "Instrument not found",
+          "code": "INSTRUMENT_NOT_FOUND"
+        }
+      }
+    }
+  ]
+}
