@@ -5,11 +5,11 @@ Integrates all scaling components for horizontal scalability
 import os
 import asyncio
 import time
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
 import json
 
-from app.utils.logging_utils import log_info, log_warning, log_exception
+from app.utils.logging_utils import log_info, log_warning, log_exception, log_debug
 from app.utils.redis import get_redis_client
 
 from .consistent_hash_manager import ConsistentHashManager
@@ -57,6 +57,7 @@ class ScalableSignalProcessor:
         # State
         self.is_running = False
         self.assigned_instruments: Set[str] = set()
+        self.start_time = time.time()
         
         # Metrics
         self.metrics = {
@@ -107,8 +108,8 @@ class ScalableSignalProcessor:
         await self.config_handler.initialize()
         
         # Greeks calculators
-        from app.utils.db import get_timescaledb_session
-        self.greeks_calculator = GreeksCalculator(get_timescaledb_session())
+        from common.storage.database import get_timescaledb_session
+        self.greeks_calculator = GreeksCalculator(get_timescaledb_session)
         self.realtime_greeks_calculator = RealTimeGreeksCalculator(self.redis_client)
         
         # Technical indicators

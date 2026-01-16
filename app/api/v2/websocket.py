@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 import logging
 logger = logging.getLogger(__name__)
-from common.storage.redis import get_redis_client
+from app.core.redis_manager import get_redis_client
 from app.services.signal_processor import SignalProcessor
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.core.config import settings

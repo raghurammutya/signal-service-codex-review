@@ -40,8 +40,8 @@ class FlexibleTimeframeManager:
         "1d": 1440
     }
     
-    def __init__(self):
-        self.redis_client = None
+    def __init__(self, redis_client=None):
+        self.redis_client = redis_client
         self.db_connection = None
         self._cache_ttl = {
             1: 60,        # 1 minute data: 1 minute TTL
@@ -57,7 +57,7 @@ class FlexibleTimeframeManager:
     async def initialize(self):
         """Initialize connections"""
         self.redis_client = await get_redis_client()
-        self.db_connection = await get_timescaledb_session()
+        # Don't store the context manager, we'll use it per-operation
         
     def parse_timeframe(self, timeframe: str) -> Tuple[TimeframeType, int]:
         """
@@ -166,20 +166,26 @@ class FlexibleTimeframeManager:
             data: Aggregated data to store
         """
         try:
-            async with self.db_connection.acquire() as conn:
+            async with get_timescaledb_session() as session:
+                from sqlalchemy import text
                 # Store in custom timeframes table
                 for record in data:
-                    await conn.execute("""
+                    await session.execute(text("""
                         INSERT INTO signal_custom_timeframes (
                             instrument_key, signal_type, timeframe_minutes,
                             timestamp, data, created_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6)
+                        ) VALUES (:instrument_key, :signal_type, :timeframe_minutes, :timestamp, :data, :created_at)
                         ON CONFLICT (instrument_key, signal_type, timeframe_minutes, timestamp)
-                        DO UPDATE SET data = $5, updated_at = CURRENT_TIMESTAMP
-                    """, 
-                    instrument_key, signal_type, timeframe_minutes,
-                    record['timestamp'], record, datetime.utcnow()
-                    )
+                        DO UPDATE SET data = :data, updated_at = CURRENT_TIMESTAMP
+                    """), {
+                        'instrument_key': instrument_key, 
+                        'signal_type': signal_type, 
+                        'timeframe_minutes': timeframe_minutes,
+                        'timestamp': record['timestamp'], 
+                        'data': record, 
+                        'created_at': datetime.utcnow()
+                    })
+                await session.commit()
                     
             logger.info("Stored %s custom timeframe records", len(data))
             
@@ -205,16 +211,20 @@ class FlexibleTimeframeManager:
         
         try:
             # Check for custom timeframes in database
-            async with self.db_connection.acquire() as conn:
-                result = await conn.fetch("""
+            async with get_timescaledb_session() as session:
+                from sqlalchemy import text
+                result = await session.execute(text("""
                     SELECT DISTINCT timeframe_minutes
                     FROM signal_custom_timeframes
-                    WHERE instrument_key = $1 AND signal_type = $2
+                    WHERE instrument_key = :instrument_key AND signal_type = :signal_type
                     ORDER BY timeframe_minutes
-                """, instrument_key, signal_type)
+                """), {
+                    'instrument_key': instrument_key, 
+                    'signal_type': signal_type
+                })
                 
                 for row in result:
-                    minutes = row['timeframe_minutes']
+                    minutes = row.timeframe_minutes
                     if minutes not in self.STANDARD_TIMEFRAMES.values():
                         available.append(f"{minutes}m")
                         
@@ -251,20 +261,25 @@ class FlexibleTimeframeManager:
             if not table:
                 raise ValueError(f"Unknown signal type: {signal_type}")
                 
-            async with self.db_connection.acquire() as conn:
+            async with get_timescaledb_session() as session:
+                from sqlalchemy import text
                 # Get 1-minute data
                 query = f"""
                     SELECT *
                     FROM {table}
-                    WHERE instrument_key = $1
-                      AND timestamp >= $2
-                      AND timestamp <= $3
+                    WHERE instrument_key = :instrument_key
+                      AND timestamp >= :start_time
+                      AND timestamp <= :end_time
                     ORDER BY timestamp
                 """
                 
-                rows = await conn.fetch(query, instrument_key, start_time, end_time)
+                result = await session.execute(text(query), {
+                    'instrument_key': instrument_key,
+                    'start_time': start_time,
+                    'end_time': end_time
+                })
                 
-                return [dict(row) for row in rows]
+                return [dict(row._mapping) for row in result]
                 
         except Exception as e:
             logger.exception("Error getting base data: %s", e)
@@ -414,13 +429,15 @@ class FlexibleTimeframeManager:
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
             
-            async with self.db_connection.acquire() as conn:
-                deleted = await conn.execute("""
+            async with get_timescaledb_session() as session:
+                from sqlalchemy import text
+                result = await session.execute(text("""
                     DELETE FROM signal_custom_timeframes 
-                    WHERE created_at < $1
-                """, cutoff_date)
+                    WHERE created_at < :cutoff_date
+                """), {'cutoff_date': cutoff_date})
+                await session.commit()
                 
-                logger.info("Cleaned up %s old custom timeframe records", deleted)
+                logger.info("Cleaned up %s old custom timeframe records", result.rowcount)
                 
         except Exception as e:
             logger.exception("Error cleaning up old data: %s", e)

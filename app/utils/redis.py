@@ -218,18 +218,31 @@ async def get_redis_client(redis_url: str = None):
     environment = os.getenv('ENVIRONMENT', 'development')
     redis_url = redis_url or os.getenv('REDIS_URL')
     
-    if redis_url and environment in ['production', 'prod', 'staging']:
+    # In production, ALWAYS use real Redis - fail hard if not available
+    if environment in ['production', 'prod', 'staging']:
+        if not redis_url:
+            raise RuntimeError(f"Redis URL not configured for {environment} environment. Set REDIS_URL environment variable.")
+        
         # Delegate to production redis manager
         try:
             from app.core.redis_manager import get_redis_client as get_prod_client
             return await get_prod_client(redis_url)
-        except ImportError:
-            logger.warning("Failed to import production Redis manager, using fake Redis")
+        except ImportError as e:
+            logger.critical(f"Failed to import production Redis manager in {environment}: {e}")
+            raise RuntimeError(f"Production Redis manager not available: {e}")
     
-    # Use fake Redis for development/testing
+    # Development/test fallback
+    if redis_url:
+        # Try production client first even in development if URL is provided
+        try:
+            from app.core.redis_manager import get_redis_client as get_prod_client
+            return await get_prod_client(redis_url)
+        except ImportError:
+            logger.warning("Production Redis manager not available, using fake Redis")
+    
+    # Use fake Redis for development/testing without URL
     if _fake_client is None:
         _fake_client = FakeRedis()
-        if environment not in ['test', 'testing']:
-            logger.warning(f"Using fake Redis client in {environment} environment - should use production Redis!")
+        logger.warning(f"Using fake Redis client in {environment} environment - configure REDIS_URL for production Redis")
     
     return _fake_client

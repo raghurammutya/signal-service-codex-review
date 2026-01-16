@@ -40,6 +40,27 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to register indicators: {e}")
         # Continue anyway - service can still work with pandas_ta
 
+    # Initialize health checking
+    try:
+        from app.api.health import initialize_health_checker, initialize_distributed_health, start_health_monitoring
+        from app.core.redis_manager import get_redis_client
+        from common.storage.database import get_timescaledb_session
+        
+        # Initialize health dependencies
+        redis_client = await get_redis_client()
+        
+        # Use async context manager properly
+        async with get_timescaledb_session() as db_session:
+            initialize_health_checker(redis_client, db_session)
+        
+        initialize_distributed_health(redis_client)
+        await start_health_monitoring()
+        
+        logger.info("Health monitoring initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize health monitoring: {e}")
+        # Continue anyway - basic health endpoint will still work
+
     logger.info("Signal Service startup complete")
 
     yield
@@ -79,15 +100,23 @@ try:
     
     logger.info("✓ Production signal routers included (database-backed)")
 except ImportError as exc:
-    logger.warning("Could not import production signal routers: %s", exc)
+    logger.error("Failed to import production signal routers: %s", exc)
     
-    # Fallback to test router if production routers fail
-    try:
-        from app.api.v2.router_test_fallback import router as v2_router
-        app.include_router(v2_router)
-        logger.warning("⚠️  Using test router as fallback")
-    except ImportError:
-        logger.error("No signal routers available!")
+    # In production, NEVER fall back to test routers
+    environment = os.getenv('ENVIRONMENT', 'development')
+    if environment in ['production', 'prod', 'staging']:
+        logger.critical("🚨 PRODUCTION DEPLOYMENT BLOCKED: Critical import failure")
+        logger.critical("Cannot load production signal routers - this is a critical configuration issue")
+        logger.critical(f"Import error: {exc}")
+        raise RuntimeError(f"Production deployment failed: {exc}")
+    else:
+        # Only use test router fallback in development
+        try:
+            from app.api.v2.router_test_fallback import router as v2_router
+            app.include_router(v2_router)
+            logger.warning("⚠️  Using test router fallback in development")
+        except ImportError:
+            logger.error("No signal routers available!")
 
 # Include v2 indicators router (real indicator calculations)
 try:
@@ -195,22 +224,14 @@ async def health():
         "version": "1.0.0"
     }
 
-@app.get("/metrics")
-async def metrics():
-    """Basic Prometheus-style metrics - secured for production."""
-    # In production, this should be secured or replaced with real metrics
-    environment = os.getenv('ENVIRONMENT', 'development')
-    
-    if environment in ['production', 'prod', 'staging']:
-        # TODO: Replace with real Prometheus metrics or secure this endpoint
-        # For now, return basic health indicator
-        body = "\n".join([
-            "# HELP signal_service_health Service health indicator",
-            "# TYPE signal_service_health gauge", 
-            "signal_service_health 1",
-        ])
-    else:
-        # Development/test metrics with more details
+# Environment-based endpoint registration
+environment = os.getenv('ENVIRONMENT', 'development')
+
+if environment not in ['production', 'prod', 'staging']:
+    # Development/test endpoints only
+    @app.get("/metrics")
+    async def metrics():
+        """Basic Prometheus-style metrics - development only."""
         body = "\n".join([
             "# HELP signal_service_health Service health indicator",
             "# TYPE signal_service_health gauge",
@@ -219,26 +240,11 @@ async def metrics():
             "# TYPE signal_service_active_subscriptions gauge",
             "signal_service_active_subscriptions 10",
         ])
-    
-    return Response(content=body, media_type="text/plain")
+        return Response(content=body, media_type="text/plain")
 
-
-@app.get("/api/v2/admin/health")
-async def admin_health():
-    """Detailed health status - secured for production."""
-    environment = os.getenv('ENVIRONMENT', 'development')
-    
-    # In production, this should be protected
-    if environment in ['production', 'prod', 'staging']:
-        # Check for admin authentication header
-        # TODO: Implement proper admin authentication
-        return {
-            "status": "healthy",
-            "message": "Admin endpoints require authentication in production",
-            "environment": environment
-        }
-    else:
-        # Development/test version with detailed status
+    @app.get("/api/v2/admin/health")
+    async def admin_health():
+        """Detailed health status - development only."""
         return {
             "status": "healthy",
             "database": "healthy", 
@@ -246,42 +252,23 @@ async def admin_health():
             "signal_processor": "healthy",
         }
 
-
-@app.get("/api/v2/admin/metrics")
-async def admin_metrics():
-    """Return metrics snapshot - secured for production."""
-    environment = os.getenv('ENVIRONMENT', 'development')
-    
-    if environment in ['production', 'prod', 'staging']:
-        # TODO: Implement authentication for admin endpoints
-        return {
-            "message": "Admin metrics require authentication in production",
-            "environment": environment
-        }
-    else:
-        # Development/test stub metrics
+    @app.get("/api/v2/admin/metrics")
+    async def admin_metrics():
+        """Return metrics snapshot - development only."""
         return {
             "backpressure_level": "LOW",
             "active_subscriptions": 10,
             "processed_signals": 100,
         }
 
-
-@app.get("/api/v2/admin/audit-trail")
-async def admin_audit_trail(user_id: str = None, limit: int = 10):
-    """Audit trail endpoint - secured for production."""
-    environment = os.getenv('ENVIRONMENT', 'development')
-    
-    if environment in ['production', 'prod', 'staging']:
-        # TODO: Implement authentication for admin endpoints
-        return {
-            "message": "Audit trail requires authentication in production",
-            "environment": environment
-        }
-    else:
-        # Development/test stub data
+    @app.get("/api/v2/admin/audit-trail")
+    async def admin_audit_trail(user_id: str = None, limit: int = 10):
+        """Audit trail endpoint - development only."""
         entries = [{"user_id": user_id or "test", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
         return {"entries": entries[:limit]}
+else:
+    # Production: Admin endpoints are completely disabled
+    logger.info("Admin endpoints disabled in production environment")
 
 if __name__ == "__main__":
     import uvicorn

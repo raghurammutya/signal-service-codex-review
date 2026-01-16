@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager, contextmanager
 import asyncpg
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class ProductionDatabase:
             
             # Test connection
             async with self.engine.begin() as conn:
-                await conn.execute("SELECT 1")
+                await conn.execute(text("SELECT 1"))
                 
             logger.info("Connected to TimescaleDB successfully")
             
@@ -237,7 +238,7 @@ class DatabaseHealthChecker:
             start_time = time.time()
             
             async with engine.begin() as conn:
-                await conn.execute("SELECT 1")
+                await conn.execute(text("SELECT 1"))
                 
             connection_time = (time.time() - start_time) * 1000
             
