@@ -30,7 +30,7 @@ try:
     logger.info("trendln library loaded successfully")
 except ImportError:
     TRENDLN_AVAILABLE = False
-    logger.warning("trendln not available - Trendline indicators will return mock data")
+    logger.error("trendln not available - Trendline indicators will fail fast")
 
 
 @register_indicator(
@@ -62,7 +62,7 @@ def support_trendline(
     """
     try:
         if not TRENDLN_AVAILABLE:
-            return _mock_support_trendline(df)
+            raise ImportError("trendln library required for support trendline calculation. No mock data allowed in production.")
 
         prices = df['low'].values
 
@@ -73,7 +73,7 @@ def support_trendline(
         )
 
         if not minimaIdxs or len(minimaIdxs) < 2:
-            return _mock_support_trendline(df)
+            raise ValueError("Insufficient data for support trendline calculation. No fallback allowed in production.")
 
         # Get the strongest support line
         # Calculate slope and intercept
@@ -81,7 +81,7 @@ def support_trendline(
         y = prices[minimaIdxs]
 
         if len(x) < 2:
-            return _mock_support_trendline(df)
+            raise ValueError("Insufficient data for support trendline calculation. No fallback allowed in production.")
 
         # Linear regression
         coeffs = np.polyfit(x, y, 1)
@@ -108,7 +108,7 @@ def support_trendline(
 
     except Exception as e:
         logger.exception(f"Error detecting support trendline: {e}")
-        return _mock_support_trendline(df)
+        raise ValueError("Insufficient data for support trendline calculation. No fallback allowed in production.")
 
 
 @register_indicator(
@@ -140,7 +140,7 @@ def resistance_trendline(
     """
     try:
         if not TRENDLN_AVAILABLE:
-            return _mock_resistance_trendline(df)
+            raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
 
         prices = df['high'].values
 
@@ -151,14 +151,14 @@ def resistance_trendline(
         )
 
         if not maximaIdxs or len(maximaIdxs) < 2:
-            return _mock_resistance_trendline(df)
+            raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
 
         # Get the strongest resistance line
         x = np.array(maximaIdxs)
         y = prices[maximaIdxs]
 
         if len(x) < 2:
-            return _mock_resistance_trendline(df)
+            raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
 
         # Linear regression
         coeffs = np.polyfit(x, y, 1)
@@ -185,7 +185,7 @@ def resistance_trendline(
 
     except Exception as e:
         logger.exception(f"Error detecting resistance trendline: {e}")
-        return _mock_resistance_trendline(df)
+        raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
 
 
 @register_indicator(
@@ -215,7 +215,7 @@ def trendline_breakout(
     """
     try:
         if not TRENDLN_AVAILABLE:
-            return _mock_breakout(df)
+            raise ImportError("trendln library required for breakout detection. No mock data allowed in production.")
 
         result = pd.Series(0, index=df.index)
 
@@ -278,14 +278,14 @@ def channel_detection(
     """
     try:
         if not TRENDLN_AVAILABLE:
-            return _mock_channel(df)
+            raise ValueError("Channel detection failed: trendln library not available. No fallback allowed in production.")
 
         # Get both trendlines
         support = support_trendline(df)
         resistance = resistance_trendline(df)
 
         if not support or not resistance:
-            return _mock_channel(df)
+            raise ValueError(f"Channel detection failed: {e}. No fallback allowed in production.")
 
         # Check if lines are approximately parallel (similar slopes)
         slope_diff = abs(support['slope'] - resistance['slope'])
@@ -317,68 +317,6 @@ def channel_detection(
 
     except Exception as e:
         logger.exception(f"Error detecting channel: {e}")
-        return _mock_channel(df)
+        raise ValueError(f"Channel detection failed: {e}. No fallback allowed in production.")
 
 
-# =============================================================================
-# Mock Functions
-# =============================================================================
-
-def _mock_support_trendline(df: pd.DataFrame) -> Dict[str, Any]:
-    """Mock support trendline"""
-    start_price = float(df['low'].iloc[0])
-    end_price = float(df['low'].iloc[-1])
-    slope = (end_price - start_price) / len(df)
-
-    return {
-        'slope': slope,
-        'intercept': start_price,
-        'start_idx': 0,
-        'end_idx': len(df) - 1,
-        'start_price': start_price,
-        'end_price': end_price,
-        'r_squared': 0.75,
-        'touch_count': 3,
-        'type': 'support'
-    }
-
-
-def _mock_resistance_trendline(df: pd.DataFrame) -> Dict[str, Any]:
-    """Mock resistance trendline"""
-    start_price = float(df['high'].iloc[0])
-    end_price = float(df['high'].iloc[-1])
-    slope = (end_price - start_price) / len(df)
-
-    return {
-        'slope': slope,
-        'intercept': start_price,
-        'start_idx': 0,
-        'end_idx': len(df) - 1,
-        'start_price': start_price,
-        'end_price': end_price,
-        'r_squared': 0.70,
-        'touch_count': 3,
-        'type': 'resistance'
-    }
-
-
-def _mock_breakout(df: pd.DataFrame) -> pd.Series:
-    """Mock breakout signals"""
-    result = pd.Series(0, index=df.index)
-    # Add some random breakouts
-    if len(df) > 20:
-        result.iloc[20] = 1
-        result.iloc[40] = -1 if len(df) > 40 else 0
-    return result
-
-
-def _mock_channel(df: pd.DataFrame) -> Dict[str, Any]:
-    """Mock channel detection"""
-    return {
-        'support_line': _mock_support_trendline(df),
-        'resistance_line': _mock_resistance_trendline(df),
-        'channel_width': float(df['high'].mean() - df['low'].mean()),
-        'channel_width_pct': 5.0,
-        'is_parallel': True,
-        'is_valid': True
-    }

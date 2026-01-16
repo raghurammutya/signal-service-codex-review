@@ -297,7 +297,7 @@ def persistent_peaks(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
-            return _mock_persistent_peaks(df)
+            raise ImportError("findpeaks library required for persistent peaks detection. No mock data allowed in production.")
 
         fp = findpeaks(method=method, lookahead=lookahead, verbose=0)
 
@@ -325,7 +325,7 @@ def persistent_peaks(
 
     except Exception as e:
         logger.exception(f"Error in persistent peak detection: {e}")
-        return _mock_persistent_peaks(df)
+        raise ImportError("findpeaks library required for persistent peaks detection. No mock data allowed in production.")
 
 
 @register_indicator(
@@ -355,7 +355,7 @@ def persistent_valleys(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
-            return _mock_persistent_valleys(df)
+            raise ValueError("Persistent valley detection failed: findpeaks library not available. No fallback allowed in production.")
 
         fp = findpeaks(method=method, lookahead=lookahead, verbose=0)
 
@@ -384,7 +384,7 @@ def persistent_valleys(
 
     except Exception as e:
         logger.exception(f"Error in persistent valley detection: {e}")
-        return _mock_persistent_valleys(df)
+        raise ValueError(f"Persistent valley detection failed: {e}. No fallback allowed in production.")
 
 
 @register_indicator(
@@ -414,7 +414,7 @@ def peaks_ranked_by_persistence(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
-            return _mock_ranked_peaks(df)
+            raise ImportError("findpeaks library required for peak ranking. No mock data allowed in production.")
 
         peaks_df = persistent_peaks(df, method='topology')
 
@@ -429,42 +429,6 @@ def peaks_ranked_by_persistence(
 
     except Exception as e:
         logger.exception(f"Error ranking peaks by persistence: {e}")
-        return _mock_ranked_peaks(df)
+        raise ImportError("findpeaks library required for peak ranking. No mock data allowed in production.")
 
 
-# =============================================================================
-# Mock Functions
-# =============================================================================
-
-def _mock_persistent_peaks(df: pd.DataFrame) -> pd.DataFrame:
-    """Mock persistent peaks"""
-    # Return some simple peaks
-    peaks = []
-    for i in range(10, len(df), 20):
-        if i < len(df):
-            peaks.append({
-                'index': i,
-                'timestamp': df.index[i],
-                'price': float(df['high'].iloc[i]),
-                'persistence': 0.8
-            })
-    return pd.DataFrame(peaks) if peaks else pd.DataFrame(columns=['index', 'timestamp', 'price', 'persistence'])
-
-
-def _mock_persistent_valleys(df: pd.DataFrame) -> pd.DataFrame:
-    """Mock persistent valleys"""
-    valleys = []
-    for i in range(15, len(df), 20):
-        if i < len(df):
-            valleys.append({
-                'index': i,
-                'timestamp': df.index[i],
-                'price': float(df['low'].iloc[i]),
-                'persistence': 0.75
-            })
-    return pd.DataFrame(valleys) if valleys else pd.DataFrame(columns=['index', 'timestamp', 'price', 'persistence'])
-
-
-def _mock_ranked_peaks(df: pd.DataFrame) -> pd.DataFrame:
-    """Mock ranked peaks"""
-    return _mock_persistent_peaks(df)

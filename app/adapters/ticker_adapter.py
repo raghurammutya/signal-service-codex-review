@@ -4,9 +4,9 @@ Handles the new enhanced tick format with timezone and currency support.
 """
 import asyncio
 import logging
+import httpx
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
 from app.utils.time import utcnow
 from decimal import Decimal, InvalidOperation
 from enum import Enum
@@ -14,6 +14,7 @@ import pytz
 from zoneinfo import ZoneInfo
 
 from app.errors import DataAccessError, ComputationError
+from app.core.config import settings
 
 
 logger = logging.getLogger(__name__)
@@ -193,13 +194,26 @@ class EnhancedTickerAdapter:
         self.currency_handler = CurrencyHandler()
         self.timezone_handler = TimezoneHandler()
         self._logger = logging.getLogger(__name__)
-        self.base_url = base_url
+        
+        # Get ticker_service URL from settings
+        self.base_url = base_url or getattr(settings, 'TICKER_SERVICE_URL', 'http://ticker-service:8001')
+        
+        # Initialize HTTP client for ticker_service
+        self.http_client = httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=30.0,
+            headers={
+                'Content-Type': 'application/json',
+                'X-Internal-API-Key': getattr(settings, 'INTERNAL_API_KEY', 'development-key'),
+                'User-Agent': 'signal-service/ticker-adapter'
+            }
+        )
         
         # Cache for instrument metadata
         self.instrument_cache = {}
         self.cache_ttl = 3600  # 1 hour
         
-        logger.info("EnhancedTickerAdapter initialized")
+        logger.info(f"EnhancedTickerAdapter initialized with ticker_service at {self.base_url}")
 
     async def get_frequency_configuration(self):
         return {}
@@ -210,9 +224,40 @@ class EnhancedTickerAdapter:
     async def notify_backpressure(self, *_args, **_kwargs):
         return True
 
-    async def get_latest_price(self, *_args, **_kwargs):
-        # PRODUCTION: This should call ticker_service for real prices
-        raise ValueError("get_latest_price not implemented - ticker_service integration required")
+    async def get_latest_price(self, instrument_key: str = None, **kwargs) -> float:
+        """
+        Get latest price from ticker_service.
+        
+        Args:
+            instrument_key: Instrument identifier
+            **kwargs: Additional parameters
+            
+        Returns:
+            Latest price from ticker_service
+        """
+        try:
+            if not instrument_key:
+                raise ValueError("instrument_key is required for get_latest_price")
+            
+            # Call ticker_service API
+            response = await self.http_client.get(f"/api/v1/latest/{instrument_key}")
+            response.raise_for_status()
+            
+            data = response.json()
+            price = data.get('price', data.get('ltp', 0.0))
+            
+            if price == 0.0:
+                logger.warning(f"ticker_service returned zero price for {instrument_key}")
+            
+            return float(price)
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"Instrument {instrument_key} not found in ticker_service")
+            else:
+                raise DataAccessError(f"ticker_service error for {instrument_key}: {e.response.status_code}")
+        except Exception as e:
+            raise DataAccessError(f"Failed to get latest price for {instrument_key}: {e}")
     
     async def process_tick(self, tick_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -476,8 +521,29 @@ class EnhancedTickerAdapter:
         Returns:
             Current market price of the option
         """
-        # PRODUCTION: This should call ticker_service for real option prices
-        raise ValueError(f"Option price data unavailable from ticker_service for {underlying} {strike} {option_type}. No synthetic data allowed in production.")
+        try:
+            # Call ticker_service for option price
+            params = {
+                'underlying': underlying,
+                'strike': strike,
+                'expiry': expiry,
+                'option_type': option_type
+            }
+            params.update(kwargs)
+            
+            response = await self.http_client.get("/api/v1/options/price", params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            return float(data.get('price', data.get('ltp', 0.0)))
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"Option {underlying} {strike} {option_type} not found in ticker_service")
+            else:
+                raise DataAccessError(f"ticker_service error for option price: {e.response.status_code}")
+        except Exception as e:
+            raise DataAccessError(f"Failed to get option price for {underlying} {strike} {option_type}: {e}")
     
     async def get_historical_options(
         self, 
@@ -499,8 +565,31 @@ class EnhancedTickerAdapter:
         Returns:
             List of historical option data
         """
-        # PRODUCTION: This should call ticker_service for real historical option data
-        raise ValueError(f"Historical options data unavailable from ticker_service for {underlying} at {timestamp}. No synthetic data allowed in production.")
+        try:
+            # Call ticker_service for historical option chain
+            params = {
+                'underlying': underlying,
+                'expiry_date': expiry_date
+            }
+            if timestamp:
+                params['timestamp'] = timestamp.isoformat()
+            if moneyness_level:
+                params['moneyness_level'] = moneyness_level
+            params.update(kwargs)
+            
+            response = await self.http_client.get("/api/v1/options/historical", params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            return data.get('options', [])
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"Historical options for {underlying} at {timestamp} not found in ticker_service")
+            else:
+                raise DataAccessError(f"ticker_service error for historical options: {e.response.status_code}")
+        except Exception as e:
+            raise DataAccessError(f"Failed to get historical options for {underlying} at {timestamp}: {e}")
     
     async def get_option_iv(
         self, 
@@ -524,8 +613,115 @@ class EnhancedTickerAdapter:
         Returns:
             Implied volatility or None if not available
         """
-        # PRODUCTION: This should call ticker_service for real IV data
-        raise ValueError(f"Implied volatility data unavailable from ticker_service for {underlying} {strike} {option_type}. No synthetic data allowed in production.")
+        try:
+            # Call ticker_service for option IV
+            params = {
+                'underlying': underlying,
+                'strike': strike,
+                'expiry': expiry,
+                'option_type': option_type
+            }
+            if timestamp:
+                params['timestamp'] = timestamp.isoformat()
+            params.update(kwargs)
+            
+            response = await self.http_client.get("/api/v1/options/iv", params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            iv = data.get('iv', data.get('implied_volatility'))
+            return float(iv) if iv is not None else None
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"IV for {underlying} {strike} {option_type} not found in ticker_service")
+            else:
+                raise DataAccessError(f"ticker_service error for option IV: {e.response.status_code}")
+        except Exception as e:
+            raise DataAccessError(f"Failed to get option IV for {underlying} {strike} {option_type}: {e}")
+    
+    async def get_option_chain(
+        self,
+        underlying: str,
+        expiry: str = None,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        Get option chain data from ticker_service.
+        
+        Args:
+            underlying: Underlying symbol
+            expiry: Option expiry date (optional)
+            
+        Returns:
+            List of option chain data
+        """
+        try:
+            # Call ticker_service for option chain
+            params = {'underlying': underlying}
+            if expiry:
+                params['expiry'] = expiry
+            params.update(kwargs)
+            
+            response = await self.http_client.get("/api/v1/options/chain", params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            return data.get('options', data.get('chain', []))
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"Option chain for {underlying} not found in ticker_service")
+            else:
+                raise DataAccessError(f"ticker_service error for option chain: {e.response.status_code}")
+        except Exception as e:
+            raise DataAccessError(f"Failed to get option chain for {underlying}: {e}")
+    
+    async def get_historical_data(
+        self,
+        symbol: str,
+        timeframe: str = "1day",
+        periods: int = 100,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        Get historical OHLCV data from ticker_service.
+        
+        Args:
+            symbol: Symbol to fetch data for
+            timeframe: Time interval (e.g., "1day", "1hour", "5minute")
+            periods: Number of periods to fetch
+            
+        Returns:
+            List of historical OHLCV data
+        """
+        try:
+            # Call ticker_service for historical data
+            params = {
+                'symbol': symbol,
+                'timeframe': timeframe,
+                'periods': periods
+            }
+            params.update(kwargs)
+            
+            response = await self.http_client.get("/api/v1/historical", params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            return data.get('data', data.get('historical', []))
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"Historical data for {symbol} not found in ticker_service")
+            else:
+                raise DataAccessError(f"ticker_service error for historical data: {e.response.status_code}")
+        except Exception as e:
+            raise DataAccessError(f"Failed to get historical data for {symbol}: {e}")
+    
+    async def close(self):
+        """Close the HTTP client connection"""
+        if self.http_client:
+            await self.http_client.aclose()
 
 
 # Alias to maintain backward compatibility with tests

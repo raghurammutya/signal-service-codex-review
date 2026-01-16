@@ -10,7 +10,7 @@ from enum import Enum
 import logging
 
 import redis.asyncio as redis
-from app.utils.logging_utils import log_warning
+from app.utils.logging_utils import log_warning, log_error
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 

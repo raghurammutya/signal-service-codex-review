@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import logging
 
-from app.utils.logging_utils import log_info, log_exception, log_warning
+from app.utils.logging_utils import log_info, log_exception, log_warning, log_error
 
 from app.core.config import settings
 from app.errors import ConfigurationError, InvalidConfigurationError, MissingConfigurationError
