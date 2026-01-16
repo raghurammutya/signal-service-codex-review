@@ -17,6 +17,7 @@ from uuid import uuid4
 
 from app.utils.redis import get_redis_client
 from app.core.config import settings
+from app.services.unified_entitlement_service import get_unified_entitlement_service, EntitlementResult
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +101,6 @@ class StreamAbuseProtectionService:
     def __init__(self):
         self.redis_client = None
         self.marketplace_client = None
-        self._limits_cache = {}  # Cache user limits
-        self._limits_cache_ttl = 300  # 5 minutes cache
         
         # Tracking keys
         self.connection_key_prefix = "stream_abuse:connections:"
@@ -128,71 +127,11 @@ class StreamAbuseProtectionService:
         
         logger.info("Stream abuse protection service initialized")
     
-    async def _get_user_limits(self, user_id: str, stream_type: StreamType) -> ConnectionLimits:
-        """
-        Get dynamic connection limits for user based on their subscription.
-        Sprint 5A: Replace hardcoded tiers with marketplace-based limits.
-        
-        Args:
-            user_id: User ID
-            stream_type: Type of stream being accessed
-            
-        Returns:
-            ConnectionLimits based on user's subscription tier
-        """
-        cache_key = f"{user_id}:{stream_type.value}"
-        
-        # Check cache first
-        if cache_key in self._limits_cache:
-            cached_limits, cached_time = self._limits_cache[cache_key]
-            if time.time() - cached_time < self._limits_cache_ttl:
-                return cached_limits
-        
-        # Default to fallback limits
-        limits = self.FALLBACK_LIMITS[stream_type]
-        
-        # Try to get from marketplace
-        if self.marketplace_client and user_id:
-            try:
-                # Get user's subscription tier from marketplace
-                subscriptions_data = await self.marketplace_client.get_user_subscriptions(user_id)
-                user_subscriptions = subscriptions_data.get("subscriptions", [])
-                
-                # Find the best tier among active subscriptions
-                best_tier = None
-                tier_priority = {"enterprise": 3, "premium": 2, "standard": 1, "free": 0}
-                
-                for subscription in user_subscriptions:
-                    if subscription.get("status") == "active":
-                        tier = subscription.get("tier", "free")
-                        if best_tier is None or tier_priority.get(tier, 0) > tier_priority.get(best_tier, 0):
-                            best_tier = tier
-                
-                # Get tier-specific limits
-                if best_tier:
-                    tier_limits = await self._get_tier_limits(best_tier, stream_type)
-                    if tier_limits:
-                        limits = tier_limits
-                        
-            except Exception as e:
-                logger.error(f"Error getting user limits from marketplace: {e}")
-                # Fall back to default limits
-        
-        # Cache the result
-        self._limits_cache[cache_key] = (limits, time.time())
-        
-        return limits
     
-    async def _get_tier_limits(self, tier: str, stream_type: StreamType) -> Optional[ConnectionLimits]:
+    def _get_tier_limits_from_unified_tier(self, tier: str, stream_type: StreamType) -> ConnectionLimits:
         """
-        Get connection limits for a specific tier.
-        
-        Args:
-            tier: Subscription tier (free, standard, premium, enterprise)
-            stream_type: Type of stream
-            
-        Returns:
-            ConnectionLimits or None if not found
+        CONSOLIDATED: Get connection limits from unified tier information.
+        Replaces _get_user_limits for consistent tier-based limits.
         """
         # Define tier multipliers relative to base (free) limits
         tier_multipliers = {
@@ -215,6 +154,7 @@ class StreamAbuseProtectionService:
             burst_message_threshold=int(base_limits.burst_message_threshold * multiplier)
         )
     
+    
     async def check_connection_allowed(
         self,
         client_id: str,
@@ -223,7 +163,7 @@ class StreamAbuseProtectionService:
         client_metadata: Optional[Dict[str, Any]] = None
     ) -> Tuple[bool, Optional[str]]:
         """
-        Check if a new connection is allowed based on abuse protection rules.
+        Check if a new connection is allowed - delegates to unified entitlement service.
         
         Args:
             client_id: Unique client identifier
@@ -235,62 +175,53 @@ class StreamAbuseProtectionService:
             Tuple of (allowed, reason_if_denied)
         """
         try:
-            if not self.redis_client:
-                await self.initialize()
+            # CONSOLIDATED: No legacy fallbacks - all connections must go through unified entitlement
+            if not user_id:
+                # Unauthenticated connections not allowed for any stream type
+                logger.warning(f"Unauthenticated connection denied for client {client_id} (stream: {stream_type.value})")
+                return False, "Authentication required for all stream access"
             
-            # Get dynamic limits based on user's subscription
-            limits = await self._get_user_limits(user_id or client_id, stream_type)
+            # PRODUCTION: Connection-level validation should check user capabilities, not specific streams
+            # Specific stream access is validated at subscription time with real stream keys
+            entitlement_service = await get_unified_entitlement_service()
+            user_data = await entitlement_service._get_user_entitlements(user_id)
             
-            # Check concurrent connections per user
-            if user_id:
-                user_connections = await self._get_user_connection_count(user_id, stream_type)
-                if user_connections >= limits.max_concurrent_connections:
-                    await self._log_abuse_event(
-                        client_id=client_id,
-                        user_id=user_id,
-                        event_type="max_connections_exceeded",
-                        severity="MEDIUM",
-                        details={
-                            "current_connections": user_connections,
-                            "max_allowed": limits.max_concurrent_connections,
-                            "stream_type": stream_type.value
-                        },
-                        action_taken="connection_rejected"
+            if not user_data:
+                result = EntitlementResult(is_allowed=False, reason="Unable to verify user entitlements")
+            else:
+                user_tier = user_data.get("tier", "free")
+                
+                # Check if user tier supports the requested stream type
+                stream_access_matrix = {
+                    StreamType.PUBLIC: ["free", "standard", "premium", "enterprise"],
+                    StreamType.COMMON: ["free", "standard", "premium", "enterprise"], 
+                    StreamType.MARKETPLACE: ["standard", "premium", "enterprise"],
+                    StreamType.PREMIUM: ["premium", "enterprise"]
+                }
+                
+                allowed_tiers = stream_access_matrix.get(stream_type, [])
+                
+                if user_tier in allowed_tiers:
+                    result = EntitlementResult(is_allowed=True, user_tier=user_tier)
+                    logger.info(f"User {user_id} tier '{user_tier}' authorized for {stream_type.value} streams")
+                else:
+                    result = EntitlementResult(
+                        is_allowed=False,
+                        reason=f"{stream_type.value} access requires {' or '.join(allowed_tiers)} tier (current: {user_tier})",
+                        user_tier=user_tier
                     )
-                    return False, f"Maximum concurrent connections exceeded ({user_connections}/{limits.max_concurrent_connections})"
             
-            # Check for rapid connection attempts
-            connection_rate = await self._check_connection_rate(client_id, user_id)
-            if connection_rate > 10:  # Max 10 connections per minute
-                await self._log_abuse_event(
-                    client_id=client_id,
-                    user_id=user_id,
-                    event_type="rapid_connection_attempts",
-                    severity="HIGH",
-                    details={
-                        "connection_rate": connection_rate,
-                        "threshold": 10,
-                        "stream_type": stream_type.value
-                    },
-                    action_taken="connection_rejected"
-                )
-                return False, "Too many connection attempts. Please slow down."
-            
-            # Check if client is banned
-            is_banned, ban_reason = await self._check_ban_status(client_id, user_id)
-            if is_banned:
-                return False, f"Client banned: {ban_reason}"
-            
-            # Record successful connection
-            await self._record_connection(client_id, user_id, stream_type, client_metadata)
-            
-            logger.info(f"Connection allowed for client {client_id} (stream: {stream_type.value})")
-            return True, None
+            if result.is_allowed:
+                logger.info(f"Connection allowed for client {client_id} (stream: {stream_type.value})")
+                return True, None
+            else:
+                logger.warning(f"Connection denied for client {client_id}: {result.reason}")
+                return False, result.reason
             
         except Exception as e:
             logger.error(f"Error checking connection permission: {e}")
-            # On error, be permissive but log the issue
-            return True, None
+            # CONSOLIDATED: No legacy fallback - fail secure on unified service errors
+            return False, "Entitlement service error - access denied for security"
     
     async def check_subscription_allowed(
         self,
@@ -314,8 +245,19 @@ class StreamAbuseProtectionService:
             Tuple of (allowed, reason_if_denied)
         """
         try:
-            # Get dynamic limits based on user's subscription
-            limits = await self._get_user_limits(user_id or client_id, stream_type)
+            # CONSOLIDATED: Get limits via unified entitlement service instead of legacy path
+            if not user_id:
+                return False, "Authentication required for subscription changes"
+            
+            entitlement_service = await get_unified_entitlement_service()
+            user_data = await entitlement_service._get_user_entitlements(user_id)
+            
+            if not user_data:
+                return False, "Unable to verify user entitlements for subscription limits"
+            
+            # Get tier-based limits from unified service
+            user_tier = user_data.get("tier", "free")
+            limits = self._get_tier_limits_from_unified_tier(user_tier, stream_type)
             
             # Check total subscription count
             if current_subscriptions:
@@ -384,7 +326,8 @@ class StreamAbuseProtectionService:
             
         except Exception as e:
             logger.error(f"Error checking subscription permission: {e}")
-            return True, None  # Be permissive on error
+            # FAIL SECURE: Deny access on error instead of being permissive
+            return False, "Subscription entitlement service error - access denied for security"
     
     async def check_message_rate(
         self,
@@ -406,8 +349,19 @@ class StreamAbuseProtectionService:
             Tuple of (allowed, reason_if_denied)
         """
         try:
-            # Get dynamic limits based on user's subscription
-            limits = await self._get_user_limits(user_id or client_id, stream_type)
+            # CONSOLIDATED: Get limits via unified entitlement service instead of legacy path
+            if not user_id:
+                return False, "Authentication required for message rate limiting"
+            
+            entitlement_service = await get_unified_entitlement_service()
+            user_data = await entitlement_service._get_user_entitlements(user_id)
+            
+            if not user_data:
+                return False, "Unable to verify user entitlements for message rate limits"
+            
+            # Get tier-based limits from unified service
+            user_tier = user_data.get("tier", "free")
+            limits = self._get_tier_limits_from_unified_tier(user_tier, stream_type)
             
             # Check message rate limit
             current_rate = await self._get_message_rate(client_id, user_id, stream_type)
@@ -453,7 +407,8 @@ class StreamAbuseProtectionService:
             
         except Exception as e:
             logger.error(f"Error checking message rate: {e}")
-            return True, None
+            # FAIL SECURE: Deny access on error instead of being permissive
+            return False, "Message rate entitlement service error - access denied for security"
     
     async def cleanup_connection(
         self,

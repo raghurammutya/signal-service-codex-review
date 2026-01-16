@@ -67,9 +67,9 @@ class ConnectionManager:
             logger.error(f"Failed to create async Redis pub/sub: {e}")
             self.redis_subscriber = None
 
-        # Initialize services
-        self.signal_processor = SignalProcessor()
-        await self.signal_processor.initialize(None)  # app_state not needed for websocket
+        # Initialize services - use singleton to avoid duplicate resource initialization
+        from app.services.signal_processor import get_signal_processor
+        self.signal_processor = await get_signal_processor()
 
         from app.services.instrument_service_client import InstrumentServiceClient
         instrument_client = InstrumentServiceClient()

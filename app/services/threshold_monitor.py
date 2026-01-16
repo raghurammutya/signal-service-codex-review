@@ -626,28 +626,76 @@ class ThresholdMonitor:
         }
         
         try:
-            if channel == AlertChannel.UI:
-                # Send to UI via Redis stream
-                await self.redis.xadd("ui_alerts", alert_data)
+            # CONSOLIDATED: Route all alerts through SignalDeliveryService
+            from app.services.signal_delivery_service import get_signal_delivery_service
             
-            elif channel == AlertChannel.TELEGRAM:
-                # Send to Telegram notification service
-                await self.redis.xadd("telegram_alerts", alert_data)
+            delivery_service = get_signal_delivery_service()
             
-            elif channel == AlertChannel.EMAIL:
-                # Send to email notification service
-                await self.redis.xadd("email_alerts", alert_data)
+            # Transform threshold alert to signal delivery format
+            signal_data = {
+                "signal_type": "threshold_alert",
+                "alert_type": channel.value,
+                "threshold_id": alert_data['threshold_id'],
+                "user_id": alert_data['user_id'],
+                "strategy_id": alert_data.get('strategy_id'),
+                "breach": alert_data['breach'],
+                "timestamp": alert_data['timestamp']
+            }
             
-            elif channel == AlertChannel.WEBHOOK:
-                # Send to webhook service
-                await self.redis.xadd("webhook_alerts", alert_data)
+            # Map channel-specific delivery config
+            delivery_config = {
+                "channels": [channel.value],
+                "message": config.alert_message or f"Threshold breach: {config.indicator_name}",
+                "priority": self._get_alert_priority(config),
+                "metadata": {
+                    "threshold_type": config.threshold_type.value,
+                    "symbol": config.symbol,
+                    "indicator": config.indicator_name
+                }
+            }
             
-            elif channel == AlertChannel.EXECUTION_ENGINE:
-                # Send to execution engine for automated trading
-                await self.redis.xadd("execution_alerts", alert_data)
+            # Route through unified delivery service with entitlement checking
+            result = await delivery_service.deliver_signal(
+                user_id=config.user_id,
+                signal_data=signal_data,
+                delivery_config=delivery_config
+            )
+            
+            if not result.get("success"):
+                logger.error(f"SignalDeliveryService failed for {channel.value}: {result.get('error')}")
+                # Fallback to direct Redis for critical system alerts
+                if channel in [AlertChannel.UI, AlertChannel.EXECUTION_ENGINE]:
+                    await self._fallback_redis_alert(channel, alert_data)
             
         except Exception as e:
-            logger.error(f"Failed to send alert via {channel.value}: {e}")
+            logger.error(f"Failed to send alert via SignalDeliveryService for {channel.value}: {e}")
+            # Fallback to direct Redis for critical channels
+            if channel in [AlertChannel.UI, AlertChannel.EXECUTION_ENGINE]:
+                await self._fallback_redis_alert(channel, alert_data)
+    
+    def _get_alert_priority(self, config: ThresholdConfig) -> str:
+        """Get alert priority based on threshold configuration"""
+        if config.financial_impact == FinancialImpact.HIGH and config.time_sensitivity == TimeSensitivity.HIGH:
+            return "critical"
+        elif config.financial_impact == FinancialImpact.MEDIUM or config.time_sensitivity == TimeSensitivity.HIGH:
+            return "high"
+        elif config.financial_impact == FinancialImpact.LOW and config.time_sensitivity == TimeSensitivity.MEDIUM:
+            return "medium"
+        else:
+            return "low"
+    
+    async def _fallback_redis_alert(self, channel: AlertChannel, alert_data: Dict[str, Any]):
+        """Fallback to direct Redis for critical system alerts when SignalDeliveryService fails"""
+        try:
+            if channel == AlertChannel.UI:
+                await self.redis.xadd("ui_alerts", alert_data)
+            elif channel == AlertChannel.EXECUTION_ENGINE:
+                await self.redis.xadd("execution_alerts", alert_data)
+            
+            logger.warning(f"Used Redis fallback for critical {channel.value} alert")
+            
+        except Exception as e:
+            logger.error(f"Redis fallback also failed for {channel.value}: {e}")
     
     async def _log_breach_for_learning(self, breach: ThresholdBreach):
         """Log breach event for machine learning"""

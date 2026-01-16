@@ -116,42 +116,9 @@ class InstrumentServiceClient:
         if service_response:
             return service_response
             
-        # Fallback: basic moneyness classification
-        try:
-            parts = option_key.split("@")
-            if len(parts) >= 3:
-                strike_price = float(parts[2])
-                ratio = spot_price / strike_price
-                
-                if 0.98 <= ratio <= 1.02:
-                    moneyness_level = "ATM"
-                elif ratio < 0.85:
-                    moneyness_level = "DITM" if "call" in option_key.lower() else "DOTM"
-                elif ratio < 0.95:
-                    moneyness_level = "ITM" if "call" in option_key.lower() else "OTM"
-                elif ratio < 0.98:
-                    moneyness_level = "SITM" if "call" in option_key.lower() else "SOTM"
-                elif ratio <= 1.02:
-                    moneyness_level = "ATM"
-                elif ratio <= 1.05:
-                    moneyness_level = "SOTM" if "call" in option_key.lower() else "SITM"
-                elif ratio <= 1.15:
-                    moneyness_level = "OTM" if "call" in option_key.lower() else "ITM"
-                else:
-                    moneyness_level = "DOTM" if "call" in option_key.lower() else "DITM"
-            else:
-                moneyness_level = "ATM"  # Default fallback
-                
-        except Exception:
-            moneyness_level = "ATM"  # Safe fallback
-            
-        return {
-            "option_key": option_key,
-            "spot_price": spot_price,
-            "method": method,
-            "moneyness_level": moneyness_level,
-            "source": "fallback_calculation"
-        }
+        # Service unavailable - return None to indicate failure
+        logger.warning(f"Instrument service unavailable for moneyness calculation: {option_key}")
+        return None
 
     async def get_strikes_by_moneyness(self, underlying_symbol, moneyness_level, expiry_date=None) -> List[Dict[str, Any]]:
         """Get option strikes by moneyness level from service or return fallback data"""
@@ -165,27 +132,9 @@ class InstrumentServiceClient:
         if service_response and service_response.get("strikes"):
             return service_response["strikes"]
             
-        # Fallback to reasonable strike data  
-        base_price = 20000  # Default base price - could be improved with market data
-        strikes = [
-            {
-                "instrument_key": f"{underlying_symbol}@CE@{base_price}",
-                "strike_price": base_price,
-                "option_type": "CE",
-                "expiry_date": expiry_date or datetime.utcnow().date().isoformat(),
-                "underlying_symbol": underlying_symbol,
-                "source": "fallback_data"
-            },
-            {
-                "instrument_key": f"{underlying_symbol}@PE@{base_price}",
-                "strike_price": base_price,
-                "option_type": "PE", 
-                "expiry_date": expiry_date or datetime.utcnow().date().isoformat(),
-                "underlying_symbol": underlying_symbol,
-                "source": "fallback_data"
-            },
-        ]
-        return strikes
+        # Service unavailable - return empty list to indicate failure
+        logger.warning(f"Instrument service unavailable for strikes by moneyness: {underlying_symbol}")
+        return []
 
     async def get_moneyness_history(self, symbol: str, start_time: datetime, end_time: datetime, interval: str = "5m") -> List[Dict[str, Any]]:
         """Return empty moneyness history (placeholder)."""
@@ -207,13 +156,35 @@ class InstrumentServiceClient:
             return None
 
     async def get_atm_iv(self, underlying_symbol: str, expiry_date: str, spot_price: float) -> Optional[float]:
-        """Return a stub ATM IV."""
-        return 0.25
+        """Get ATM IV from instrument service."""
+        payload = {
+            "underlying_symbol": underlying_symbol,
+            "expiry_date": expiry_date,
+            "spot_price": spot_price
+        }
+        service_response = await self._make_request("GET", "/api/v1/iv/atm", params=payload)
+        if service_response and "atm_iv" in service_response:
+            return service_response["atm_iv"]
+        
+        # Service unavailable - return None to indicate failure
+        logger.warning(f"Instrument service unavailable for ATM IV: {underlying_symbol}")
+        return None
 
     async def get_otm_delta_strikes(self, underlying_symbol: str, delta_target: float, option_type: str, expiry_date: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Return strikes filtered by option type using stub data."""
-        strikes = await self.get_strikes_by_moneyness(underlying_symbol, f"OTM{int(delta_target*100)}delta", expiry_date)
-        return [s for s in strikes if s.get("option_type") == option_type]
+        """Get OTM strikes by delta target from instrument service."""
+        payload = {
+            "underlying_symbol": underlying_symbol,
+            "delta_target": delta_target,
+            "option_type": option_type,
+            "expiry_date": expiry_date
+        }
+        service_response = await self._make_request("GET", "/api/v1/options/strikes/delta", params=payload)
+        if service_response and service_response.get("strikes"):
+            return service_response["strikes"]
+        
+        # Service unavailable - return empty list to indicate failure
+        logger.warning(f"Instrument service unavailable for OTM delta strikes: {underlying_symbol}")
+        return []
 
     async def get_moneyness_configuration(self) -> Dict[str, Any]:
         """Return default moneyness configuration."""

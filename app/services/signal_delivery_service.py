@@ -19,6 +19,7 @@ from dataclasses import dataclass
 
 from app.clients.alert_service_client import get_alert_service_client, AlertPriority, AlertChannel
 from app.clients.comms_service_client import get_comms_service_client
+from app.services.unified_entitlement_service import get_unified_entitlement_service
 from app.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -62,21 +63,54 @@ class SignalDeliveryService:
         """
         Deliver signal to user through configured channels.
         
-        Uses alert_service and comms_service APIs with circuit breakers.
+        Uses unified entitlement service for final access validation before delivery.
+        Routes through alert_service and comms_service APIs with circuit breakers.
         """
         delivery_config = delivery_config or {}
-        channels = delivery_config.get("channels", ["ui", "telegram"])
+        
+        # CONSOLIDATED: Support both "channel" (singular) and "channels" (plural) for compatibility
+        if "channel" in delivery_config:
+            channels = [delivery_config["channel"]]  # Convert singular to list
+        else:
+            channels = delivery_config.get("channels", ["ui", "telegram"])
+            
         priority = delivery_config.get("priority", "medium")
         
         results = {
             "signal_id": signal_data.get("signal_id"),
             "user_id": user_id,
             "delivery_results": {},
-            "overall_success": True,
+            "success": True,  # CONSOLIDATED: Use standard 'success' key for compatibility
+            "overall_success": True,  # Keep for backward compatibility
             "timestamp": datetime.utcnow().isoformat()
         }
         
         try:
+            # ENTITLEMENT CHECK: Verify delivery access via unified service
+            entitlement_service = await get_unified_entitlement_service()
+            
+            # Determine signal type for entitlement check
+            signal_type = signal_data.get("signal_type", "common")
+            product_id = signal_data.get("product_id")
+            
+            # Check delivery entitlement
+            entitlement_result = await entitlement_service.check_delivery_access(
+                user_id=user_id,
+                signal_type=signal_type,
+                product_id=product_id,
+                subscription_id=signal_data.get("subscription_id")
+            )
+            
+            if not entitlement_result.is_allowed:
+                logger.warning(f"Signal delivery denied for user {user_id}: {entitlement_result.reason}")
+                results["success"] = False
+                results["overall_success"] = False
+                results["error"] = f"Delivery access denied: {entitlement_result.reason}"
+                results["entitlement_error"] = True
+                return results
+            
+            logger.debug(f"Signal delivery authorized for user {user_id} (tier: {entitlement_result.user_tier})")
+            
             # Get user notification preferences first
             preferences = await self._get_user_preferences_with_circuit_breaker(user_id)
             
@@ -91,6 +125,7 @@ class SignalDeliveryService:
                 results["delivery_results"]["alert_service"] = alert_result
                 
                 if not alert_result.get("success", False):
+                    results["success"] = False
                     results["overall_success"] = False
             
             # Deliver email separately through comms_service if enabled
@@ -101,13 +136,19 @@ class SignalDeliveryService:
                 results["delivery_results"]["comms_service"] = email_result
                 
                 if not email_result.get("success", False):
+                    results["success"] = False
                     results["overall_success"] = False
             
-            logger.info(f"Signal delivery completed for user {user_id}: {results['overall_success']}")
+            # Add entitlement metadata to results
+            results["user_tier"] = entitlement_result.user_tier
+            results["entitlement_validated"] = True
+            
+            logger.info(f"Signal delivery completed for user {user_id}: {results['success']}")
             return results
             
         except Exception as e:
             logger.error(f"Signal delivery failed for user {user_id}: {e}")
+            results["success"] = False
             results["overall_success"] = False
             results["error"] = str(e)
             return results

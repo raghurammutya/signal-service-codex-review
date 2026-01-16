@@ -1,10 +1,16 @@
-"""Integration with Calendar, Alert, and Messaging services for Signal Service"""
+"""Integration with Calendar, Alert, and Messaging services for Signal Service
+
+Updated for consolidation: All signal notifications now route through SignalDeliveryService
+for consistent delivery and entitlement checking.
+"""
 
 import asyncio
 import httpx
 from datetime import datetime
 from typing import Dict, Optional, List
 import logging
+
+from app.services.signal_delivery_service import get_signal_delivery_service
 
 logger = logging.getLogger(__name__)
 
@@ -69,86 +75,165 @@ class SignalServiceIntegrations:
         return 9 <= current_hour <= 15
     
     async def send_signal_alert(self, user_id: str, symbol: str, signal_type: str, value: float, threshold: float) -> bool:
-        """Send signal threshold breach alert"""
-        message = f"Signal {signal_type} for {symbol}: {value:.4f} (threshold: {threshold:.4f})"
-        
-        alert_data = {
-            "user_id": user_id,
+        """Send signal threshold breach alert via SignalDeliveryService (CONSOLIDATED)"""
+        # Prepare signal data for unified delivery service
+        signal_data = {
+            "signal_id": f"{symbol}_{signal_type}_{int(datetime.now().timestamp())}",
+            "symbol": symbol,
+            "signal_type": signal_type,
+            "value": value,
+            "threshold": threshold,
+            "message": f"Signal {signal_type} for {symbol}: {value:.4f} (threshold: {threshold:.4f})",
             "alert_type": "SIGNAL_ALERT",
-            "message": message,
-            "priority": "medium",
-            "channels": ["ui"]
+            "timestamp": datetime.now().isoformat()
         }
         
-        result = await self._make_request(
-            "POST",
-            f"{self.alert_base_url}/api/v1/alerts/send",
-            alert_data
-        )
+        delivery_config = {
+            "channels": ["ui", "telegram"],  # Default channels
+            "priority": "medium"
+        }
         
-        if result:
-            logger.debug(f"Signal alert sent: {signal_type} for {symbol} to user {user_id}")
-            return True
-        else:
-            logger.debug(f"Failed to send signal alert: {signal_type} for {symbol}")
+        # Use consolidated SignalDeliveryService
+        try:
+            delivery_service = get_signal_delivery_service()
+            result = await delivery_service.deliver_signal(
+                user_id=user_id,
+                signal_data=signal_data,
+                delivery_config=delivery_config
+            )
+            
+            if result.get("overall_success", False):
+                logger.debug(f"Signal alert delivered: {signal_type} for {symbol} to user {user_id}")
+                return True
+            else:
+                logger.debug(f"Signal alert delivery failed: {signal_type} for {symbol} - {result.get('error', 'Unknown error')}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Signal alert delivery error: {e}")
             return False
     
     async def send_bulk_signal_alerts(self, alerts: List[Dict]) -> int:
-        """Send multiple signal alerts efficiently"""
-        tasks = []
-        for alert in alerts:
-            task = self.send_signal_alert(
-                alert["user_id"],
-                alert["symbol"],
-                alert["signal_type"],
-                alert["value"],
-                alert["threshold"]
-            )
-            tasks.append(task)
+        """Send multiple signal alerts efficiently via SignalDeliveryService (CONSOLIDATED)"""
+        if not alerts:
+            return 0
         
-        if tasks:
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            success_count = sum(1 for r in results if r is True)
-            logger.info(f"Bulk signal alerts: {success_count}/{len(alerts)} sent successfully")
+        try:
+            # Transform alerts into signal delivery format
+            signal_deliveries = []
+            for alert in alerts:
+                signal_data = {
+                    "signal_id": f"{alert['symbol']}_{alert['signal_type']}_{int(datetime.now().timestamp())}",
+                    "symbol": alert["symbol"],
+                    "signal_type": alert["signal_type"], 
+                    "value": alert["value"],
+                    "threshold": alert["threshold"],
+                    "message": f"Signal {alert['signal_type']} for {alert['symbol']}: {alert['value']:.4f} (threshold: {alert['threshold']:.4f})",
+                    "alert_type": "SIGNAL_ALERT",
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                signal_deliveries.append({
+                    "user_id": alert["user_id"],
+                    "signal_data": signal_data,
+                    "channels": ["ui", "telegram"],
+                    "priority": "medium"
+                })
+            
+            # Use consolidated SignalDeliveryService for bulk delivery
+            delivery_service = get_signal_delivery_service()
+            result = await delivery_service.deliver_bulk_signals(signal_deliveries)
+            
+            # Extract success count from result
+            success_count = 0
+            if result.get("bulk_delivery") and result.get("results"):
+                # Count successful deliveries across services
+                for service_result in result["results"].values():
+                    if isinstance(service_result, dict) and service_result.get("success_count"):
+                        success_count += service_result["success_count"]
+                    elif isinstance(service_result, dict) and service_result.get("successful"):
+                        success_count += len(service_result["successful"])
+            
+            logger.info(f"Bulk signal alerts: {success_count}/{len(alerts)} delivered successfully")
             return success_count
-        return 0
+            
+        except Exception as e:
+            logger.error(f"Bulk signal delivery error: {e}")
+            return 0
     
     async def notify_signal_computation_complete(self, user_id: str, symbol: str, indicators: List[str]) -> bool:
-        """Notify user when signal computation is complete"""
-        message = f"Signal computation complete for {symbol}: {', '.join(indicators)}"
-        
-        message_data = {
-            "recipient": user_id,
-            "message": message,
-            "message_type": "SIGNAL_UPDATE",
-            "delivery_method": "async"
+        """Notify user when signal computation is complete via SignalDeliveryService (CONSOLIDATED)"""
+        # Prepare signal data for unified delivery
+        signal_data = {
+            "signal_id": f"{symbol}_computation_complete_{int(datetime.now().timestamp())}",
+            "symbol": symbol,
+            "signal_type": "computation_complete",
+            "indicators": indicators,
+            "message": f"Signal computation complete for {symbol}: {', '.join(indicators)}",
+            "alert_type": "SIGNAL_UPDATE",
+            "timestamp": datetime.now().isoformat()
         }
         
-        result = await self._make_request(
-            "POST",
-            f"{self.messaging_base_url}/api/v1/messages/send",
-            message_data
-        )
+        delivery_config = {
+            "channels": ["ui"],  # Computation complete notifications are typically UI-only
+            "priority": "low"
+        }
         
-        return result is not None
+        # Use consolidated SignalDeliveryService
+        try:
+            delivery_service = get_signal_delivery_service()
+            result = await delivery_service.deliver_signal(
+                user_id=user_id,
+                signal_data=signal_data,
+                delivery_config=delivery_config
+            )
+            
+            return result.get("overall_success", False)
+            
+        except Exception as e:
+            logger.error(f"Signal computation notification error: {e}")
+            return False
     
     async def send_system_signal_alert(self, message: str, priority: str = "medium") -> bool:
-        """Send system-wide signal processing alert"""
-        alert_data = {
-            "user_id": "system",
-            "alert_type": "SIGNAL_SYSTEM",
-            "message": message,
-            "priority": priority,
-            "channels": ["ui"]
-        }
-        
-        result = await self._make_request(
-            "POST",
-            f"{self.alert_base_url}/api/v1/alerts/send",
-            alert_data
-        )
-        
-        return result is not None
+        """CONSOLIDATED: Send system-wide signal processing alert through SignalDeliveryService"""
+        try:
+            from app.services.signal_delivery_service import get_signal_delivery_service
+            
+            delivery_service = get_signal_delivery_service()
+            
+            # Transform to signal delivery format
+            signal_data = {
+                "signal_type": "system_alert",
+                "alert_type": "SIGNAL_SYSTEM", 
+                "message": message,
+                "priority": priority,
+                "timestamp": datetime.utcnow().isoformat(),
+                "source": "signal_processing_system"
+            }
+            
+            delivery_config = {
+                "channels": ["ui"],
+                "message": message,
+                "priority": priority,
+                "metadata": {
+                    "alert_type": "SIGNAL_SYSTEM",
+                    "system_wide": True
+                }
+            }
+            
+            # Send through unified delivery service
+            # Use a special system user ID for system-wide alerts
+            result = await delivery_service.deliver_signal(
+                user_id="system",  # Special system user for system alerts
+                signal_data=signal_data,
+                delivery_config=delivery_config
+            )
+            
+            return result.get("success", False)
+            
+        except Exception as e:
+            logger.error(f"System signal alert failed: {e}")
+            return False
     
     async def schedule_signal_computation(self, computation_data: Dict) -> bool:
         """Schedule signal computation for next trading session"""
@@ -167,24 +252,40 @@ class SignalServiceIntegrations:
         return result is not None
     
     async def send_threshold_breach_alert(self, user_id: str, symbol: str, indicator: str, current_value: float, threshold: float, direction: str) -> bool:
-        """Send specific threshold breach alert"""
-        message = f"THRESHOLD BREACH: {indicator} for {symbol} is {current_value:.4f} ({direction} threshold {threshold:.4f})"
-        
-        alert_data = {
-            "user_id": user_id,
+        """Send specific threshold breach alert via SignalDeliveryService (CONSOLIDATED)"""
+        # Prepare signal data for unified delivery
+        signal_data = {
+            "signal_id": f"{symbol}_{indicator}_breach_{int(datetime.now().timestamp())}",
+            "symbol": symbol,
+            "indicator": indicator,
+            "signal_type": "threshold_breach",
+            "current_value": current_value,
+            "threshold": threshold,
+            "direction": direction,
+            "message": f"THRESHOLD BREACH: {indicator} for {symbol} is {current_value:.4f} ({direction} threshold {threshold:.4f})",
             "alert_type": "THRESHOLD_BREACH",
-            "message": message,
-            "priority": "high",
-            "channels": ["ui", "email"]
+            "timestamp": datetime.now().isoformat()
         }
         
-        result = await self._make_request(
-            "POST",
-            f"{self.alert_base_url}/api/v1/alerts/send",
-            alert_data
-        )
+        delivery_config = {
+            "channels": ["ui", "email", "telegram"],  # High priority - multiple channels
+            "priority": "high"
+        }
         
-        return result is not None
+        # Use consolidated SignalDeliveryService
+        try:
+            delivery_service = get_signal_delivery_service()
+            result = await delivery_service.deliver_signal(
+                user_id=user_id,
+                signal_data=signal_data,
+                delivery_config=delivery_config
+            )
+            
+            return result.get("overall_success", False)
+            
+        except Exception as e:
+            logger.error(f"Threshold breach alert delivery error: {e}")
+            return False
 
 
 # Global service integration instance

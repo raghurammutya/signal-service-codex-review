@@ -207,11 +207,10 @@ class ConfigHandler:
                 if config_key not in self.active_tasks:
                     break
                 
-                # Execute computations (this would be called via signal processor)
                 log_info(f"Executing periodic computation for {config_key}")
                 
-                # Note: Actual computation execution will be handled by SignalProcessor
-                # This is just the scheduling mechanism
+                # Trigger actual computation via SignalProcessor
+                await self._trigger_computation(config)
                 
             except asyncio.CancelledError:
                 log_info(f"Periodic task cancelled for {config_key}")
@@ -234,7 +233,8 @@ class ConfigHandler:
                 current_time = datetime.now()
                 if self.is_market_close_time(current_time):
                     log_info(f"Executing on-close computation for {config_key}")
-                    # Execute computation
+                    # Trigger actual computation via SignalProcessor
+                    await self._trigger_computation(config)
                     
             except asyncio.CancelledError:
                 log_info(f"On-close task cancelled for {config_key}")
@@ -256,6 +256,66 @@ class ConfigHandler:
             
             del self.active_tasks[config_key]
             log_info(f"Cancelled tasks for {config_key}")
+    
+    async def _trigger_computation(self, config: SignalConfigData):
+        """Trigger actual signal computation for a configuration"""
+        try:
+            # Import here to avoid circular dependencies
+            from app.services.signal_processor import get_signal_processor
+            
+            # Get signal processor instance
+            processor = await get_signal_processor()
+            
+            # Trigger computation based on actual config fields (not signal_type which doesn't exist)
+            if config.option_greeks:
+                # Trigger Greeks calculation using actual method
+                result = await processor.compute_greeks_for_instrument(
+                    instrument_key=config.instrument_key
+                )
+                log_info(f"Triggered Greeks computation for {config.instrument_key}: {result is not None}")
+                
+            if config.technical_indicators:
+                # Trigger indicator calculation using actual method  
+                # Convert TechnicalIndicatorConfig objects to dict format expected by processor
+                indicators = []
+                for indicator_config in config.technical_indicators:
+                    indicators.append({
+                        "name": indicator_config.name,
+                        "params": indicator_config.parameters
+                    })
+                
+                result = await processor.compute_indicators_for_instrument(
+                    instrument_key=config.instrument_key,
+                    indicators=indicators
+                )
+                log_info(f"Triggered indicator computation for {config.instrument_key}: {result is not None}")
+                
+            if config.external_functions:
+                # Trigger external function execution using SignalProcessor's existing method
+                from app.schemas.config_schema import TickProcessingContext
+                
+                # External functions require real market data for proper execution
+                # Get latest market data - fail fast if unavailable (no synthetic fallback)
+                market_data = await processor._get_latest_market_data(config.instrument_key)
+                if not market_data:
+                    log_error(f"No market data available for external function execution: {config.instrument_key}")
+                    log_warning(f"Skipping {len(config.external_functions)} external functions due to missing market data")
+                else:
+                    context = TickProcessingContext(
+                        tick_data=market_data,  # Required field - only real data
+                        instrument_key=config.instrument_key,
+                        timestamp=datetime.utcnow()
+                    )
+                    
+                    result = await processor.compute_external_functions(config, context)
+                    log_info(f"Triggered external function computation for {config.instrument_key}: {result is not None}")
+                
+            if not config.option_greeks and not config.technical_indicators and not config.external_functions:
+                log_warning(f"No computation types configured for {config.instrument_key}")
+                
+        except Exception as e:
+            log_exception(f"Failed to trigger computation for {config.instrument_key}: {e}")
+            raise
     
     async def get_active_configs(self) -> Dict[str, Dict]:
         """Get all active configurations"""

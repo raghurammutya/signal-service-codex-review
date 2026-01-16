@@ -249,7 +249,13 @@ class FlexibleTimeframeManager:
         start_time: datetime,
         end_time: datetime
     ) -> List[Dict[str, Any]]:
-        """Get 1-minute base data from database"""
+        """
+        Get 1-minute base data from database.
+        
+        NOTE: This reads computed signal data (Greeks, indicators) from TimescaleDB,
+        not historical market data. Market data comes from ticker_service.
+        If policy requires NO TimescaleDB reads, this needs refactoring to cache/API approach.
+        """
         try:
             table_map = {
                 "greeks": "signal_greeks",

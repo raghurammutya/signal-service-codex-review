@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field, validator
 import asyncio
+import time
 from datetime import datetime
 
 from app.security.sandbox_enhancements import get_enhanced_sandbox
@@ -16,6 +17,7 @@ from app.security.sandbox_config import (
 )
 from app.utils.logging_utils import log_info, log_warning, log_exception
 from app.errors import SecurityError, ExternalFunctionExecutionError
+from app.core.auth.gateway_trust import get_current_user_from_gateway
 
 router = APIRouter(prefix="/custom-scripts", tags=["custom-scripts"])
 
@@ -75,7 +77,8 @@ class ScriptValidationResponse(BaseModel):
 @router.post("/execute", response_model=ScriptExecutionResponse)
 async def execute_script(
     request: ScriptExecutionRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    current_user: Dict[str, str] = Depends(get_current_user_from_gateway)
 ) -> ScriptExecutionResponse:
     """
     Execute custom Python script with enhanced sandboxing
@@ -91,14 +94,20 @@ async def execute_script(
     execution_start = datetime.utcnow()
     
     try:
-        log_info(f"Executing custom script: function={request.function_name}, tier={request.user_tier}")
+        # Get user tier from entitlement service instead of trusting user input
+        from app.services.unified_entitlement_service import get_unified_entitlement_service
+        entitlement_service = await get_unified_entitlement_service()
+        user_data = await entitlement_service._get_user_entitlements(current_user["user_id"])
+        actual_user_tier = user_data.get("tier", "free") if user_data else "free"
         
-        # Create sandbox configuration
-        security_level = request.security_level or get_security_level_for_user(request.user_tier).value
+        log_info(f"Executing custom script: function={request.function_name}, tier={actual_user_tier} (verified)")
+        
+        # Create sandbox configuration using verified tier
+        security_level = request.security_level or get_security_level_for_user(actual_user_tier).value
         
         sandbox_config = create_sandbox_config(
             environment=request.environment,
-            user_tier=request.user_tier,
+            user_tier=actual_user_tier,  # Use verified tier instead of user input
             custom_overrides=request.custom_limits
         )
         
@@ -117,10 +126,21 @@ async def execute_script(
         
         execution_time = (datetime.utcnow() - execution_start).total_seconds()
         
+        # Publish results to signal stream contract if output should behave like indicators
+        if request.input_data.get("publish_to_stream", True) and request.input_data.get("instrument_key"):
+            background_tasks.add_task(
+                _publish_script_results_to_stream,
+                result,
+                request.function_name,
+                request.input_data.get("instrument_key"),
+                actual_user_tier,  # Use verified tier instead of user input
+                current_user["user_id"]  # Use gateway-authenticated user ID (trusted)
+            )
+        
         # Log successful execution in background
         background_tasks.add_task(
             _log_execution_audit,
-            request.user_tier,
+            actual_user_tier,  # Use verified tier instead of user input
             request.function_name,
             execution_time,
             sandbox_config['security_level'],
@@ -485,3 +505,79 @@ def _get_isolation_method(policy: Dict[str, Any]) -> str:
         return 'cgroups_v2'
     else:
         return 'process_limits'
+
+
+async def _publish_script_results_to_stream(
+    result: Dict[str, Any],
+    function_name: str,
+    instrument_key: Optional[str],
+    user_tier: str,
+    user_id: str
+):
+    """Publish custom script results to signal stream contract like indicators"""
+    try:
+        if not result or not instrument_key:
+            log_warning("Skipping stream publish: missing result data or instrument_key")
+            return
+        
+        # Import here to avoid circular dependencies
+        from app.services.signal_delivery_service import get_signal_delivery_service
+        from app.services.signal_stream_contract import StreamKeyFormat
+        from app.utils.redis import get_redis_client
+        
+        # Create proper stream key using personal signal format from stream contract
+        signal_id = f"custom_script_{function_name}"
+        stream_key = StreamKeyFormat.create_personal_key(
+            user_id=user_id,
+            signal_id=signal_id,
+            instrument=instrument_key,
+            params={"function": function_name}
+        )
+        
+        # Create signal data matching indicator format
+        signal_data = {
+            "signal_id": f"{signal_id}_{int(time.time())}",
+            "signal_type": "personal",  # Use correct signal type from stream contract
+            "instrument_key": instrument_key,
+            "function_name": function_name,
+            "result": result,
+            "timestamp": datetime.utcnow().isoformat(),
+            "source": "custom_script_execution",
+            "user_tier": user_tier,
+            "user_id": user_id
+        }
+        
+        # Publish to Redis streams using proper stream key format
+        redis_client = await get_redis_client()
+        
+        await redis_client.xadd(
+            stream_key,
+            signal_data
+        )
+        
+        # Deliver to the script owner only (not system-wide broadcast)
+        delivery_service = get_signal_delivery_service()
+        
+        # Create delivery config for personal custom signal
+        delivery_config = {
+            "channels": ["ui", "webhook"],  # Default channels for custom signals
+            "priority": "medium",
+            "metadata": {
+                "signal_origin": "custom_script",
+                "function_name": function_name,
+                "personal_signal": True
+            }
+        }
+        
+        # Deliver to the script owner only
+        delivery_result = await delivery_service.deliver_signal(
+            user_id=user_id,  # Deliver to script owner, not system
+            signal_data=signal_data,
+            delivery_config=delivery_config
+        )
+        
+        log_info(f"Published custom script results to personal stream: {stream_key}, delivery_success: {delivery_result.get('success', False)}")
+        
+    except Exception as e:
+        log_exception(f"Failed to publish script results to stream: {e}")
+        # Don't raise - this is a background task

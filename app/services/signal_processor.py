@@ -336,33 +336,37 @@ class SignalProcessor:
                 
                 for symbol in symbols:
                     try:
-                        # Create processing context for the symbol
+                        # Get real market data - fail fast if unavailable (no synthetic fallback)
+                        market_data = await self._get_latest_market_data(symbol)
+                        if not market_data:
+                            log_error(f"No market data available for technical indicators: {symbol}")
+                            continue  # Skip this symbol
+                        
+                        # Create processing context for the symbol using real market data
                         context = TickProcessingContext(
+                            tick_data=market_data,  # Required field - only real data
                             instrument_key=symbol,
-                            tick_data={"price": 100.0, "timestamp": datetime.utcnow()},  # Minimal tick
-                            timestamp=datetime.utcnow(),
-                            aggregated_data=None
+                            timestamp=datetime.utcnow()
                         )
                         
                         # Create basic configuration for indicators
-                        from app.schemas.config_schema import SignalConfigData, TechnicalIndicatorConfig
+                        from app.schemas.config_schema import SignalConfigData, TechnicalIndicatorConfig, IntervalType, FrequencyType
                         
-                        # Convert indicators list to proper config format
+                        # Convert indicators list to proper config format using correct schema fields
                         indicator_configs = []
                         for indicator_dict in indicators:
                             indicator_config = TechnicalIndicatorConfig(
-                                indicator=indicator_dict.get('indicator', 'sma'),
+                                name=indicator_dict.get('indicator', 'sma'),  # Correct field name
                                 parameters=indicator_dict.get('parameters', {}),
-                                interval=indicator_dict.get('interval', '5m')
+                                output_key=indicator_dict.get('indicator', 'sma')  # Required field
                             )
                             indicator_configs.append(indicator_config)
                         
                         config_data = SignalConfigData(
-                            signal_id=f"ta_{symbol}",
-                            technical_indicators=indicator_configs,
-                            external_functions=[],
-                            symbol_filters=[],
-                            timeframe_configs=[]
+                            instrument_key=symbol,  # Required field
+                            interval=IntervalType.FIVE_MINUTE,  # Required field
+                            frequency=FrequencyType.EVERY_MINUTE,  # Required field
+                            technical_indicators=indicator_configs
                         )
                         
                         # Execute technical indicators
@@ -375,13 +379,13 @@ class SignalProcessor:
                                     if ta_result:
                                         results.append({
                                             "symbol": symbol,
-                                            "indicator": indicator_config.indicator,
+                                            "indicator": indicator_config.name,
                                             "result": ta_result,
                                             "timestamp": datetime.utcnow().isoformat()
                                         })
                                         computed_count += 1
                                 except Exception as e:
-                                    log_warning(f"Failed to compute {indicator_config.indicator} for {symbol}: {e}")
+                                    log_warning(f"Failed to compute {indicator_config.name} for {symbol}: {e}")
                                         
                     except Exception as e:
                         log_warning(f"Failed to process symbol {symbol}: {e}")
@@ -792,15 +796,15 @@ class SignalProcessor:
                 if cached_data:
                     aggregated_data[interval] = json.loads(cached_data)
                 else:
-                    # Fetch from TimescaleDB
-                    db_data = await self.fetch_from_timescaledb(instrument_key, interval)
-                    if db_data:
-                        aggregated_data[interval] = db_data
+                    # CONSOLIDATED: Fetch from ticker_service instead of direct TimescaleDB
+                    ticker_data = await self.fetch_from_ticker_service(instrument_key, interval)
+                    if ticker_data:
+                        aggregated_data[interval] = ticker_data
                         # Cache for future use
                         await self.redis_client.setex(
                             cache_key, 
                             settings.CACHE_TTL_SECONDS, 
-                            json.dumps(db_data)
+                            json.dumps(ticker_data)
                         )
             
             return aggregated_data if aggregated_data else None
@@ -809,18 +813,48 @@ class SignalProcessor:
             log_exception(f"Failed to get aggregated data for {instrument_key}: {e}")
             return None
     
-    async def fetch_from_timescaledb(self, instrument_key: str, interval: str) -> Optional[Dict]:
-        """Fetch data from TimescaleDB"""
+    async def fetch_from_ticker_service(self, instrument_key: str, interval: str) -> Optional[Dict]:
+        """CONSOLIDATED: Fetch data from ticker_service instead of direct TimescaleDB"""
         try:
-            # Implementation depends on TimescaleDB schema
-            # This is a placeholder for the actual implementation
-            log_info(f"Fetching data from TimescaleDB: {instrument_key}, {interval}")
+            from app.services.historical_data_manager import get_historical_data_manager
+            
+            historical_manager = await get_historical_data_manager()
+            if not historical_manager:
+                log_error("Historical data manager not available")
+                return None
+            
+            # Map interval to timeframe
+            timeframe_map = {
+                "1m": "1minute",
+                "5m": "5minute", 
+                "15m": "15minute",
+                "1h": "1hour",
+                "1d": "1day"
+            }
+            timeframe = timeframe_map.get(interval, "5minute")
+            
+            # Request from ticker_service
+            result = await historical_manager.get_historical_data_for_indicator(
+                symbol=instrument_key,
+                timeframe=timeframe,
+                periods_required=100,  # Get last 100 periods for aggregation
+                indicator_name="ohlcv"
+            )
+            
+            if result.get("success") and result.get("data"):
+                # Transform to expected format
+                return {
+                    "data": result["data"],
+                    "timeframe": timeframe,
+                    "source": "ticker_service"
+                }
+            
+            log_warning(f"No data available from ticker_service for {instrument_key}:{interval}")
             return None
             
         except Exception as e:
-            error = handle_data_access_error(e, "fetch", "timescaledb")
-            log_exception(f"TimescaleDB fetch failed: {error}")
-            raise error
+            log_error(f"Error fetching data from ticker_service: {e}")
+            return None
     
     async def compute_greeks(self, config: SignalConfigData, context: TickProcessingContext) -> Dict:
         """Compute option Greeks"""
@@ -952,16 +986,27 @@ class SignalProcessor:
                 return await self._compute_moneyness_greeks_local(instrument_key)
                 
             # Regular Greeks
+            # Get market data - fail fast if unavailable (no synthetic fallback)
+            market_data = await self._get_latest_market_data(instrument_key)
+            if not market_data:
+                log_error(f"No market data available for Greeks computation: {instrument_key}")
+                return None
+            
             context = TickProcessingContext(
+                tick_data=market_data,  # Required field - only real data
                 instrument_key=instrument_key,
-                timestamp=datetime.utcnow(),
-                market_data=await self._get_latest_market_data(instrument_key)
+                timestamp=datetime.utcnow()
             )
+            
+            # Import schema classes for proper construction
+            from app.schemas.config_schema import SignalConfigData, OptionGreeksConfig, IntervalType, FrequencyType
             
             result = await self.compute_greeks(
                 SignalConfigData(
                     instrument_key=instrument_key,
-                    option_greeks=True
+                    interval=IntervalType.ONE_MINUTE,  # Required field
+                    frequency=FrequencyType.EVERY_MINUTE,  # Required field
+                    option_greeks=OptionGreeksConfig(enabled=True)  # Proper config object
                 ),
                 context
             )
@@ -1043,16 +1088,36 @@ class SignalProcessor:
     ) -> Optional[Dict]:
         """Compute indicators for a single instrument"""
         try:
+            # Get market data - fail fast if unavailable (no synthetic fallback)
+            market_data = await self._get_latest_market_data(instrument_key)
+            if not market_data:
+                log_error(f"No market data available for indicators computation: {instrument_key}")
+                return None
+            
             context = TickProcessingContext(
+                tick_data=market_data,  # Required field - only real data
                 instrument_key=instrument_key,
-                timestamp=datetime.utcnow(),
-                market_data=await self._get_latest_market_data(instrument_key)
+                timestamp=datetime.utcnow()
             )
+            
+            # Import schema classes for proper construction
+            from app.schemas.config_schema import SignalConfigData, TechnicalIndicatorConfig, IntervalType, FrequencyType
+            
+            # Convert indicators to proper TechnicalIndicatorConfig objects
+            indicator_configs = []
+            for indicator in indicators:
+                indicator_configs.append(TechnicalIndicatorConfig(
+                    name=indicator["name"],
+                    parameters=indicator.get("params", {}),
+                    output_key=indicator.get("output_key", indicator["name"])
+                ))
             
             result = await self.compute_technical_indicators(
                 SignalConfigData(
                     instrument_key=instrument_key,
-                    technical_indicators=indicators
+                    interval=IntervalType.ONE_MINUTE,  # Required field
+                    frequency=FrequencyType.EVERY_MINUTE,  # Required field
+                    technical_indicators=indicator_configs
                 ),
                 context
             )
@@ -1073,14 +1138,9 @@ class SignalProcessor:
             if data:
                 return json.loads(data)
                 
-            # Fallback to mock data
-            return {
-                'last_price': 100.0,
-                'bid': 99.95,
-                'ask': 100.05,
-                'volume': 10000,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # No fallback to mock data - fail fast if real data unavailable
+            log_warning(f"No latest market data available for {instrument_key}")
+            return None
             
         except Exception as e:
             log_error(f"Error getting market data for {instrument_key}: {e}")
@@ -1113,3 +1173,23 @@ class SignalProcessor:
         except Exception as e:
             log_warning(f"Failed to get memory usage: {e}")
             return 0.0
+
+
+# Global singleton instance and lock
+_signal_processor_instance = None
+_signal_processor_lock = asyncio.Lock()
+
+
+async def get_signal_processor() -> SignalProcessor:
+    """Get global signal processor singleton instance with thread safety."""
+    global _signal_processor_instance
+    
+    if _signal_processor_instance is None:
+        async with _signal_processor_lock:
+            # Double-check pattern to avoid race conditions
+            if _signal_processor_instance is None:
+                _signal_processor_instance = SignalProcessor()
+                # Initialize with minimal state for shared usage
+                await _signal_processor_instance.initialize(app_state=None)
+    
+    return _signal_processor_instance

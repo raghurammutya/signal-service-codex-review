@@ -1,6 +1,9 @@
 """
 Signal Repository for Database Operations
 Handles all database interactions for signal data
+
+Updated for consolidation: Historical data queries now route through ticker_service
+for consistent data sourcing. Only current/live signal data is stored locally.
 """
 import asyncio
 from typing import List, Dict, Optional, Any, Tuple
@@ -11,6 +14,7 @@ from decimal import Decimal
 import logging
 logger = logging.getLogger(__name__)
 from common.storage.database import get_timescaledb_session
+from app.services.historical_data_manager import get_historical_data_manager
 # from app.models.signal_models import SignalGreeks, SignalIndicators
 # TODO: Add signal models when available
 
@@ -258,7 +262,7 @@ class SignalRepository:
         interval_minutes: int = 1
     ) -> List[Dict[str, Any]]:
         """
-        Get historical Greeks data with optional aggregation
+        Get historical Greeks data - routes through ticker_service (CONSOLIDATED)
         
         Args:
             instrument_key: Instrument identifier
@@ -267,70 +271,78 @@ class SignalRepository:
             interval_minutes: Aggregation interval in minutes
             
         Returns:
-            List of Greeks data points
+            List of Greeks data points from ticker_service
         """
-        await self.ensure_initialized()
-        
         try:
-            async with self.db_connection.acquire() as conn:
-                if interval_minutes == 1:
-                    # Raw data
-                    results = await conn.fetch(
-                        """
-                        SELECT
-                            id,
-                            signal_id,
-                            instrument_key,
-                            timestamp,
-                            delta,
-                            gamma,
-                            theta,
-                            vega,
-                            rho,
-                            implied_volatility,
-                            theoretical_value,
-                            underlying_price,
-                            strike_price,
-                            time_to_expiry
-                        FROM signal_greeks
-                        WHERE instrument_key = $1
-                          AND timestamp >= $2
-                          AND timestamp <= $3
-                        ORDER BY timestamp
-                        """,
-                        instrument_key,
-                        start_time,
-                        end_time,
-                    )
-                else:
-                    # Aggregated data
-                    results = await conn.fetch("""
-                        SELECT 
-                            time_bucket($4::interval, timestamp) as bucket,
-                            instrument_key,
-                            AVG(delta) as delta,
-                            AVG(gamma) as gamma,
-                            AVG(theta) as theta,
-                            AVG(vega) as vega,
-                            AVG(rho) as rho,
-                            AVG(implied_volatility) as implied_volatility,
-                            AVG(theoretical_value) as theoretical_value,
-                            AVG(underlying_price) as underlying_price,
-                            LAST(strike_price, timestamp) as strike_price,
-                            COUNT(*) as data_points
-                        FROM signal_greeks
-                        WHERE instrument_key = $1
-                          AND timestamp >= $2
-                          AND timestamp <= $3
-                        GROUP BY bucket, instrument_key
-                        ORDER BY bucket
-                    """, instrument_key, start_time, end_time, f'{interval_minutes} minutes')
-                    
-                return [dict(row) for row in results]
+            # Route through ticker_service for historical data
+            historical_manager = await get_historical_data_manager()
+            if not historical_manager:
+                logger.error("Historical data manager not available for Greeks data")
+                return []
+            
+            # Calculate timeframe from interval
+            timeframe_map = {
+                1: "1minute",
+                5: "5minute", 
+                15: "15minute",
+                30: "30minute",
+                60: "1hour"
+            }
+            timeframe = timeframe_map.get(interval_minutes, "5minute")
+            
+            # Calculate periods needed
+            time_diff = end_time - start_time
+            periods_needed = max(int(time_diff.total_seconds() / (interval_minutes * 60)), 1)
+            
+            # Request from ticker_service
+            result = await historical_manager.get_historical_data_for_indicator(
+                symbol=instrument_key,
+                timeframe=timeframe,
+                periods_required=periods_needed,
+                indicator_name="greeks"
+            )
+            
+            if result.get("success") and result.get("data"):
+                # Transform ticker_service data to expected format
+                historical_data = []
+                for data_point in result["data"]:
+                    # Convert ticker_service format to repository format
+                    historical_data.append({
+                        "id": f"historical_{len(historical_data)}",
+                        "signal_id": None,
+                        "instrument_key": instrument_key,
+                        "timestamp": datetime.fromisoformat(data_point.get("timestamp", start_time.isoformat())),
+                        "delta": data_point.get("delta", 0.0),
+                        "gamma": data_point.get("gamma", 0.0),
+                        "theta": data_point.get("theta", 0.0),
+                        "vega": data_point.get("vega", 0.0),
+                        "rho": data_point.get("rho", 0.0),
+                        "implied_volatility": data_point.get("iv", 0.0),
+                        "theoretical_value": data_point.get("theoretical_value", 0.0),
+                        "underlying_price": data_point.get("underlying_price", 0.0),
+                        "strike_price": data_point.get("strike_price", 0.0),
+                        "time_to_expiry": data_point.get("time_to_expiry", 0.0),
+                        "source": "ticker_service"
+                    })
                 
+                # Filter to exact time range
+                filtered_data = [
+                    item for item in historical_data 
+                    if start_time <= item["timestamp"] <= end_time
+                ]
+                
+                logger.info(f"Retrieved {len(filtered_data)} historical Greeks from ticker_service")
+                return filtered_data
+            
+            # STRICT COMPLIANCE: No TimescaleDB fallback - ticker_service is the only source
+            logger.error(f"ticker_service unavailable for {instrument_key}, no historical data available")
+            return []
+            
         except Exception as e:
-            logger.exception(f"Error getting historical Greeks: {e}")
-            raise DatabaseError(f"Failed to fetch historical Greeks for {instrument_key}: {e}") from e
+            logger.error(f"Error getting historical Greeks from ticker_service: {e}")
+            # STRICT COMPLIANCE: Fail without TimescaleDB fallback
+            return []
+    
             
     # Indicators Operations
     
@@ -615,3 +627,83 @@ class SignalRepository:
 
         except Exception as e:
             logger.exception("Error cleaning up old data: %s", e)
+    
+    async def get_moneyness_history(
+        self,
+        underlying: str,
+        moneyness_level: str,
+        expiry_date: str,
+        start_time: datetime,
+        end_time: datetime
+    ) -> List[Dict[str, Any]]:
+        """
+        Get moneyness historical data - routes through ticker_service (CONSOLIDATED)
+        
+        Args:
+            underlying: Underlying symbol
+            moneyness_level: Moneyness level (ATM, OTM, etc.)
+            expiry_date: Option expiry date
+            start_time: Start time
+            end_time: End time
+            
+        Returns:
+            List of moneyness historical data from ticker_service
+        """
+        try:
+            # Route through ticker_service for moneyness historical data
+            historical_manager = await get_historical_data_manager()
+            if not historical_manager:
+                logger.error("Historical data manager not available for moneyness data")
+                return []
+            
+            # Create virtual symbol for moneyness data
+            symbol = f"{underlying}_{moneyness_level}_{expiry_date}"
+            
+            # Calculate periods needed
+            time_diff = end_time - start_time
+            periods_needed = max(int(time_diff.total_seconds() / 300), 1)  # 5-minute intervals
+            
+            # Request from ticker_service
+            result = await historical_manager.get_historical_data_for_indicator(
+                symbol=symbol,
+                timeframe="5minute",
+                periods_required=periods_needed,
+                indicator_name="moneyness_greeks"
+            )
+            
+            if result.get("success") and result.get("data"):
+                # Transform ticker_service data to expected format
+                moneyness_data = []
+                for data_point in result["data"]:
+                    moneyness_data.append({
+                        "timestamp": datetime.fromisoformat(data_point.get("timestamp", start_time.isoformat())),
+                        "underlying": underlying,
+                        "moneyness_level": moneyness_level,
+                        "expiry_date": expiry_date,
+                        "greeks": {
+                            "delta": data_point.get("delta", 0.0),
+                            "gamma": data_point.get("gamma", 0.0),
+                            "theta": data_point.get("theta", 0.0),
+                            "vega": data_point.get("vega", 0.0),
+                            "rho": data_point.get("rho", 0.0),
+                            "iv": data_point.get("iv", 0.0)
+                        },
+                        "source": "ticker_service"
+                    })
+                
+                # Filter to time range
+                filtered_data = [
+                    item for item in moneyness_data 
+                    if start_time <= item["timestamp"] <= end_time
+                ]
+                
+                logger.info(f"Retrieved {len(filtered_data)} moneyness historical points from ticker_service")
+                return filtered_data
+            
+            # If ticker_service unavailable, return empty (no local fallback for moneyness)
+            logger.warning(f"ticker_service unavailable for moneyness data: {underlying}_{moneyness_level}")
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error getting moneyness history from ticker_service: {e}")
+            return []
