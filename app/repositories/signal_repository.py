@@ -64,12 +64,14 @@ class DatabaseSessionContext:
         
         result = await self.session.execute(text(converted_query), param_dict)
         
-        # Commit if this is a write operation
+        # Fetch the row first (especially important for RETURNING clauses)
+        row = result.fetchone()
+        
+        # Commit after fetching to avoid ResourceClosedError
         query_upper = query.strip().upper()
         if query_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
             await self.session.commit()
         
-        row = result.fetchone()
         return dict(row._mapping) if row else None
     
     async def fetch(self, query, *params):
@@ -88,12 +90,15 @@ class DatabaseSessionContext:
             
         result = await self.session.execute(text(converted_query), param_dict)
         
-        # Commit if this is a write operation
+        # Fetch all rows first (especially important for RETURNING clauses)
+        rows = [dict(row._mapping) for row in result]
+        
+        # Commit after fetching to avoid ResourceClosedError
         query_upper = query.strip().upper()
         if query_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
             await self.session.commit()
             
-        return [dict(row._mapping) for row in result]
+        return rows
     
     async def execute(self, query, *params):
         """Execute query (asyncpg compatibility)"""

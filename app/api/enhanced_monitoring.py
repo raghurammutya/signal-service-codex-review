@@ -66,34 +66,52 @@ class EnhancedMonitoringService:
     @property
     def health_checker(self):
         """Lazy load health checker to avoid import-time crashes"""
-        if not self._health_checker_initialized:
+        # Only cache successful results, retry if None or exception
+        if self._health_checker is None:
             try:
-                self._health_checker = get_health_checker() if health_checker_available else None
+                if health_checker_available:
+                    checker = get_health_checker()
+                    if checker is not None:
+                        self._health_checker = checker
+                        self._health_checker_initialized = True
+                    # If None, don't cache - retry next time
             except Exception:
-                self._health_checker = None
-            self._health_checker_initialized = True
+                # Don't cache exceptions - retry next time
+                pass
         return self._health_checker
     
     @property  
     def circuit_breaker_manager(self):
         """Lazy load circuit breaker manager"""
-        if not self._circuit_breaker_initialized:
+        # Only cache successful results, retry if None or exception
+        if self._circuit_breaker_manager is None:
             try:
-                self._circuit_breaker_manager = get_circuit_breaker_manager() if circuit_breaker_available else None
+                if circuit_breaker_available:
+                    manager = get_circuit_breaker_manager()
+                    if manager is not None:
+                        self._circuit_breaker_manager = manager
+                        self._circuit_breaker_initialized = True
+                    # If None, don't cache - retry next time
             except Exception:
-                self._circuit_breaker_manager = None
-            self._circuit_breaker_initialized = True
+                # Don't cache exceptions - retry next time
+                pass
         return self._circuit_breaker_manager
         
     @property
     def metrics_collector(self):
         """Lazy load metrics collector"""
-        if not self._metrics_collector_initialized:
+        # Only cache successful results, retry if None or exception  
+        if self._metrics_collector is None:
             try:
-                self._metrics_collector = get_enhanced_metrics_collector() if enhanced_metrics_available else None
+                if enhanced_metrics_available:
+                    collector = get_enhanced_metrics_collector()
+                    if collector is not None:
+                        self._metrics_collector = collector
+                        self._metrics_collector_initialized = True
+                    # If None, don't cache - retry next time
             except Exception:
-                self._metrics_collector = None
-            self._metrics_collector_initialized = True
+                # Don't cache exceptions - retry next time
+                pass
         return self._metrics_collector
         
     def get_available_components(self):
