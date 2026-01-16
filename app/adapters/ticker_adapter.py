@@ -205,7 +205,10 @@ class EnhancedTickerAdapter:
             )
             
             self.base_url = base_url or config_client.get_service_url('ticker_service')
-            internal_api_key = config_client.get_config('INTERNAL_API_KEY', required=True)
+            internal_api_key = config_client.get_config('INTERNAL_API_KEY')
+            
+            if not internal_api_key:
+                raise RuntimeError("INTERNAL_API_KEY not found in config_service. Required for ticker_service authentication.")
             
         except Exception as e:
             raise RuntimeError(f"Failed to get ticker_service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")

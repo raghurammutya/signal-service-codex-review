@@ -209,6 +209,38 @@ class InstrumentServiceClient:
             },
         }
 
+    async def get_active_expiries(self, underlying: str) -> List[str]:
+        """
+        Get active expiry dates for an underlying symbol.
+        
+        Args:
+            underlying: The underlying symbol (e.g., 'NIFTY')
+            
+        Returns:
+            List of active expiry dates in YYYY-MM-DD format, sorted by date
+        """
+        try:
+            response = await self._http_client.get(f"/api/v1/instruments/{underlying}/expiries")
+            response.raise_for_status()
+            
+            data = response.json()
+            expiries = data.get('expiries', [])
+            
+            # Ensure we have valid expiry dates
+            if not expiries:
+                raise ValueError(f"No active expiries found for {underlying}")
+            
+            # Sort expiries by date (nearest first)
+            return sorted(expiries)
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise ValueError(f"Underlying {underlying} not found in instrument service")
+            else:
+                raise ServiceUnavailableError(f"Instrument service error: {e.response.status_code}")
+        except Exception as e:
+            raise ServiceUnavailableError(f"Failed to get expiries for {underlying}: {e}")
+
     async def close(self):
         """Close HTTP client and cleanup resources"""
         if self._http_client:

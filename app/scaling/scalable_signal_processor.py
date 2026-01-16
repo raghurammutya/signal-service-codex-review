@@ -513,9 +513,21 @@ class ScalableSignalProcessor:
             
             # Calculate real moneyness Greeks
             calculator = MoneynessAwareGreeksCalculator()
-            # Determine expiry date (default to next month for now - should come from context)
-            from datetime import datetime, timedelta
-            expiry_date = (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%d')
+            # PRODUCTION: Get expiry date from instrument service instead of hardcoding
+            try:
+                from app.services.instrument_service_client import InstrumentServiceClient
+                instrument_client = InstrumentServiceClient()
+                
+                # Get current active expiries for the underlying
+                expiries = await instrument_client.get_active_expiries(underlying)
+                if not expiries:
+                    raise ValueError(f"No active expiries found for {underlying}")
+                
+                # Use the nearest expiry (first in sorted list)
+                expiry_date = sorted(expiries)[0]
+                
+            except Exception as e:
+                raise ValueError(f"Failed to get expiry dates for {underlying} from instrument_service: {e}. No hardcoded expiry fallbacks allowed in production.")
             
             result = await calculator.calculate_moneyness_greeks(
                 underlying_symbol=underlying,
