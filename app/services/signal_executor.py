@@ -398,6 +398,14 @@ class SignalExecutor:
         Returns:
             Dict with execution results and any signals generated
         """
+        # SECURITY: Disable script execution in production
+        environment = os.getenv('ENVIRONMENT', 'development')
+        if environment in ['production', 'prod', 'staging']:
+            raise RuntimeError(
+                "Script execution is disabled in production environment for security reasons. "
+                "Use pre-compiled signal libraries or contact administrators for signal deployment."
+            )
+        
         try:
             # Validate script content for basic security
             if not cls._validate_script_security(script_content):

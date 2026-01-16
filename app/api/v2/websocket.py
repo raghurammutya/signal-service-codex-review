@@ -46,7 +46,7 @@ class ConnectionManager:
         
     async def initialize(self):
         """Initialize the connection manager"""
-        self.redis_client = get_redis_client()
+        self.redis_client = await get_redis_client()
 
         # CRITICAL FIX: Use async Redis client for pub/sub to avoid blocking event loop
         # The sync redis client's pubsub() doesn't have async methods

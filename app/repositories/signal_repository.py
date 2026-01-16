@@ -50,12 +50,17 @@ class DatabaseSessionContext:
     async def fetchrow(self, query, *params):
         """Execute query and return single row (asyncpg compatibility)"""
         from sqlalchemy import text
+        import re
         # Convert positional params to named params for SQLAlchemy
         param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-        # Convert $1, $2 style to :param_0, :param_1
-        converted_query = query
-        for i, param in enumerate(params):
-            converted_query = converted_query.replace(f'${i+1}', f':param_{i}')
+        
+        # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
+        # Use regex to properly handle multi-digit parameters
+        def replace_param(match):
+            param_num = int(match.group(1)) - 1  # Convert to 0-based index
+            return f':param_{param_num}'
+        
+        converted_query = re.sub(r'\$(\d+)', replace_param, query)
         
         result = await self.session.execute(text(converted_query), param_dict)
         row = result.fetchone()
@@ -64,12 +69,16 @@ class DatabaseSessionContext:
     async def fetch(self, query, *params):
         """Execute query and return all rows (asyncpg compatibility)"""
         from sqlalchemy import text
+        import re
         # Convert positional params to named params  
         param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-        # Convert $1, $2 style to :param_0, :param_1
-        converted_query = query
-        for i, param in enumerate(params):
-            converted_query = converted_query.replace(f'${i+1}', f':param_{i}')
+        
+        # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
+        def replace_param(match):
+            param_num = int(match.group(1)) - 1  # Convert to 0-based index
+            return f':param_{param_num}'
+        
+        converted_query = re.sub(r'\$(\d+)', replace_param, query)
             
         result = await self.session.execute(text(converted_query), param_dict)
         return [dict(row._mapping) for row in result]
@@ -77,12 +86,16 @@ class DatabaseSessionContext:
     async def execute(self, query, *params):
         """Execute query (asyncpg compatibility)"""
         from sqlalchemy import text
+        import re
         # Convert positional params to named params
         param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-        # Convert $1, $2 style to :param_0, :param_1
-        converted_query = query
-        for i, param in enumerate(params):
-            converted_query = converted_query.replace(f'${i+1}', f':param_{i}')
+        
+        # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
+        def replace_param(match):
+            param_num = int(match.group(1)) - 1  # Convert to 0-based index
+            return f':param_{param_num}'
+        
+        converted_query = re.sub(r'\$(\d+)', replace_param, query)
             
         result = await self.session.execute(text(converted_query), param_dict)
         await self.session.commit()
@@ -91,14 +104,18 @@ class DatabaseSessionContext:
     async def executemany(self, query, param_list):
         """Execute query with multiple parameter sets (asyncpg compatibility)"""
         from sqlalchemy import text
+        import re
+        
+        # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
+        def replace_param(match):
+            param_num = int(match.group(1)) - 1  # Convert to 0-based index
+            return f':param_{param_num}'
+        
+        converted_query = re.sub(r'\$(\d+)', replace_param, query)
+        
         for params in param_list:
             # Convert positional params to named params
             param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-            # Convert $1, $2 style to :param_0, :param_1  
-            converted_query = query
-            for i, param in enumerate(params):
-                converted_query = converted_query.replace(f'${i+1}', f':param_{i}')
-                
             await self.session.execute(text(converted_query), param_dict)
         await self.session.commit()
 

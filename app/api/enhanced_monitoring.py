@@ -15,7 +15,7 @@ from app.utils.logging_config import get_logger
 
 # Import with fallback handling for missing dependencies
 try:
-    from app.core.health_checker import get_health_checker
+    from app.api.health import get_health_checker
     health_checker_available = True
 except ImportError:
     health_checker_available = False

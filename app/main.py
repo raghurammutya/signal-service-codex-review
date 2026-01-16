@@ -49,9 +49,8 @@ async def lifespan(app: FastAPI):
         # Initialize health dependencies
         redis_client = await get_redis_client()
         
-        # Use async context manager properly
-        async with get_timescaledb_session() as db_session:
-            initialize_health_checker(redis_client, db_session)
+        # Pass the session factory function, not a session instance
+        initialize_health_checker(redis_client, get_timescaledb_session)
         
         initialize_distributed_health(redis_client)
         await start_health_monitoring()

@@ -12,9 +12,35 @@ from app.utils.logging_utils import log_info, log_error, log_warning
 from app.repositories.signal_repository import SignalRepository
 from app.services.instrument_service_client import InstrumentServiceClient
 
-# Simple admin token verification
+import os
+
+# Production-grade admin token verification
 def verify_admin_token(token: Optional[str] = None) -> Optional[str]:
-    """Simple admin token verification"""
+    """Production-grade admin token verification"""
+    environment = os.getenv('ENVIRONMENT', 'development')
+    
+    # In production, completely block admin endpoints
+    if environment in ['production', 'prod', 'staging']:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin endpoints are disabled in production environment"
+        )
+    
+    # In development, still require a token
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Admin token required"
+        )
+    
+    # Simple development token check
+    expected_token = os.getenv('ADMIN_TOKEN', 'dev-admin-token')
+    if token != expected_token:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid admin token"
+        )
+    
     return token
 
 from app.services.signal_processor import SignalProcessor
@@ -25,8 +51,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 async def verify_admin(token: str = Depends(verify_admin_token)) -> bool:
-    """Verify admin access"""
-    # In production, implement proper admin verification
+    """Verify admin access with production-grade security"""
     # For now, just check if token exists
     if not token:
         raise HTTPException(status_code=403, detail="Admin access required")

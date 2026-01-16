@@ -175,16 +175,26 @@ async def get_database_connection():
 @asynccontextmanager
 async def get_timescaledb_session():
     """Get TimescaleDB session with proper error handling."""
+    import os
+    environment = os.getenv('ENVIRONMENT', 'development')
+    
     try:
         engine, session_factory = await get_database_connection()
         
         if session_factory is None:
-            # Use mock session
-            session = MockSession()
-            try:
-                yield session
-            finally:
-                await session.close()
+            if environment in ['production', 'prod', 'staging']:
+                raise DatabaseConnectionError(
+                    "Database connection failed in production environment. "
+                    "Mock sessions are not allowed in production."
+                )
+            else:
+                # Use mock session only in development
+                logger.warning("Using mock database session in development environment")
+                session = MockSession()
+                try:
+                    yield session
+                finally:
+                    await session.close()
         else:
             # Use real session
             async with session_factory() as session:
@@ -192,12 +202,20 @@ async def get_timescaledb_session():
                 
     except Exception as e:
         logger.error(f"Database session error: {e}")
-        # Fallback to mock session
-        session = MockSession()
-        try:
-            yield session
-        finally:
-            await session.close()
+        if environment in ['production', 'prod', 'staging']:
+            # Never fall back to mock in production
+            raise DatabaseConnectionError(
+                f"Critical database error in {environment}: {e}. "
+                "Service cannot continue without database connection."
+            ) from e
+        else:
+            # Fallback to mock session only in development
+            logger.warning("Falling back to mock database session in development")
+            session = MockSession()
+            try:
+                yield session
+            finally:
+                await session.close()
 
 
 @contextmanager  

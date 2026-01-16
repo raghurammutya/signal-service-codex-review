@@ -216,7 +216,17 @@ async def get_redis_client(redis_url: str = None):
     
     # Check if we should use production Redis
     environment = os.getenv('ENVIRONMENT', 'development')
-    redis_url = redis_url or os.getenv('REDIS_URL')
+    
+    # Try to get Redis URL from multiple sources
+    if not redis_url:
+        # First try config service settings (preferred in production)
+        try:
+            from app.core.config import settings
+            redis_url = settings.REDIS_URL
+        except (ImportError, AttributeError, Exception) as e:
+            logger.warning(f"Could not get Redis URL from config service: {e}")
+            # Fallback to environment variable
+            redis_url = os.getenv('REDIS_URL')
     
     # In production, ALWAYS use real Redis - fail hard if not available
     if environment in ['production', 'prod', 'staging']:
