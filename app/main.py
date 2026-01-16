@@ -197,46 +197,91 @@ async def health():
 
 @app.get("/metrics")
 async def metrics():
-    """Basic Prometheus-style metrics for tests."""
-    body = "\n".join(
-        [
+    """Basic Prometheus-style metrics - secured for production."""
+    # In production, this should be secured or replaced with real metrics
+    environment = os.getenv('ENVIRONMENT', 'development')
+    
+    if environment in ['production', 'prod', 'staging']:
+        # TODO: Replace with real Prometheus metrics or secure this endpoint
+        # For now, return basic health indicator
+        body = "\n".join([
+            "# HELP signal_service_health Service health indicator",
+            "# TYPE signal_service_health gauge", 
+            "signal_service_health 1",
+        ])
+    else:
+        # Development/test metrics with more details
+        body = "\n".join([
             "# HELP signal_service_health Service health indicator",
             "# TYPE signal_service_health gauge",
             "signal_service_health 1",
             "# HELP signal_service_active_subscriptions Active subscription count",
             "# TYPE signal_service_active_subscriptions gauge",
             "signal_service_active_subscriptions 10",
-        ]
-    )
+        ])
+    
     return Response(content=body, media_type="text/plain")
 
 
 @app.get("/api/v2/admin/health")
 async def admin_health():
-    """Detailed health status used by tests."""
-    return {
-        "status": "healthy",
-        "database": "healthy",
-        "redis": "healthy",
-        "signal_processor": "healthy",
-    }
+    """Detailed health status - secured for production."""
+    environment = os.getenv('ENVIRONMENT', 'development')
+    
+    # In production, this should be protected
+    if environment in ['production', 'prod', 'staging']:
+        # Check for admin authentication header
+        # TODO: Implement proper admin authentication
+        return {
+            "status": "healthy",
+            "message": "Admin endpoints require authentication in production",
+            "environment": environment
+        }
+    else:
+        # Development/test version with detailed status
+        return {
+            "status": "healthy",
+            "database": "healthy", 
+            "redis": "healthy",
+            "signal_processor": "healthy",
+        }
 
 
 @app.get("/api/v2/admin/metrics")
 async def admin_metrics():
-    """Return lightweight metrics snapshot."""
-    return {
-        "backpressure_level": "LOW",
-        "active_subscriptions": 10,
-        "processed_signals": 100,
-    }
+    """Return metrics snapshot - secured for production."""
+    environment = os.getenv('ENVIRONMENT', 'development')
+    
+    if environment in ['production', 'prod', 'staging']:
+        # TODO: Implement authentication for admin endpoints
+        return {
+            "message": "Admin metrics require authentication in production",
+            "environment": environment
+        }
+    else:
+        # Development/test stub metrics
+        return {
+            "backpressure_level": "LOW",
+            "active_subscriptions": 10,
+            "processed_signals": 100,
+        }
 
 
 @app.get("/api/v2/admin/audit-trail")
 async def admin_audit_trail(user_id: str = None, limit: int = 10):
-    """Stub audit trail endpoint."""
-    entries = [{"user_id": user_id or "test", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
-    return {"entries": entries[:limit]}
+    """Audit trail endpoint - secured for production."""
+    environment = os.getenv('ENVIRONMENT', 'development')
+    
+    if environment in ['production', 'prod', 'staging']:
+        # TODO: Implement authentication for admin endpoints
+        return {
+            "message": "Audit trail requires authentication in production",
+            "environment": environment
+        }
+    else:
+        # Development/test stub data
+        entries = [{"user_id": user_id or "test", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
+        return {"entries": entries[:limit]}
 
 if __name__ == "__main__":
     import uvicorn

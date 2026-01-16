@@ -392,10 +392,11 @@ class SignalRepository:
         
         try:
             async with self.db_connection.acquire() as conn:
+                # TODO: Ensure index on instrument_key for better performance
                 results = await conn.fetch("""
                     SELECT timestamp, data
                     FROM signal_custom_timeframes
-                    WHERE instrument_key =#TODO: Ensure index on instrument_key$1
+                    WHERE instrument_key = $1
                       AND signal_type = $2
                       AND timeframe_minutes = $3
                       AND timestamp >= $4

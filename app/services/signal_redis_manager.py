@@ -22,8 +22,152 @@ def log_error(message):
     logger.error(message)
 
 
+class RedisClusterManager:
+    """Simple Redis cluster manager for Signal Service."""
+    
+    def __init__(self, redis_client):
+        self.redis_client = redis_client
+        
+    async def store_with_expiry(self, key: str, value: Any, ttl: int) -> bool:
+        """Store value with expiry."""
+        try:
+            await self.redis_client.setex(key, ttl, value)
+            return True
+        except Exception as e:
+            log_error(f"Failed to store with expiry {key}: {e}")
+            return False
+    
+    async def get_value(self, key: str) -> Optional[str]:
+        """Get value from Redis."""
+        try:
+            return await self.redis_client.get(key)
+        except Exception as e:
+            log_error(f"Failed to get value {key}: {e}")
+            return None
+    
+    async def hash_set(self, key: str, field: str, value: Any) -> bool:
+        """Set hash field."""
+        try:
+            await self.redis_client.hset(key, field, value)
+            return True
+        except Exception as e:
+            log_error(f"Failed to hash set {key}:{field}: {e}")
+            return False
+    
+    async def hash_get_all(self, key: str) -> Dict[str, Any]:
+        """Get all hash fields."""
+        try:
+            return await self.redis_client.hgetall(key)
+        except Exception as e:
+            log_error(f"Failed to hash get all {key}: {e}")
+            return {}
+    
+    async def hash_delete(self, key: str, field: str) -> bool:
+        """Delete hash field."""
+        try:
+            await self.redis_client.hdel(key, field)
+            return True
+        except Exception as e:
+            log_error(f"Failed to hash delete {key}:{field}: {e}")
+            return False
+    
+    async def get_json(self, key: str) -> Optional[Dict[str, Any]]:
+        """Get JSON value."""
+        try:
+            value = await self.redis_client.get(key)
+            if value:
+                return json.loads(value)
+            return None
+        except Exception as e:
+            log_error(f"Failed to get JSON {key}: {e}")
+            return None
+    
+    async def store_json_with_expiry(self, key: str, value: Dict[str, Any], ttl: int) -> bool:
+        """Store JSON with expiry."""
+        try:
+            await self.redis_client.setex(key, ttl, json.dumps(value))
+            return True
+        except Exception as e:
+            log_error(f"Failed to store JSON with expiry {key}: {e}")
+            return False
+    
+    async def set_add(self, key: str, value: Any) -> bool:
+        """Add to set."""
+        try:
+            # Use list since fake Redis doesn't have sets
+            current = await self.redis_client.get(key)
+            if current:
+                try:
+                    items = json.loads(current)
+                    if not isinstance(items, list):
+                        items = []
+                except:
+                    items = []
+            else:
+                items = []
+            
+            if value not in items:
+                items.append(value)
+            
+            await self.redis_client.set(key, json.dumps(items))
+            return True
+        except Exception as e:
+            log_error(f"Failed to set add {key}: {e}")
+            return False
+    
+    async def set_remove(self, key: str, value: Any) -> bool:
+        """Remove from set."""
+        try:
+            current = await self.redis_client.get(key)
+            if current:
+                try:
+                    items = json.loads(current)
+                    if isinstance(items, list) and value in items:
+                        items.remove(value)
+                        await self.redis_client.set(key, json.dumps(items))
+                except:
+                    pass
+            return True
+        except Exception as e:
+            log_error(f"Failed to set remove {key}: {e}")
+            return False
+    
+    async def set_members(self, key: str) -> List[str]:
+        """Get set members."""
+        try:
+            current = await self.redis_client.get(key)
+            if current:
+                try:
+                    items = json.loads(current)
+                    return items if isinstance(items, list) else []
+                except:
+                    return []
+            return []
+        except Exception as e:
+            log_error(f"Failed to get set members {key}: {e}")
+            return []
+    
+    async def delete_key(self, key: str) -> bool:
+        """Delete key."""
+        try:
+            await self.redis_client.delete(key)
+            return True
+        except Exception as e:
+            log_error(f"Failed to delete key {key}: {e}")
+            return False
+    
+    async def stream_add(self, stream_key: str, fields: Dict[str, Any], maxlen: Optional[int] = None) -> bool:
+        """Add to stream."""
+        try:
+            await self.redis_client.xadd(stream_key, fields, maxlen=maxlen)
+            return True
+        except Exception as e:
+            log_error(f"Failed to add to stream {stream_key}: {e}")
+            return False
+
+
 class SignalRedisManager:
-    """Signal Service specific Redis manager (single Redis instance)."""
+    """Signal Service specific Redis manager."""
 
     def __init__(self):
         # Define signal service specific key patterns with hash tags for cluster
@@ -65,14 +209,20 @@ class SignalRedisManager:
         }
 
         self.redis_client = None
+        self.cluster_manager = None
         logger.info("SignalRedisManager initialized")
 
     async def initialize(self):
-        """Initialize Redis connection"""
+        """Initialize Redis connection and cluster manager"""
         try:
             if not self.redis_client:
                 self.redis_client = await get_redis_client(settings.REDIS_URL)
-            logger.info("SignalRedisManager connected to Redis")
+            
+            # Initialize cluster manager
+            if not self.cluster_manager:
+                self.cluster_manager = RedisClusterManager(self.redis_client)
+            
+            logger.info("SignalRedisManager connected to Redis with cluster manager")
         except Exception as e:
             logger.error(f"Failed to initialize SignalRedisManager: {e}")
             raise

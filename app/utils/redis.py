@@ -1,13 +1,18 @@
 """
-Minimal Redis helper used in tests/dev.
+Redis helper with production and development support.
 
-Provides an in-memory async stub that implements the small subset of Redis
+In production: Uses real Redis connection
+In development: Provides an in-memory async stub that implements the small subset of Redis
 commands relied on by the service.
 """
 
+import os
+import logging
 from typing import Any, Dict, List, Optional
 import asyncio
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class _Pipeline:
@@ -38,7 +43,7 @@ class _Pipeline:
 
 
 class FakeRedis:
-    """Lightweight async in-memory Redis replacement."""
+    """Lightweight async in-memory Redis replacement for development."""
 
     def __init__(self):
         self.store: Dict[str, Any] = {}
@@ -49,6 +54,9 @@ class FakeRedis:
 
     async def ping(self):
         return True
+
+    async def exists(self, key: str):
+        return key in self.store
 
     async def get(self, key: str):
         return self.store.get(key)
@@ -79,7 +87,7 @@ class FakeRedis:
         for key in keys:
             self.store.pop(key, None)
             self.expiry.pop(key, None)
-        return True
+        return len(keys)
 
     async def flushall(self):
         self.store.clear()
@@ -109,37 +117,46 @@ class FakeRedis:
 
     async def hdel(self, key: str, *fields: str):
         current = self.store.get(key, {}) or {}
+        deleted_count = 0
         for f in fields:
-            current.pop(f, None)
+            if f in current:
+                current.pop(f)
+                deleted_count += 1
         self.store[key] = current
-        return True
+        return deleted_count
 
     async def lpush(self, key: str, value: Any):
         lst = self.store.setdefault(key, [])
         lst.insert(0, value)
-        return True
+        return len(lst)
 
     async def ltrim(self, key: str, start: int, end: int):
         lst = self.store.get(key, [])
         self.store[key] = lst[start : end + 1]
         return True
 
-    async def xadd(self, name, fields, **_kwargs):
+    async def xadd(self, name, fields, maxlen=None, **_kwargs):
         stream = self.store.setdefault(name, [])
         msg_id = str(len(stream))
-        stream.append((msg_id, {k.encode(): str(v).encode() for k, v in fields.items()}))
+        stream.append((msg_id, {k: str(v) for k, v in fields.items()}))
+        
+        # Apply maxlen if specified
+        if maxlen and len(stream) > maxlen:
+            self.store[name] = stream[-maxlen:]
+            
         return msg_id
 
     async def xgroup_create(self, *_args, **_kwargs):
         return True
 
-    async def xreadgroup(self, *_args, **_kwargs):
+    async def xreadgroup(self, group, consumer, streams: dict, count: int = 1, block=None, **_kwargs):
+        # Simple mock implementation
         return []
 
     async def xack(self, *_args, **_kwargs):
         return True
 
-    async def xread(self, streams: dict, count: int = 1):
+    async def xread(self, streams: dict, count: int = 1, block=None):
         result = []
         for name, start_id in streams.items():
             stream = self.store.get(name, [])
@@ -147,35 +164,72 @@ class FakeRedis:
                 result.append((name, [(mid, data) for mid, data in stream[:count]]))
         return result
 
-    async def xreadgroup(self, group, consumer, streams: dict, count: int = 1, **_kwargs):
-        return await self.xread(streams, count=count)
-
-    async def scan(self, *_args, **_kwargs):
-        return (0, [])
+    async def scan(self, cursor=0, match=None, count=None):
+        keys = list(self.store.keys())
+        if match:
+            pattern = match.replace('*', '')
+            keys = [k for k in keys if pattern in k]
+        return (0, keys)
 
     async def keys(self, pattern: str):
-        return [k for k in self.store if k.startswith(pattern.replace("*", ""))]
+        pattern_str = pattern.replace("*", "")
+        return [k for k in self.store if pattern_str in k]
 
     def pubsub(self):
         return self
 
-    async def publish(self, *_args, **_kwargs):
-        return True
+    async def subscribe(self, *channels):
+        """Mock subscribe for pubsub."""
+        pass
+
+    async def unsubscribe(self, *channels):
+        """Mock unsubscribe for pubsub.""" 
+        pass
+
+    async def get_message(self, ignore_subscribe_messages=True, timeout=None):
+        """Mock get_message for pubsub."""
+        return None
+
+    async def publish(self, channel, message):
+        """Mock publish."""
+        return 1
 
     async def close(self):
         return True
 
     async def info(self, section: str = None):
         """Return lightweight memory stats."""
-        return {"used_memory": len(self.store), "keys": len(self.store)}
+        return {"used_memory": len(self.store), "keys": len(self.store), "connected_clients": 1, "uptime_in_seconds": 3600, "redis_version": "fake", "role": "master"}
 
 
-_client: Optional[FakeRedis] = None
+_fake_client: Optional[FakeRedis] = None
 
 
-async def get_redis_client(_url: str = None):
-    """Return a singleton fake redis client for tests/dev."""
-    global _client
-    if _client is None:
-        _client = FakeRedis()
-    return _client
+async def get_redis_client(redis_url: str = None):
+    """
+    Get Redis client - uses production Redis if configured, otherwise fake client.
+    
+    This function is used for backward compatibility with existing code that
+    imports from app.utils.redis. For new code, use app.core.redis_manager.get_redis_client().
+    """
+    global _fake_client
+    
+    # Check if we should use production Redis
+    environment = os.getenv('ENVIRONMENT', 'development')
+    redis_url = redis_url or os.getenv('REDIS_URL')
+    
+    if redis_url and environment in ['production', 'prod', 'staging']:
+        # Delegate to production redis manager
+        try:
+            from app.core.redis_manager import get_redis_client as get_prod_client
+            return await get_prod_client(redis_url)
+        except ImportError:
+            logger.warning("Failed to import production Redis manager, using fake Redis")
+    
+    # Use fake Redis for development/testing
+    if _fake_client is None:
+        _fake_client = FakeRedis()
+        if environment not in ['test', 'testing']:
+            logger.warning(f"Using fake Redis client in {environment} environment - should use production Redis!")
+    
+    return _fake_client

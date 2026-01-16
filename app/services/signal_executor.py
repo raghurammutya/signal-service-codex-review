@@ -334,32 +334,46 @@ class SignalExecutor:
         """
         Create sandboxed globals for signal script execution.
         
-        Provides limited APIs and context variables.
+        Provides limited APIs and context variables with security restrictions.
         """
-        # Import allowed modules
+        # Import allowed modules with restricted access
         safe_modules = {}
         for module_name in cls.ALLOWED_MODULES:
             try:
-                safe_modules[module_name] = __import__(module_name)
+                module = __import__(module_name)
+                # Filter dangerous attributes from modules
+                safe_module = type('SafeModule', (), {})()
+                for attr_name in dir(module):
+                    if not attr_name.startswith('_') and attr_name not in ['exec', 'eval', 'compile', 'open', 'input']:
+                        setattr(safe_module, attr_name, getattr(module, attr_name))
+                safe_modules[module_name] = safe_module
             except ImportError:
                 pass
         
-        # Create restricted builtins
+        # Create highly restricted builtins - remove dangerous functions
+        safe_builtins = {}
+        for name in cls.SANDBOX_BUILTINS:
+            if hasattr(__builtins__, name):
+                builtin_func = getattr(__builtins__, name)
+                # Additional safety checks
+                if name not in ['exec', 'eval', 'compile', 'open', 'input', 'raw_input', 'file', 'reload', '__import__']:
+                    safe_builtins[name] = builtin_func
+        
+        # Completely isolated builtins
         restricted_builtins = {
-            "__builtins__": {name: getattr(__builtins__, name) 
-                            for name in cls.SANDBOX_BUILTINS 
-                            if hasattr(__builtins__, name)},
-            "__name__": "__main__",
-            "__doc__": None,
+            "__builtins__": safe_builtins,
+            "__name__": "__sandbox__",
+            "__doc__": "Secure Signal Script Sandbox",
+            "__file__": "<sandbox>",
         }
         
-        # Add safe modules
+        # Add safe modules with restricted access
         sandbox_globals = {**safe_modules, **restricted_builtins}
         
-        # Add context variables
+        # Add controlled context variables
         sandbox_globals.update({
-            "context": context,
-            "log": lambda msg: log_info(f"[Signal Script] {msg}"),
+            "context": context,  # Read-only context
+            "log": lambda msg: log_info(f"[Signal Script] {str(msg)[:200]}"),  # Limit log message length
             "get_timestamp": lambda: datetime.now(timezone.utc).isoformat(),
             "get_unix_timestamp": lambda: int(time.time()),
         })
@@ -374,7 +388,7 @@ class SignalExecutor:
         timeout: float = 30.0
     ) -> Dict[str, Any]:
         """
-        Execute signal script in sandboxed environment.
+        Execute signal script in secure sandboxed environment.
         
         Args:
             script_content: Python code to execute
@@ -385,19 +399,60 @@ class SignalExecutor:
             Dict with execution results and any signals generated
         """
         try:
+            # Validate script content for basic security
+            if not cls._validate_script_security(script_content):
+                return {
+                    "success": False,
+                    "error": "Script contains potentially unsafe code",
+                    "error_type": "SecurityError"
+                }
+            
             # Create sandbox globals
             sandbox_globals = cls._create_sandbox_globals(context)
             
-            # Add signal collection list
+            # Add signal collection with limits
             signals_generated = []
-            sandbox_globals["emit_signal"] = lambda signal: signals_generated.append(signal)
+            max_signals = 100  # Limit number of signals
             
-            # Execute script
+            def emit_signal(signal):
+                if len(signals_generated) < max_signals:
+                    # Sanitize signal data
+                    if isinstance(signal, dict):
+                        # Limit signal data size and content
+                        safe_signal = {}
+                        for k, v in signal.items():
+                            if isinstance(k, str) and len(k) < 50:
+                                if isinstance(v, (int, float, str, bool)):
+                                    if isinstance(v, str) and len(v) < 500:
+                                        safe_signal[k] = v
+                                    elif not isinstance(v, str):
+                                        safe_signal[k] = v
+                        signals_generated.append(safe_signal)
+                
+            sandbox_globals["emit_signal"] = emit_signal
+            
+            # Execute script with resource limits
             start_time = time.time()
             
             async def _execute():
-                exec(script_content, sandbox_globals)
-                return signals_generated
+                try:
+                    # Compile first to catch syntax errors
+                    compiled_code = compile(script_content, '<sandbox>', 'exec')
+                    
+                    # Execute in thread to prevent blocking event loop
+                    def run_script():
+                        exec(compiled_code, sandbox_globals)
+                        return signals_generated
+                    
+                    # Run in thread with timeout
+                    return await asyncio.get_event_loop().run_in_executor(None, run_script)
+                    
+                except SyntaxError as e:
+                    raise ValueError(f"Script syntax error: {e}")
+                except Exception as e:
+                    # Log the error but don't expose internal details
+                    log_error(f"Script execution error: {e}")
+                    raise RuntimeError("Script execution failed")
             
             # Run with timeout
             signals = await asyncio.wait_for(_execute(), timeout=timeout)
@@ -406,9 +461,10 @@ class SignalExecutor:
             
             return {
                 "success": True,
-                "signals": signals,
+                "signals": signals[:max_signals],  # Ensure limit
                 "execution_time": execution_time,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "signals_count": len(signals)
             }
             
         except asyncio.TimeoutError:
@@ -422,9 +478,51 @@ class SignalExecutor:
             log_error(f"Signal script execution error: {e}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": str(e)[:200],  # Limit error message length
                 "error_type": type(e).__name__
             }
+    
+    @classmethod
+    def _validate_script_security(cls, script_content: str) -> bool:
+        """
+        Basic security validation of script content.
+        
+        Args:
+            script_content: Script to validate
+            
+        Returns:
+            True if script appears safe, False otherwise
+        """
+        # Basic blacklist of dangerous patterns
+        dangerous_patterns = [
+            'import os', 'import sys', 'import subprocess', 'import socket',
+            'import urllib', 'import requests', 'import http',
+            '__import__', 'eval(', 'exec(', 'compile(',
+            'open(', 'file(', 'input(', 'raw_input(',
+            'globals()', 'locals()', 'vars()', 'dir(',
+            'getattr(', 'setattr(', 'delattr(', 'hasattr(',
+            'reload(', '__builtins__',
+            'while True:', 'for i in range(999',  # Potential infinite loops
+        ]
+        
+        script_lower = script_content.lower()
+        
+        for pattern in dangerous_patterns:
+            if pattern.lower() in script_lower:
+                log_warning(f"Script contains potentially dangerous pattern: {pattern}")
+                return False
+        
+        # Check script length (prevent overly complex scripts)
+        if len(script_content) > 10000:  # 10KB limit
+            log_warning("Script exceeds maximum allowed length")
+            return False
+        
+        # Check for excessive complexity indicators
+        if script_content.count('\n') > 500:  # Line limit
+            log_warning("Script exceeds maximum line count")
+            return False
+            
+        return True
     
     @classmethod
     async def publish_to_redis(

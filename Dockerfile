@@ -1,9 +1,10 @@
 # Use Python 3.12 for pandas-ta compatibility
 FROM python:3.12-slim
 
-# Install minimal build dependencies
+# Install minimal build dependencies and curl for health checks
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -14,19 +15,18 @@ RUN groupadd -r signalservice && \
 # Set working directory
 WORKDIR /app
 
-# Copy service-specific requirements (context is project root)
-COPY signal_service/requirements.txt ./
+# Copy requirements and install dependencies
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code (context is project root)
-COPY signal_service/app/ ./app/
-
-# Copy tests for in-container execution
-COPY signal_service/tests/ ./signal_service/tests/
-COPY signal_service/conftest.py ./signal_service/conftest.py
-
-# Copy config service client (if using common directory)
+# Copy application code
+COPY app/ ./app/
 COPY common/ ./common/
+
+# Copy tests and configuration
+COPY test/ ./test/
+COPY conftest.py ./
+COPY pytest.ini ./
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs && \

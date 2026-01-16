@@ -48,6 +48,57 @@ class HealthChecker:
             'db_connection_pool_percent': {'healthy': 80, 'unhealthy': 50}
         }
     
+    async def check_health(self, detailed: bool = True) -> Dict[str, Any]:
+        """
+        Check health with optional detailed flag.
+        
+        Args:
+            detailed: If True, return detailed health info. If False, return basic status.
+            
+        Returns:
+            Health status dictionary
+        """
+        if detailed:
+            return await self.get_comprehensive_health()
+        else:
+            # Basic health check
+            try:
+                # Quick check of critical components
+                redis_ok = False
+                db_ok = False
+                
+                if self.redis_client:
+                    try:
+                        await self.redis_client.ping()
+                        redis_ok = True
+                    except:
+                        pass
+                
+                # Mock basic DB check
+                if self.db_session:
+                    db_ok = True
+                
+                if redis_ok and db_ok:
+                    status = "healthy"
+                elif redis_ok or db_ok:
+                    status = "degraded"
+                else:
+                    status = "unhealthy"
+                
+                return {
+                    "status": status,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "redis": "up" if redis_ok else "down",
+                    "database": "up" if db_ok else "down"
+                }
+                
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+    
     async def get_comprehensive_health(self) -> Dict[str, Any]:
         """Get comprehensive health status with caching"""
         now = time.time()
