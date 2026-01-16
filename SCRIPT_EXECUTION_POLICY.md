@@ -15,8 +15,8 @@
 
 The following endpoints will return HTTP 500 errors in production:
 
-- `POST /api/v2/signals/execute-marketplace`
-- `POST /api/v2/signals/execute-personal`
+- `POST /api/v2/signals/execute/marketplace`
+- `POST /api/v2/signals/execute/personal`
 - Any endpoint using `SignalExecutor.execute_signal_script()`
 
 ### Alternative Approaches for Production
