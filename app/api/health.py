@@ -159,7 +159,9 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
                 timeout=5
             )
             
-            service_name = config_client.get_config("SERVICE_DISPLAY_NAME") or "Signal Service"
+            service_name = config_client.get_config("SERVICE_DISPLAY_NAME")
+            if not service_name:
+                raise ValueError("SERVICE_DISPLAY_NAME not found in config_service")
             service_port = config_client.get_config("SERVICE_PORT")
             
             if not service_port:

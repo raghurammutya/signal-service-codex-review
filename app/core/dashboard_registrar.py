@@ -68,7 +68,9 @@ class DashboardRegistrar:
                     timeout=5
                 )
                 
-                service_name = config_client.get_config("SERVICE_DISPLAY_NAME") or "Signal Service"
+                service_name = config_client.get_config("SERVICE_DISPLAY_NAME")
+                if not service_name:
+                    raise ValueError("SERVICE_DISPLAY_NAME not found in config_service")
                 service_host = config_client.get_config("SERVICE_HOST")
                 service_port = config_client.get_config("SERVICE_PORT")
                 
@@ -133,7 +135,7 @@ class DashboardRegistrar:
                 
                 # Dashboard display configuration
                 "dashboard_config": {
-                    "display_name": "Signal Service",
+                    "display_name": service_name,
                     "icon": "📊",
                     "color": "#4A90E2",
                     "category": "Core Services",
@@ -258,7 +260,24 @@ class DashboardRegistrar:
 class DashboardIntegration:
     """Main integration class for dashboard connectivity"""
     
-    def __init__(self, dashboard_url: str = "http://localhost:8500"):
+    def __init__(self, dashboard_url: str = None):
+        # Get dashboard URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+        if dashboard_url is None:
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                dashboard_url = config_client.get_config("DASHBOARD_SERVICE_URL")
+                if not dashboard_url:
+                    raise ValueError("DASHBOARD_SERVICE_URL not found in config_service")
+            except Exception as e:
+                raise RuntimeError(f"Failed to get dashboard URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+                
         self.registrar = DashboardRegistrar(dashboard_url)
         self.background_tasks = []
     
@@ -310,6 +329,23 @@ class DashboardIntegration:
 # Dashboard data formatting utilities
 def format_instance_data_for_dashboard(instances: list) -> Dict[str, Any]:
     """Format instance data specifically for dashboard display"""
+    # Get service port from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+    try:
+        from common.config_service.client import ConfigServiceClient
+        from app.core.config import settings
+        
+        config_client = ConfigServiceClient(
+            service_name="signal_service",
+            environment=settings.environment,
+            timeout=5
+        )
+        service_port = config_client.get_config("SERVICE_PORT")
+        if not service_port:
+            raise ValueError("SERVICE_PORT not found in config_service")
+            
+    except Exception as e:
+        raise RuntimeError(f"Failed to get service port from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+    
     return {
         "instances": [
             {
@@ -317,14 +353,15 @@ def format_instance_data_for_dashboard(instances: list) -> Dict[str, Any]:
                 "name": inst["container_name"],
                 "status": inst["status"],
                 "host": inst["host"],
-                "port": 8003,
+                "port": int(service_port),
                 "uptime": inst["uptime_seconds"],
                 "cpu_usage": inst["load_metrics"].get("cpu_percent", 0),
                 "memory_usage": inst["load_metrics"].get("memory_percent", 0),
                 "requests_per_minute": inst["load_metrics"].get("requests_per_minute", 0),
                 "queue_size": inst["load_metrics"].get("queue_size", 0),
                 "assigned_instruments": inst["assigned_instruments_count"],
-                "health_endpoint": f"http://{inst['host']}:8003/health/detailed"
+                # Architecture Principle #3: API versioning is mandatory - health endpoints must be versioned
+                "health_endpoint": f"http://{inst['host']}:{service_port}/api/v1/health/detailed"
             }
             for inst in instances
         ],
