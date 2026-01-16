@@ -139,7 +139,7 @@ async def cluster_health_check(dist_health: DistributedHealthManager = Depends(g
         logger.error(f"Cluster health check failed: {e}")
         raise HTTPException(status_code=500, detail=f"Cluster health check failed: {e}")
 
-@router.get("/health/dashboard")
+@router.get("/dashboard")
 async def dashboard_health_summary(dist_health: DistributedHealthManager = Depends(get_distributed_health)):
     """
     Health summary specifically formatted for the dynamic dashboard at localhost:8500
@@ -148,16 +148,37 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
     try:
         cluster_data = await dist_health.get_cluster_health_for_dashboard()
         
+        # Get configuration from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+        try:
+            from common.config_service.client import ConfigServiceClient
+            from app.core.config import settings
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            
+            service_name = config_client.get_config("SERVICE_DISPLAY_NAME") or "Signal Service"
+            service_port = config_client.get_config("SERVICE_PORT")
+            
+            if not service_port:
+                raise ValueError("SERVICE_PORT not found in config_service")
+                
+        except Exception as e:
+            raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+        
         # Format according to dashboard expectations
         dashboard_format = {
-            "service_name": "Signal Service",
+            "service_name": service_name,
             "service_type": "signal_processing",
-            "port": 8003,
+            "port": int(service_port),
             "status": cluster_data['status'],
             "timestamp": cluster_data['timestamp'],
-            "health_endpoint": "/health/dashboard",
-            "detailed_endpoint": "/health/detailed",
-            "cluster_endpoint": "/health/cluster",
+            # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
+            "health_endpoint": "/api/v1/health/dashboard",
+            "detailed_endpoint": "/api/v1/health/detailed",
+            "cluster_endpoint": "/api/v1/health/cluster",
             
             # Instance information for horizontal scaling display
             "instances": cluster_data['instances'],
@@ -205,7 +226,7 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
         logger.error(f"Dashboard health summary failed: {e}")
         raise HTTPException(status_code=500, detail=f"Dashboard health failed: {e}")
 
-@router.get("/health/metrics")
+@router.get("/metrics")
 async def health_metrics():
     """
     Prometheus-compatible health metrics

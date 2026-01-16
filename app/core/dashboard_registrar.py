@@ -57,16 +57,38 @@ class DashboardRegistrar:
     async def register_service(self) -> bool:
         """Register Signal Service with the dynamic dashboard"""
         try:
+            # Get configuration from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                
+                service_name = config_client.get_config("SERVICE_DISPLAY_NAME") or "Signal Service"
+                service_host = config_client.get_config("SERVICE_HOST")
+                service_port = config_client.get_config("SERVICE_PORT")
+                
+                if not service_host or not service_port:
+                    raise ValueError("SERVICE_HOST and SERVICE_PORT not found in config_service")
+                    
+            except Exception as e:
+                raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+            
             service_config = {
-                "service_name": "Signal Service",
-                "service_id": "signal_service",
+                "service_name": service_name,
+                "service_id": "signal_service", 
                 "service_type": "signal_processing",
-                "host": "localhost",
-                "port": 8003,
-                "health_endpoint": f"{self.service_url}/health/dashboard",
-                "detailed_health_endpoint": f"{self.service_url}/health/detailed",
-                "cluster_health_endpoint": f"{self.service_url}/health/cluster",
-                "metrics_endpoint": f"{self.service_url}/health/metrics",
+                "host": service_host,
+                "port": int(service_port),
+                # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
+                "health_endpoint": f"{self.service_url}/api/v1/health/dashboard",
+                "detailed_health_endpoint": f"{self.service_url}/api/v1/health/detailed", 
+                "cluster_health_endpoint": f"{self.service_url}/api/v1/health/cluster",
+                "metrics_endpoint": f"{self.service_url}/api/v1/health/metrics",
                 "api_base_url": f"{self.service_url}/api/v2",
                 
                 # Service metadata

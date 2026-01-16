@@ -379,10 +379,11 @@ class HealthChecker:
                     timeout=5
                 )
                 
+                # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
                 external_services = {
-                    'instrument_service': f"{config_client.get_service_url('instrument_service')}/health",
-                    'ticker_service': f"{config_client.get_service_url('ticker_service')}/health", 
-                    'subscription_service': f"{config_client.get_service_url('subscription_service')}/health"
+                    'instrument_service': f"{config_client.get_service_url('instrument_service')}/api/v1/health",
+                    'ticker_service': f"{config_client.get_service_url('ticker_service')}/api/v1/health", 
+                    'subscription_service': f"{config_client.get_service_url('subscription_service')}/api/v1/health"
                 }
                 
             except Exception as e:
