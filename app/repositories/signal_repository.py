@@ -63,6 +63,12 @@ class DatabaseSessionContext:
         converted_query = re.sub(r'\$(\d+)', replace_param, query)
         
         result = await self.session.execute(text(converted_query), param_dict)
+        
+        # Commit if this is a write operation
+        query_upper = query.strip().upper()
+        if query_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
+            await self.session.commit()
+        
         row = result.fetchone()
         return dict(row._mapping) if row else None
     
@@ -81,6 +87,12 @@ class DatabaseSessionContext:
         converted_query = re.sub(r'\$(\d+)', replace_param, query)
             
         result = await self.session.execute(text(converted_query), param_dict)
+        
+        # Commit if this is a write operation
+        query_upper = query.strip().upper()
+        if query_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
+            await self.session.commit()
+            
         return [dict(row._mapping) for row in result]
     
     async def execute(self, query, *params):
