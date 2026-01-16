@@ -143,24 +143,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return True, limit
             
     def _get_user_id(self, request: Request) -> Optional[str]:
-        """Extract user ID from request"""
-        # Check JWT token
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            # In production, decode JWT to get user ID
-            # For now, use a placeholder
-            return "user_from_jwt"
-            
-        # Check API key
-        api_key = request.headers.get("X-API-Key")
-        if api_key:
-            return f"api_key_{api_key[:8]}"
-            
-        # Check query parameter
-        user_id = request.query_params.get("user_id")
+        """Extract user ID from request (Architecture Principle #7: JWT validation at gateway only)"""
+        # ARCHITECTURE COMPLIANCE: Services MUST trust api-gateway for JWT validation
+        # Services MUST NOT independently validate JWT tokens per Architecture Principle #7
+        
+        # Get user ID from gateway-validated header (ONLY source of user identity)
+        user_id = request.headers.get("X-User-ID")
         if user_id:
             return user_id
             
+        # For internal service-to-service calls, check internal API key
+        api_key = request.headers.get("X-Internal-API-Key")
+        if api_key:
+            return f"internal_service_{api_key[:8]}"
+            
+        # No user identity available - unauthenticated request
         return None
         
     def _get_endpoint_key(self, path: str) -> str:
