@@ -495,17 +495,37 @@ class ScalableSignalProcessor:
             self.metrics['errors'] += 1
     
     async def compute_moneyness_greeks(self, underlying: str, moneyness_level: str, timeframe: str):
-        """Compute moneyness-based Greeks"""
+        """Compute moneyness-based Greeks using real moneyness calculator"""
         try:
-            # Would integrate with instrument service
-            # This is placeholder
-            result = {
-                'underlying': underlying,
-                'moneyness_level': moneyness_level,
-                'timeframe': timeframe,
-                'iv': 0.25,
-                'aggregated_greeks': {}
-            }
+            # PRODUCTION: Use real moneyness Greeks calculator instead of synthetic data
+            from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
+            from app.adapters.ticker_adapter import EnhancedTickerAdapter
+            
+            # Get real spot price
+            ticker_adapter = EnhancedTickerAdapter()
+            try:
+                spot_price = await ticker_adapter.get_latest_price(underlying)
+            finally:
+                await ticker_adapter.close()
+            
+            if not spot_price or spot_price <= 0:
+                raise ValueError(f"No valid spot price available for {underlying} from ticker_service")
+            
+            # Calculate real moneyness Greeks
+            calculator = MoneynessAwareGreeksCalculator()
+            # Determine expiry date (default to next month for now - should come from context)
+            from datetime import datetime, timedelta
+            expiry_date = (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%d')
+            
+            result = await calculator.calculate_moneyness_greeks(
+                underlying_symbol=underlying,
+                spot_price=spot_price,
+                moneyness_level=moneyness_level,
+                expiry_date=expiry_date
+            )
+            
+            if not result or not result.get('aggregated_greeks'):
+                raise ValueError(f"No valid moneyness Greeks computed for {underlying} {moneyness_level}")
             
             await self._publish_computation_result(
                 f"{underlying}_{moneyness_level}",
@@ -518,6 +538,8 @@ class ScalableSignalProcessor:
         except Exception as e:
             log_exception(f"Moneyness Greeks failed for {underlying}: {e}")
             self.metrics['errors'] += 1
+            # PRODUCTION: Fail fast instead of returning synthetic data
+            raise ValueError(f"Failed to compute moneyness Greeks for {underlying} {moneyness_level}: {e}. No synthetic data allowed in production.")
     
     async def _publish_computation_result(self, instrument_key: str, computation_type: str, result: Dict):
         """Publish computation result"""

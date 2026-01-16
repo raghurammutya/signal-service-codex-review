@@ -5,6 +5,7 @@ Handles the new enhanced tick format with timezone and currency support.
 import asyncio
 import logging
 import httpx
+import pandas as pd
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 from app.utils.time import utcnow
@@ -195,8 +196,19 @@ class EnhancedTickerAdapter:
         self.timezone_handler = TimezoneHandler()
         self._logger = logging.getLogger(__name__)
         
-        # Get ticker_service URL from settings
-        self.base_url = base_url or getattr(settings, 'TICKER_SERVICE_URL', 'http://ticker-service:8001')
+        # Get ticker_service URL from config_service exclusively (Architecture Principle #1)
+        try:
+            from common.config_service.client import ConfigServiceClient
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment
+            )
+            
+            self.base_url = base_url or config_client.get_service_url('ticker_service')
+            internal_api_key = config_client.get_config('INTERNAL_API_KEY', required=True)
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get ticker_service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
         
         # Initialize HTTP client for ticker_service
         self.http_client = httpx.AsyncClient(
@@ -204,7 +216,7 @@ class EnhancedTickerAdapter:
             timeout=30.0,
             headers={
                 'Content-Type': 'application/json',
-                'X-Internal-API-Key': getattr(settings, 'INTERNAL_API_KEY', 'development-key'),
+                'X-Internal-API-Key': internal_api_key,
                 'User-Agent': 'signal-service/ticker-adapter'
             }
         )
@@ -682,8 +694,11 @@ class EnhancedTickerAdapter:
         symbol: str,
         timeframe: str = "1day",
         periods: int = 100,
+        start_date: str = None,
+        end_date: str = None,
+        interval: str = None,
         **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> pd.DataFrame:
         """
         Get historical OHLCV data from ticker_service.
         
@@ -691,24 +706,56 @@ class EnhancedTickerAdapter:
             symbol: Symbol to fetch data for
             timeframe: Time interval (e.g., "1day", "1hour", "5minute")
             periods: Number of periods to fetch
+            start_date: Start date (YYYY-MM-DD format)
+            end_date: End date (YYYY-MM-DD format)  
+            interval: Time interval (alternative to timeframe)
             
         Returns:
-            List of historical OHLCV data
+            DataFrame with historical OHLCV data
         """
         try:
             # Call ticker_service for historical data
             params = {
                 'symbol': symbol,
-                'timeframe': timeframe,
+                'timeframe': interval or timeframe,  # Support both interval and timeframe
                 'periods': periods
             }
+            
+            if start_date:
+                params['start_date'] = start_date
+            if end_date:
+                params['end_date'] = end_date
+                
             params.update(kwargs)
             
             response = await self.http_client.get("/api/v1/historical", params=params)
             response.raise_for_status()
             
             data = response.json()
-            return data.get('data', data.get('historical', []))
+            historical_records = data.get('data', data.get('historical', []))
+            
+            # Convert to DataFrame
+            if not historical_records:
+                # Return empty DataFrame with expected columns
+                return pd.DataFrame(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            
+            df = pd.DataFrame(historical_records)
+            
+            # Ensure timestamp is datetime and set as index if present
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                df.set_index('timestamp', inplace=True)
+            elif 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+                df.set_index('date', inplace=True)
+                
+            # Ensure numeric columns are properly typed
+            numeric_columns = ['open', 'high', 'low', 'close', 'volume', 'oi']
+            for col in numeric_columns:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            return df
             
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:

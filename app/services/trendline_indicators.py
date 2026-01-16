@@ -285,7 +285,7 @@ def channel_detection(
         resistance = resistance_trendline(df)
 
         if not support or not resistance:
-            raise ValueError(f"Channel detection failed: {e}. No fallback allowed in production.")
+            raise ValueError("Channel detection failed: unable to detect support or resistance trendlines. No fallback allowed in production.")
 
         # Check if lines are approximately parallel (similar slopes)
         slope_diff = abs(support['slope'] - resistance['slope'])
