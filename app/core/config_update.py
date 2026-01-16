@@ -44,11 +44,19 @@ The following configurations should be added to config_service:
 def get_cache_ttl_for_timeframe(self, timeframe: str) -> int:
     """Get cache TTL for a specific timeframe from config_service"""
     # Implementation must get TIMEFRAME_CACHE_TTL_MAP from config_service
-    # NO hardcoded defaults allowed
-    pass
+    # NO hardcoded defaults allowed per Architecture Principle #1
+    raise NotImplementedError(
+        "get_cache_ttl_for_timeframe must be implemented to get TIMEFRAME_CACHE_TTL_MAP from config_service. "
+        "No hardcoded defaults allowed per Architecture Principle #1. "
+        "This method MUST NOT silently ignore required configuration."
+    )
 
 def get_aggregation_factor(self, source: str, target: str) -> Optional[int]:
     """Get aggregation factor between timeframes from config_service"""  
     # Implementation must get AGGREGATION_FACTORS from config_service
-    # NO hardcoded defaults allowed
-    pass
+    # NO hardcoded defaults allowed per Architecture Principle #1
+    raise NotImplementedError(
+        "get_aggregation_factor must be implemented to get AGGREGATION_FACTORS from config_service. "
+        "No hardcoded defaults allowed per Architecture Principle #1. "
+        "This method MUST NOT silently ignore required configuration."
+    )

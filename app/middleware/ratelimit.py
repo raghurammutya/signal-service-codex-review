@@ -146,18 +146,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """Extract user ID from request (Architecture Principle #7: JWT validation at gateway only)"""
         # ARCHITECTURE COMPLIANCE: Services MUST trust api-gateway for JWT validation
         # Services MUST NOT independently validate JWT tokens per Architecture Principle #7
+        # ARCHITECTURE COMPLIANCE: Single route per functionality - NO alternate identity paths
         
         # Get user ID from gateway-validated header (ONLY source of user identity)
+        # API Gateway is the SOLE source of user identity - no exceptions
         user_id = request.headers.get("X-User-ID")
         if user_id:
             return user_id
             
-        # For internal service-to-service calls, check internal API key
-        api_key = request.headers.get("X-Internal-API-Key")
-        if api_key:
-            return f"internal_service_{api_key[:8]}"
-            
         # No user identity available - unauthenticated request
+        # Internal services MUST go through api-gateway like all other requests
         return None
         
     def _get_endpoint_key(self, path: str) -> str:
