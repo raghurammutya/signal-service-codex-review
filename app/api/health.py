@@ -272,7 +272,7 @@ async def health_metrics():
         logger.error(f"Health metrics failed: {e}")
         raise HTTPException(status_code=500, detail="Metrics unavailable")
 
-@router.get("/health/components/{component_name}")
+@router.get("/components/{component_name}")
 async def component_health(component_name: str, checker: HealthChecker = Depends(get_health_checker)):
     """
     Get health status for a specific component
@@ -312,7 +312,7 @@ async def component_health(component_name: str, checker: HealthChecker = Depends
         logger.error(f"Component health check failed for {component_name}: {e}")
         raise HTTPException(status_code=500, detail=f"Component health check failed: {e}")
 
-@router.post("/health/refresh")
+@router.post("/refresh")
 async def refresh_health_cache(checker: HealthChecker = Depends(get_health_checker)):
     """
     Force refresh of health check cache
