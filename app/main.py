@@ -234,7 +234,7 @@ except Exception as e:
 
 if environment not in ['production', 'prod', 'staging']:
     # Development/test endpoints only
-    @app.get("/metrics")
+    @app.get("/api/v1/metrics")
     async def metrics():
         """Basic Prometheus-style metrics - development only."""
         body = "\n".join([
