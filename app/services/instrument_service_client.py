@@ -220,10 +220,8 @@ class InstrumentServiceClient:
             List of active expiry dates in YYYY-MM-DD format, sorted by date
         """
         try:
-            response = await self._http_client.get(f"/api/v1/instruments/{underlying}/expiries")
-            response.raise_for_status()
-            
-            data = response.json()
+            # Use the existing _make_request helper which handles HTTP client initialization
+            data = await self._make_request("GET", f"/api/v1/instruments/{underlying}/expiries")
             expiries = data.get('expiries', [])
             
             # Ensure we have valid expiry dates
@@ -233,11 +231,12 @@ class InstrumentServiceClient:
             # Sort expiries by date (nearest first)
             return sorted(expiries)
             
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise ValueError(f"Underlying {underlying} not found in instrument service")
-            else:
-                raise ServiceUnavailableError(f"Instrument service error: {e.response.status_code}")
+        except ServiceUnavailableError:
+            # Re-raise service unavailable errors as-is
+            raise
+        except ValueError:
+            # Re-raise validation errors as-is  
+            raise
         except Exception as e:
             raise ServiceUnavailableError(f"Failed to get expiries for {underlying}: {e}")
 
