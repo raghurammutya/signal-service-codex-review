@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS signal_indicators (
 -- Convert to hypertable
 SELECT create_hypertable('signal_indicators', 'timestamp', if_not_exists => TRUE);
 
--- Custom Timeframe Data table
-CREATE TABLE IF NOT EXISTS custom_timeframe_data (
+-- Custom Timeframe Data table (renamed to match code expectations)
+CREATE TABLE IF NOT EXISTS signal_custom_timeframes (
     id SERIAL PRIMARY KEY,
     instrument_key VARCHAR(255) NOT NULL,
     data_type VARCHAR(100) NOT NULL, -- 'greeks', 'indicators', etc.
@@ -56,7 +56,28 @@ CREATE TABLE IF NOT EXISTS custom_timeframe_data (
 );
 
 -- Convert to hypertable
-SELECT create_hypertable('custom_timeframe_data', 'timestamp', if_not_exists => TRUE);
+SELECT create_hypertable('signal_custom_timeframes', 'timestamp', if_not_exists => TRUE);
+
+-- Moneyness Greeks table (required by signal repository)
+CREATE TABLE IF NOT EXISTS signal_moneyness_greeks (
+    id SERIAL PRIMARY KEY,
+    underlying VARCHAR(50) NOT NULL,
+    moneyness_level VARCHAR(20) NOT NULL,
+    expiry_date DATE NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    delta DECIMAL(10,6),
+    gamma DECIMAL(10,6),
+    theta DECIMAL(10,6),
+    vega DECIMAL(10,6),
+    rho DECIMAL(10,6),
+    iv DECIMAL(10,6),
+    theoretical_value DECIMAL(15,6),
+    option_count INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Convert to hypertable
+SELECT create_hypertable('signal_moneyness_greeks', 'timestamp', if_not_exists => TRUE);
 
 -- Market Data table for Smart Money testing
 CREATE TABLE IF NOT EXISTS market_data (

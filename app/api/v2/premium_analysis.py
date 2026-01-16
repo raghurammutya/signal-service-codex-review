@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.services.premium_discount_calculator import PremiumDiscountCalculator, MispricingSeverity
 from app.services.vectorized_pyvollib_engine import VectorizedPyvolibGreeksEngine
-from app.utils.logging_utils import log_info, log_exception, log_warning
+from app.utils.logging_utils import log_info, log_exception, log_warning, log_error
 
 router = APIRouter(prefix="/api/v2/signals/fo", tags=["premium-analysis"])
 
@@ -215,10 +215,26 @@ async def premium_analysis_strike_range(
                 }
                 option_chain_data.append(option_dict)
                 
-                # Mock market price (in production, this would come from market data)
-                # For demonstration, use a simple pricing model
-                market_price = _mock_market_price(underlying_price, current_strike, option_type, expiry_date)
-                market_prices.append(market_price)
+                # PRODUCTION: Get real market price from market data service - fail fast if unavailable
+                try:
+                    # Use ticker service for real market data (Architecture compliance)
+                    from app.adapters import EnhancedTickerAdapter
+                    ticker_adapter = EnhancedTickerAdapter()
+                    market_price = await ticker_adapter.get_option_price(
+                        symbol=symbol,
+                        strike=current_strike,
+                        option_type=option_type,
+                        expiry=expiry_date.strftime('%Y-%m-%d')
+                    )
+                    if market_price is None:
+                        raise ValueError(f"No market price available for {symbol} {current_strike} {option_type}")
+                    market_prices.append(market_price)
+                except Exception as e:
+                    log_error(f"Failed to get market price for {symbol} {current_strike} {option_type}: {e}")
+                    raise HTTPException(
+                        status_code=503,
+                        detail=f"Market data unavailable for option chain analysis. No synthetic data allowed in production."
+                    )
             
             current_strike += strike_step
         
@@ -291,9 +307,25 @@ async def premium_analysis_term_structure(request: TermStructureRequest):
                     }
                     option_chain_data.append(option_dict)
                     
-                    # Mock market price
-                    market_price = _mock_market_price(request.underlying_price, strike, option_type, expiry_date)
-                    market_prices.append(market_price)
+                    # PRODUCTION: Get real market price from ticker service - fail fast if unavailable
+                    try:
+                        from app.adapters import EnhancedTickerAdapter
+                        ticker_adapter = EnhancedTickerAdapter()
+                        market_price = await ticker_adapter.get_option_price(
+                            symbol=request.symbol,
+                            strike=strike,
+                            option_type=option_type,
+                            expiry=expiry_date.strftime('%Y-%m-%d')
+                        )
+                        if market_price is None:
+                            raise ValueError(f"No market price for {request.symbol} {strike} {option_type}")
+                        market_prices.append(market_price)
+                    except Exception as e:
+                        log_error(f"Failed to get market price for term structure: {e}")
+                        raise HTTPException(
+                            status_code=503,
+                            detail="Market data unavailable for term structure analysis. No synthetic data allowed in production."
+                        )
             
             # Calculate premium analysis for this expiry
             expiry_analysis = await premium_calculator.calculate_premium_analysis(
@@ -350,54 +382,36 @@ async def get_arbitrage_opportunities(
     try:
         log_info(f"[AGENT-2] Arbitrage scan for {symbol}, min severity: {min_severity}")
         
-        # In production, this would fetch live option chain data
-        # For now, we'll return mock arbitrage opportunities
-        
-        opportunities = [
-            {
-                'opportunity_id': f"ARB_{symbol}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
-                'type': 'mispricing_arbitrage',
-                'symbol': symbol,
-                'strike': 26000.0,
-                'expiry_date': '2025-01-30',
-                'option_type': 'CE',
-                'market_price': 47.30,
-                'theoretical_price': 45.20,
-                'premium_percentage': 4.65,
-                'mispricing_severity': 'MEDIUM',
-                'action': 'sell',
-                'confidence_score': 0.75,
-                'estimated_profit_per_lot': 210.0,
-                'risk_factors': ['volatility_change', 'time_decay'],
-                'recommended_position_size': 1,
-                'entry_condition': 'market_price >= 47.00',
-                'exit_condition': 'theoretical_price + 1.00',
-                'max_holding_period_days': 3,
-                'detected_at': datetime.utcnow().isoformat()
-            }
-        ]
-        
-        # Filter by severity
-        severity_order = {'LOW': 0, 'MEDIUM': 1, 'HIGH': 2, 'EXTREME': 3}
-        min_severity_level = severity_order.get(min_severity, 1)
-        
-        filtered_opportunities = [
-            opp for opp in opportunities 
-            if severity_order.get(opp['mispricing_severity'], 0) >= min_severity_level
-        ]
+        # PRODUCTION: Fetch live option chain data for arbitrage detection - fail fast if unavailable
+        try:
+            from app.adapters import EnhancedTickerAdapter
+            ticker_adapter = EnhancedTickerAdapter()
+            option_chain = await ticker_adapter.get_option_chain(symbol)
+            if not option_chain:
+                raise ValueError(f"No option chain data available for {symbol}")
+            
+            # Real arbitrage detection logic would go here
+            # For now, return empty list until real arbitrage engine is implemented
+            opportunities = []
+            log_info(f"Arbitrage scan completed for {symbol} - {len(opportunities)} opportunities found")
+        except Exception as e:
+            log_error(f"Failed to fetch option chain for arbitrage scan on {symbol}: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Option chain data unavailable for arbitrage analysis. No mock data allowed in production."
+            )
         
         return {
             'symbol': symbol,
             'scan_timestamp': datetime.utcnow().isoformat(),
             'min_severity_filter': min_severity,
             'expiry_filter': expiry_date,
-            'opportunities_found': len(filtered_opportunities),
-            'opportunities': filtered_opportunities,
+            'opportunities_found': len(opportunities),
+            'opportunities': opportunities,
             'summary': {
-                'total_scanned_options': 50,  # Mock value
-                'mispricing_opportunities': len(filtered_opportunities),
-                'avg_premium_percentage': 3.2,
-                'highest_severity_found': 'HIGH'
+                'total_scanned_options': len(option_chain) if 'option_chain' in locals() else 0,
+                'mispricing_opportunities': len(opportunities),
+                'status': 'Real arbitrage detection not yet implemented'
             }
         }
         
@@ -469,28 +483,6 @@ def _calculate_summary_stats(results: List[Dict]) -> Dict[str, Any]:
     except Exception:
         return {}
 
-
-def _mock_market_price(underlying_price: float, strike: float, option_type: str, expiry_date: str) -> float:
-    """Generate mock market price for demonstration purposes."""
-    # This is a simplified mock - in production, use real market data
-    try:
-        # Parse expiry to calculate time to expiry
-        expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d')
-        time_to_expiry = max((expiry_dt - datetime.now()).days / 365.25, 1/365.25)
-        
-        # Simple intrinsic + time value calculation
-        if option_type.upper() in ['CE', 'CALL']:
-            intrinsic = max(underlying_price - strike, 0)
-        else:
-            intrinsic = max(strike - underlying_price, 0)
-        
-        # Add some time value (simplified)
-        time_value = 10.0 * time_to_expiry * (abs(underlying_price - strike) / underlying_price * 0.1 + 0.02)
-        
-        return round(intrinsic + time_value, 2)
-        
-    except Exception:
-        return 10.0  # Fallback value
 
 
 def _analyze_term_structure_patterns(term_results: Dict, strikes: List[float]) -> Dict[str, Any]:

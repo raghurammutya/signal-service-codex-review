@@ -10,6 +10,7 @@ from enum import Enum
 import logging
 
 import redis.asyncio as redis
+from app.utils.logging_utils import log_warning
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
@@ -327,16 +328,47 @@ class HealthChecker:
             # Test signal computation performance
             start_time = time.time()
             
-            # Mock signal computation test
+            # PRODUCTION: Real signal computation test using actual signal processor
             test_instrument = 'NSE@HEALTH@equity_options@2025-07-10@call@21500'
             
-            # In real implementation, this would call actual signal processor
-            await asyncio.sleep(0.01)  # Simulate 10ms computation
-            
-            processing_time_ms = (time.time() - start_time) * 1000
-            
-            # Check backpressure levels if available
-            backpressure_level = 'LOW'  # Would get from actual backpressure monitor
+            try:
+                # Use actual signal processor for health check
+                from app.services.signal_processor import get_signal_processor
+                processor = await get_signal_processor()
+                
+                # Test basic signal computation capability (minimal Greeks calculation)
+                test_result = await processor.compute_greeks_for_instrument(
+                    instrument_key=test_instrument
+                )
+                
+                processing_time_ms = (time.time() - start_time) * 1000
+                
+                if test_result is None:
+                    raise ValueError("Signal processor returned None - indicates computation failure")
+                    
+                # Check backpressure levels from actual backpressure monitor
+                try:
+                    # Get backpressure level from monitoring system
+                    from app.monitoring import get_backpressure_monitor
+                    monitor = get_backpressure_monitor()
+                    backpressure_level = await monitor.get_current_backpressure_level()
+                except ImportError:
+                    log_warning("Backpressure monitor not available - using processing time heuristic")
+                    # Use processing time as backpressure indicator
+                    if processing_time_ms > 1000:  # > 1 second
+                        backpressure_level = 'HIGH'
+                    elif processing_time_ms > 500:  # > 500ms
+                        backpressure_level = 'MEDIUM'
+                    else:
+                        backpressure_level = 'LOW'
+                except Exception as e:
+                    log_warning(f"Failed to get backpressure level: {e}")
+                    backpressure_level = 'UNKNOWN'
+                
+            except Exception as e:
+                processing_time_ms = (time.time() - start_time) * 1000
+                log_error(f"Signal processor health check failed: {e}")
+                backpressure_level = 'CRITICAL'
             
             # Determine status
             if processing_time_ms <= self.thresholds['signal_processing_time_ms']['healthy']:

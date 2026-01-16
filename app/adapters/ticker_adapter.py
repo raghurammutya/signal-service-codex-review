@@ -6,6 +6,7 @@ import asyncio
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
+from typing import Dict, Any, List, Optional, Tuple
 from app.utils.time import utcnow
 from decimal import Decimal, InvalidOperation
 from enum import Enum
@@ -210,7 +211,8 @@ class EnhancedTickerAdapter:
         return True
 
     async def get_latest_price(self, *_args, **_kwargs):
-        return 0.0
+        # PRODUCTION: This should call ticker_service for real prices
+        raise ValueError("get_latest_price not implemented - ticker_service integration required")
     
     async def process_tick(self, tick_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -460,6 +462,70 @@ class EnhancedTickerAdapter:
         elif ":" in instrument_key:
             return instrument_key.split(":")[0]
         return "UNKNOWN"
+    
+    async def get_option_price(self, underlying: str, strike: float, expiry: str, option_type: str, **kwargs) -> float:
+        """
+        Get option market price from ticker_service.
+        
+        Args:
+            underlying: Underlying symbol
+            strike: Strike price
+            expiry: Expiry date
+            option_type: 'call' or 'put'
+            
+        Returns:
+            Current market price of the option
+        """
+        # PRODUCTION: This should call ticker_service for real option prices
+        raise ValueError(f"Option price data unavailable from ticker_service for {underlying} {strike} {option_type}. No synthetic data allowed in production.")
+    
+    async def get_historical_options(
+        self, 
+        underlying: str, 
+        expiry_date: str, 
+        timestamp: datetime = None, 
+        moneyness_level: str = None,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        Get historical option chain data from ticker_service.
+        
+        Args:
+            underlying: Underlying symbol
+            expiry_date: Option expiry date
+            timestamp: Historical timestamp (optional)
+            moneyness_level: Moneyness level filter (optional)
+            
+        Returns:
+            List of historical option data
+        """
+        # PRODUCTION: This should call ticker_service for real historical option data
+        raise ValueError(f"Historical options data unavailable from ticker_service for {underlying} at {timestamp}. No synthetic data allowed in production.")
+    
+    async def get_option_iv(
+        self, 
+        underlying: str, 
+        strike: float, 
+        expiry: str, 
+        option_type: str, 
+        timestamp: datetime = None,
+        **kwargs
+    ) -> Optional[float]:
+        """
+        Get option implied volatility from ticker_service.
+        
+        Args:
+            underlying: Underlying symbol
+            strike: Strike price
+            expiry: Expiry date
+            option_type: 'call' or 'put'
+            timestamp: Historical timestamp (optional)
+            
+        Returns:
+            Implied volatility or None if not available
+        """
+        # PRODUCTION: This should call ticker_service for real IV data
+        raise ValueError(f"Implied volatility data unavailable from ticker_service for {underlying} {strike} {option_type}. No synthetic data allowed in production.")
 
 
 # Alias to maintain backward compatibility with tests

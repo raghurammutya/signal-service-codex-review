@@ -4,7 +4,7 @@ A stateless computation engine that handles calculations for any financial instr
 """
 import asyncio
 from typing import Dict, List, Optional, Any, Union, Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 import pandas as pd
 import numpy as np
@@ -824,24 +824,27 @@ class UniversalCalculator:
         context: Dict[str, Any]
     ) -> pd.DataFrame:
         """Fetch historical data for instrument"""
-        # This would be implemented to fetch from TimescaleDB
-        # For now, return mock data
-        periods = context.get("periods", 100)
-        
-        # Generate sample data
-        dates = pd.date_range(end=datetime.utcnow(), periods=periods, freq="D")
-        base_price = 100
-        
-        data = pd.DataFrame({
-            "open": base_price + np.random.randn(periods).cumsum(),
-            "high": base_price + np.random.randn(periods).cumsum() + 1,
-            "low": base_price + np.random.randn(periods).cumsum() - 1,
-            "close": base_price + np.random.randn(periods).cumsum(),
-            "volume": np.random.randint(1000000, 10000000, periods)
-        }, index=dates)
-        
-        # Ensure high/low are correct
-        data["high"] = data[["open", "high", "close"]].max(axis=1)
-        data["low"] = data[["open", "low", "close"]].min(axis=1)
-        
-        return data
+        # PRODUCTION: Historical data must come from ticker_service - fail fast if unavailable
+        try:
+            from app.adapters import EnhancedTickerAdapter
+            ticker_adapter = EnhancedTickerAdapter()
+            
+            periods = context.get("periods", 100)
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=periods)
+            
+            historical_data = await ticker_adapter.get_historical_data(
+                symbol=instrument_key,
+                start_date=start_date.strftime('%Y-%m-%d'),
+                end_date=end_date.strftime('%Y-%m-%d'),
+                interval='1d'
+            )
+            
+            if historical_data is None or historical_data.empty:
+                raise ValueError(f"No historical data available for {instrument_key}")
+                
+            return historical_data
+            
+        except Exception as e:
+            log_error(f"Failed to fetch historical data for {instrument_key}: {e}")
+            raise ValueError(f"Historical data unavailable from ticker_service. No synthetic OHLCV allowed in production.")
