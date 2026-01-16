@@ -223,7 +223,7 @@ class HealthChecker:
             # Test database connectivity
             async with self.db_session() as session:
                 result = await session.execute(text("SELECT 1"))
-                await result.fetchone()
+                result.fetchone()  # Not awaitable in SQLAlchemy
                 
                 # Check connection pool status
                 pool = session.get_bind().pool

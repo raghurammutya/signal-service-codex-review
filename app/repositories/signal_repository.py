@@ -163,45 +163,26 @@ class SignalRepository:
         await self.ensure_initialized()
         
         try:
-            if self.db_session_factory is None:
-                # Fallback for mock/development
-                logger.warning("Using mock database for save_greeks")
-                return 1  # Mock ID
-            
-            async with self.db_session_factory() as session:
-                from sqlalchemy import text
-                result = await session.execute(text("""
+            # Use compatibility wrapper for asyncpg-style API
+            async with self.db_connection.acquire() as conn:
+                result = await conn.fetchrow("""
                     INSERT INTO signal_greeks (
                         signal_id, instrument_key, timestamp,
                         delta, gamma, theta, vega, rho,
                         implied_volatility, theoretical_value,
                         underlying_price, strike_price, time_to_expiry,
                         created_at
-                    ) VALUES (:signal_id, :instrument_key, :timestamp,
-                             :delta, :gamma, :theta, :vega, :rho,
-                             :implied_volatility, :theoretical_value,
-                             :underlying_price, :strike_price, :time_to_expiry,
-                             :created_at)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     RETURNING id
-                """), {
-                    'signal_id': greeks.signal_id,
-                    'instrument_key': greeks.instrument_key,
-                    'timestamp': greeks.timestamp,
-                    'delta': greeks.delta,
-                    'gamma': greeks.gamma,
-                    'theta': greeks.theta,
-                    'vega': greeks.vega,
-                    'rho': greeks.rho,
-                    'implied_volatility': greeks.implied_volatility,
-                    'theoretical_value': greeks.theoretical_value,
-                    'underlying_price': greeks.underlying_price,
-                    'strike_price': greeks.strike_price,
-                    'time_to_expiry': greeks.time_to_expiry,
-                    'created_at': datetime.utcnow()
-                })
+                """, 
+                greeks.signal_id, greeks.instrument_key, greeks.timestamp,
+                greeks.delta, greeks.gamma, greeks.theta, greeks.vega, greeks.rho,
+                greeks.implied_volatility, greeks.theoretical_value,
+                greeks.underlying_price, greeks.strike_price, greeks.time_to_expiry,
+                datetime.utcnow()
+                )
                 
-                await session.commit()
-                return result.scalar()
+                return result['id'] if result else None
                 
         except Exception as e:
             logger.exception(f"Error saving Greeks: {e}")
@@ -517,32 +498,20 @@ class SignalRepository:
         await self.ensure_initialized()
         
         try:
-            if self.db_session_factory is None:
-                # Mock fallback
-                logger.warning("Using mock database for get_custom_timeframe_data")
-                return []
-            
-            async with self.db_session_factory() as session:
+            # Use compatibility wrapper for asyncpg-style API
+            async with self.db_connection.acquire() as conn:
                 # TODO: Ensure index on instrument_key for better performance
-                from sqlalchemy import text
-                result = await session.execute(text("""
+                results = await conn.fetch("""
                     SELECT timestamp, data
                     FROM signal_custom_timeframes
-                    WHERE instrument_key = :instrument_key
-                      AND signal_type = :signal_type
-                      AND timeframe_minutes = :timeframe_minutes
-                      AND timestamp >= :start_time
-                      AND timestamp <= :end_time
+                    WHERE instrument_key = $1
+                      AND signal_type = $2
+                      AND timeframe_minutes = $3
+                      AND timestamp >= $4
+                      AND timestamp <= $5
                     ORDER BY timestamp
-                """), {
-                    'instrument_key': instrument_key,
-                    'signal_type': signal_type, 
-                    'timeframe_minutes': timeframe_minutes,
-                    'start_time': start_time,
-                    'end_time': end_time
-                })
-                
-                results = result.fetchall()
+                """, instrument_key, signal_type, timeframe_minutes,
+                start_time, end_time)
                 
                 return [
                     {**json.loads(row['data']), 'timestamp': row['timestamp']}

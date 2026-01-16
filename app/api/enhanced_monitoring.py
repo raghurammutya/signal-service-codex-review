@@ -54,12 +54,50 @@ class EnhancedMonitoringService:
     """
     
     def __init__(self):
-        # Initialize with fallback handling
-        self.health_checker = get_health_checker() if health_checker_available else None
-        self.circuit_breaker_manager = get_circuit_breaker_manager() if circuit_breaker_available else None
-        self.metrics_collector = get_enhanced_metrics_collector() if enhanced_metrics_available else None
+        # Initialize with lazy loading to avoid import-time crashes
+        self._health_checker = None
+        self._circuit_breaker_manager = None
+        self._metrics_collector = None
+        self._health_checker_initialized = False
+        self._circuit_breaker_initialized = False
+        self._metrics_collector_initialized = False
         self.start_time = datetime.utcnow()
+    
+    @property
+    def health_checker(self):
+        """Lazy load health checker to avoid import-time crashes"""
+        if not self._health_checker_initialized:
+            try:
+                self._health_checker = get_health_checker() if health_checker_available else None
+            except Exception:
+                self._health_checker = None
+            self._health_checker_initialized = True
+        return self._health_checker
+    
+    @property  
+    def circuit_breaker_manager(self):
+        """Lazy load circuit breaker manager"""
+        if not self._circuit_breaker_initialized:
+            try:
+                self._circuit_breaker_manager = get_circuit_breaker_manager() if circuit_breaker_available else None
+            except Exception:
+                self._circuit_breaker_manager = None
+            self._circuit_breaker_initialized = True
+        return self._circuit_breaker_manager
         
+    @property
+    def metrics_collector(self):
+        """Lazy load metrics collector"""
+        if not self._metrics_collector_initialized:
+            try:
+                self._metrics_collector = get_enhanced_metrics_collector() if enhanced_metrics_available else None
+            except Exception:
+                self._metrics_collector = None
+            self._metrics_collector_initialized = True
+        return self._metrics_collector
+        
+    def get_available_components(self):
+        """Get list of available components"""
         available_components = []
         if self.health_checker:
             available_components.append("health_checker")
@@ -67,8 +105,7 @@ class EnhancedMonitoringService:
             available_components.append("circuit_breaker_manager")
         if self.metrics_collector:
             available_components.append("enhanced_metrics")
-            
-        logger.info(f"Enhanced monitoring service initialized with components: {available_components}")
+        return available_components
     
     async def collect_comprehensive_metrics(self) -> Dict[str, Any]:
         """Collect all metrics from existing and enhanced systems"""
