@@ -11,6 +11,14 @@ logger = logging.getLogger(__name__)
 from app.services.signal_processor import SignalProcessor
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.instrument_service_client import InstrumentServiceClient
+
+# Import standardized error handling (architecture compliance)
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from common.errors.standardized_errors import (
+    resource_not_found_error, internal_server_error, invalid_input_error
+)
 # from app.models.signal_models import SignalGreeks, SignalIndicators
 from app.schemas.signal_schemas import (
     GreeksResponse, IndicatorResponse, MoneynessGreeksResponse
@@ -62,7 +70,7 @@ async def get_realtime_greeks(
         greeks = await processor.get_latest_greeks(instrument_key)
         
         if not greeks:
-            raise HTTPException(status_code=404, detail="Greeks not found for instrument")
+            resource_not_found_error("Greeks", instrument_key)
             
         return GreeksResponse(
             instrument_key=instrument_key,
@@ -83,7 +91,7 @@ async def get_realtime_greeks(
         raise
     except Exception as e:
         logger.error(f"Error getting real-time Greeks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        internal_server_error(f"Failed to retrieve real-time Greeks for {instrument_key}", {"error": str(e)})
 
 
 @router.get("/indicators/{instrument_key}/{indicator}", response_model=IndicatorResponse)
@@ -111,7 +119,7 @@ async def get_realtime_indicator(
         )
         
         if value is None:
-            raise HTTPException(status_code=404, detail="Indicator not found")
+            resource_not_found_error("Indicator", f"{instrument_key}/{indicator}")
             
         return IndicatorResponse(
             instrument_key=instrument_key,
@@ -129,7 +137,7 @@ async def get_realtime_indicator(
         raise
     except Exception as e:
         logger.error(f"Error getting real-time indicator: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        internal_server_error(f"Failed to retrieve real-time indicator for {instrument_key}", {"error": str(e)})
 
 
 @router.get("/moneyness/{underlying}/greeks/{moneyness_level}", response_model=MoneynessGreeksResponse)
@@ -155,7 +163,7 @@ async def get_moneyness_greeks(
         # Get current spot price
         spot_price = await processor.get_latest_price(underlying)
         if not spot_price:
-            raise HTTPException(status_code=404, detail="Underlying price not found")
+            resource_not_found_error("Underlying price", underlying)
             
         # Calculate moneyness Greeks
         result = await calculator.calculate_moneyness_greeks(
@@ -166,7 +174,7 @@ async def get_moneyness_greeks(
         )
         
         if not result or not result.get("aggregated_greeks", {}).get("all"):
-            raise HTTPException(status_code=404, detail="No options found for moneyness level")
+            resource_not_found_error("Options for moneyness level", f"{underlying}/{moneyness_level}")
             
         return MoneynessGreeksResponse(**result)
         
@@ -174,7 +182,7 @@ async def get_moneyness_greeks(
         raise
     except Exception as e:
         logger.error(f"Error getting moneyness Greeks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        internal_server_error(f"Failed to retrieve moneyness Greeks for {underlying}", {"error": str(e)})
 
 
 @router.get("/moneyness/{underlying}/atm-iv")
@@ -200,7 +208,7 @@ async def get_atm_iv(
         # Get current spot price
         spot_price = await processor.get_latest_price(underlying)
         if not spot_price:
-            raise HTTPException(status_code=404, detail="Underlying price not found")
+            resource_not_found_error("Underlying price", underlying)
             
         # Calculate ATM IV
         result = await calculator.calculate_atm_iv(
@@ -211,7 +219,7 @@ async def get_atm_iv(
         )
         
         if result.get("error"):
-            raise HTTPException(status_code=404, detail=result["error"])
+            resource_not_found_error("ATM IV data", f"{underlying}/{expiry_date}")
             
         return result
         
@@ -219,7 +227,7 @@ async def get_atm_iv(
         raise
     except Exception as e:
         logger.error(f"Error getting ATM IV: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        internal_server_error(f"Failed to retrieve ATM IV for {underlying}", {"error": str(e)})
 
 
 @router.get("/moneyness/{underlying}/otm-delta")
@@ -247,7 +255,7 @@ async def get_otm_delta_greeks(
         # Get current spot price
         spot_price = await processor.get_latest_price(underlying)
         if not spot_price:
-            raise HTTPException(status_code=404, detail="Underlying price not found")
+            resource_not_found_error("Underlying price", underlying)
             
         # Get OTM delta Greeks
         result = await calculator.calculate_otm_delta_greeks(
@@ -259,7 +267,7 @@ async def get_otm_delta_greeks(
         )
         
         if result.get("error"):
-            raise HTTPException(status_code=404, detail=result["error"])
+            resource_not_found_error("ATM IV data", f"{underlying}/{expiry_date}")
             
         return result
         
@@ -267,7 +275,7 @@ async def get_otm_delta_greeks(
         raise
     except Exception as e:
         logger.error(f"Error getting OTM delta Greeks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        internal_server_error(f"Failed to retrieve OTM delta Greeks for {underlying}", {"error": str(e)})
 
 
 @router.get("/price/{instrument_key}")
@@ -288,7 +296,7 @@ async def get_realtime_price(
         price = await processor.get_latest_price(instrument_key)
         
         if price is None:
-            raise HTTPException(status_code=404, detail="Price not found")
+            resource_not_found_error("Price", instrument_key)
             
         return {
             "instrument_key": instrument_key,
@@ -301,7 +309,7 @@ async def get_realtime_price(
         raise
     except Exception as e:
         logger.error(f"Error getting real-time price: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        internal_server_error(f"Failed to retrieve real-time price for {instrument_key}", {"error": str(e)})
 
 
 @router.get("/health")

@@ -48,15 +48,14 @@ async def get_redis_client(redis_url: Optional[str] = None) -> aioredis.Redis:
                 # Connection is stale, recreate
                 _redis_client = None
         
-        # Get Redis URL from parameter, settings, or environment
-        url = redis_url or getattr(settings, 'REDIS_URL', None) or os.getenv('REDIS_URL')
+        # Get Redis URL from config_service (Architecture Principle #1: Config service exclusivity)
+        url = redis_url or getattr(settings, 'REDIS_URL', None)
+        if not url:
+            raise RedisConnectionError("Redis URL must be provided via config_service (no environment fallbacks)")
         
         if not url:
-            # In production, Redis is required
-            environment = os.getenv('ENVIRONMENT', 'development')
-            if environment in ['production', 'prod', 'staging']:
-                raise RedisConnectionError(
-                    f"Redis URL not configured for {environment} environment. "
+            raise RedisConnectionError(
+                "Redis URL not configured in config_service. "
                     "Set REDIS_URL environment variable or configure in settings."
                 )
             
@@ -89,17 +88,10 @@ async def get_redis_client(redis_url: Optional[str] = None) -> aioredis.Redis:
             return _redis_client
             
         except Exception as e:
-            logger.error(f"Failed to connect to Redis at {url}: {e}")
+            logger.error(f"Failed to connect to Redis: {e}")
             
-            # In production, fail hard if Redis is unavailable
-            environment = os.getenv('ENVIRONMENT', 'development')
-            if environment in ['production', 'prod', 'staging']:
-                raise RedisConnectionError(f"Production Redis connection failed: {e}")
-            
-            # Development fallback
-            logger.warning("Using fake Redis client for development")
-            from app.utils.redis import get_redis_client as get_fake_client
-            return await get_fake_client()
+            # No silent fallbacks allowed per architecture - fail fast in all environments
+            raise RedisConnectionError(f"Redis connection failed and no fallbacks allowed per architecture: {e}")
 
 
 async def close_redis_client():

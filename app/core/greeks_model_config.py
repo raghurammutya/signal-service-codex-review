@@ -49,8 +49,10 @@ class GreeksModelConfig:
             return
             
         try:
-            # Load model selection from config_service
-            self._model_name = settings.get_config("signal_service.options_pricing_model", "black_scholes_merton")
+            # Load model selection from config_service (MANDATORY - no defaults)
+            self._model_name = settings.get_config("signal_service.options_pricing_model")
+            if not self._model_name:
+                raise ValueError("signal_service.options_pricing_model not found in config_service")
             
             # Validate model is supported
             if self._model_name not in self.SUPPORTED_MODELS:
@@ -64,13 +66,33 @@ class GreeksModelConfig:
                     }
                 )
             
-            # Load model parameters
+            # Load model parameters (MANDATORY from config_service - no defaults)
+            risk_free_rate = settings.get_config("signal_service.model_params.risk_free_rate")
+            if not risk_free_rate:
+                raise ValueError("signal_service.model_params.risk_free_rate not found in config_service")
+                
+            dividend_yield = settings.get_config("signal_service.model_params.dividend_yield")
+            if dividend_yield is None:
+                raise ValueError("signal_service.model_params.dividend_yield not found in config_service")
+                
+            default_volatility = settings.get_config("signal_service.model_params.default_volatility")
+            if not default_volatility:
+                raise ValueError("signal_service.model_params.default_volatility not found in config_service")
+                
+            volatility_min = settings.get_config("signal_service.model_params.volatility_min")
+            if not volatility_min:
+                raise ValueError("signal_service.model_params.volatility_min not found in config_service")
+                
+            volatility_max = settings.get_config("signal_service.model_params.volatility_max")
+            if not volatility_max:
+                raise ValueError("signal_service.model_params.volatility_max not found in config_service")
+            
             self._parameters = ModelParameters(
-                risk_free_rate=float(settings.get_config("signal_service.model_params.risk_free_rate", "0.06")),
-                dividend_yield=float(settings.get_config("signal_service.model_params.dividend_yield", "0.0")),
-                default_volatility=float(settings.get_config("signal_service.model_params.default_volatility", "0.20")),
-                volatility_min=float(settings.get_config("signal_service.model_params.volatility_min", "0.01")),
-                volatility_max=float(settings.get_config("signal_service.model_params.volatility_max", "5.0"))
+                risk_free_rate=float(risk_free_rate),
+                dividend_yield=float(dividend_yield),
+                default_volatility=float(default_volatility),
+                volatility_min=float(volatility_min),
+                volatility_max=float(volatility_max)
             )
             
             # Validate parameters

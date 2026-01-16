@@ -215,18 +215,22 @@ async def get_redis_client(redis_url: str = None):
     global _fake_client
     
     # Check if we should use production Redis
-    environment = os.getenv('ENVIRONMENT', 'development')
+    # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        from app.core.config import settings
+        environment = settings.environment
+    except Exception as e:
+        raise RuntimeError(f"Failed to get environment from config_service for Redis selection: {e}. No environment fallbacks allowed per architecture.")
     
-    # Try to get Redis URL from multiple sources
+    # Get Redis URL exclusively from config_service (Architecture Principle #1: Config service exclusivity)
     if not redis_url:
-        # First try config service settings (preferred in production)
         try:
             from app.core.config import settings
             redis_url = settings.REDIS_URL
+            if not redis_url:
+                raise ValueError("REDIS_URL not found in config_service")
         except (ImportError, AttributeError, Exception) as e:
-            logger.warning(f"Could not get Redis URL from config service: {e}")
-            # Fallback to environment variable
-            redis_url = os.getenv('REDIS_URL')
+            raise ValueError(f"Could not get Redis URL from config_service: {e}. No fallbacks allowed per architecture.")
     
     # In production, ALWAYS use real Redis - fail hard if not available
     if environment in ['production', 'prod', 'staging']:
@@ -241,18 +245,16 @@ async def get_redis_client(redis_url: str = None):
             logger.critical(f"Failed to import production Redis manager in {environment}: {e}")
             raise RuntimeError(f"Production Redis manager not available: {e}")
     
-    # Development/test fallback
-    if redis_url:
-        # Try production client first even in development if URL is provided
-        try:
-            from app.core.redis_manager import get_redis_client as get_prod_client
-            return await get_prod_client(redis_url)
-        except ImportError:
-            logger.warning("Production Redis manager not available, using fake Redis")
+    # ARCHITECTURE COMPLIANCE: No silent fallbacks (fail-fast per Architecture Principle #1)
+    if not redis_url:
+        raise ValueError("Redis URL not configured in config_service. No fallbacks allowed per architecture.")
     
-    # Use fake Redis for development/testing without URL
-    if _fake_client is None:
-        _fake_client = FakeRedis()
+    # Use production client with config_service URL
+    try:
+        from app.core.redis_manager import get_redis_client as get_prod_client
+        return await get_prod_client(redis_url)
+    except ImportError as e:
+        raise RuntimeError(f"Production Redis manager not available: {e}. Fake Redis not allowed per architecture.")
         logger.warning(f"Using fake Redis client in {environment} environment - configure REDIS_URL for production Redis")
     
     return _fake_client

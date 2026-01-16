@@ -77,7 +77,15 @@ app = FastAPI(
 )
 
 # Add CORS middleware using shared configuration (no wildcards in production)
-add_cors_middleware(app, environment=os.getenv("ENVIRONMENT", "production"))
+# Get environment from config_service (Architecture Principle #1: Config service exclusivity)
+try:
+    from app.core.config import settings
+    cors_environment = settings.environment
+except Exception as e:
+    # Fail-fast if config not available
+    raise RuntimeError(f"Failed to get environment from config_service for CORS: {e}. No environment fallbacks allowed per architecture.")
+
+add_cors_middleware(app, environment=cors_environment)
 
 # Include API routers (if they exist)
 try:
@@ -102,20 +110,19 @@ except ImportError as exc:
     logger.error("Failed to import production signal routers: %s", exc)
     
     # In production, NEVER fall back to test routers
-    environment = os.getenv('ENVIRONMENT', 'development')
-    if environment in ['production', 'prod', 'staging']:
-        logger.critical("🚨 PRODUCTION DEPLOYMENT BLOCKED: Critical import failure")
-        logger.critical("Cannot load production signal routers - this is a critical configuration issue")
-        logger.critical(f"Import error: {exc}")
-        raise RuntimeError(f"Production deployment failed: {exc}")
-    else:
-        # Only use test router fallback in development
-        try:
-            from app.api.v2.router_test_fallback import router as v2_router
-            app.include_router(v2_router)
-            logger.warning("⚠️  Using test router fallback in development")
-        except ImportError:
-            logger.error("No signal routers available!")
+    # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        from app.core.config import settings
+        environment = settings.environment
+    except Exception as e:
+        raise RuntimeError(f"Failed to get environment from config_service for router selection: {e}. No environment fallbacks allowed per architecture.")
+    
+    # No environment-based fallbacks allowed per architecture - fail fast in all environments
+    logger.critical("🚨 DEPLOYMENT BLOCKED: Critical import failure")
+    logger.critical("Cannot load production signal routers - this is a critical configuration issue")
+    logger.critical(f"Import error: {exc}")
+    logger.critical("No test router fallbacks allowed per Architecture Principle #1")
+    raise RuntimeError(f"Signal router deployment failed: {exc}. No fallbacks allowed per architecture.")
 
 # Include v2 indicators router (real indicator calculations)
 try:
@@ -177,8 +184,8 @@ except ImportError as exc:
 # Production: Include monitoring router for observability and health checks
 try:
     from app.api.monitoring import router as monitoring_router
-    app.include_router(monitoring_router, prefix="/monitoring")
-    logger.info("✓ Production monitoring router included")
+    app.include_router(monitoring_router, prefix="/api/v2")
+    logger.info("✓ Production monitoring router included with versioned API")
 except ImportError as exc:
     logger.warning("Could not import monitoring router: %s", exc)
 
@@ -193,15 +200,15 @@ except ImportError as exc:
 # Production: Include enhanced monitoring router for operations management
 try:
     from app.api.enhanced_monitoring import router as enhanced_monitoring_router
-    app.include_router(enhanced_monitoring_router)
-    logger.info("✓ Enhanced monitoring router included - production operations ready")
+    app.include_router(enhanced_monitoring_router, prefix="/api/v2")
+    logger.info("✓ Enhanced monitoring router included with versioned API - production operations ready")
 except ImportError as exc:
     logger.warning("Could not import enhanced monitoring router: %s", exc)
     # Fallback to simple monitoring router
     try:
         from app.api.simple_monitoring import router as simple_monitoring_router
-        app.include_router(simple_monitoring_router)
-        logger.info("✓ Simple monitoring router included as fallback")
+        app.include_router(simple_monitoring_router, prefix="/api/v2")
+        logger.info("✓ Simple monitoring router included as versioned fallback")
     except ImportError as fallback_exc:
         logger.warning("Could not import simple monitoring router: %s", fallback_exc)
 
@@ -214,17 +221,16 @@ async def root():
         "status": "running"
     }
 
-@app.get("/health")
-async def health():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "signal_service",
-        "version": "1.0.0"
-    }
+# Removed duplicate health endpoint - use centralized health router only 
+# (Architecture compliance: single route per functionality)
 
 # Environment-based endpoint registration
-environment = os.getenv('ENVIRONMENT', 'development')
+# Get environment from config_service (Architecture Principle #1: Config service exclusivity)
+try:
+    from app.core.config import settings
+    environment = settings.environment
+except Exception as e:
+    raise RuntimeError(f"Failed to get environment from config_service for endpoint registration: {e}. No environment fallbacks allowed per architecture.")
 
 if environment not in ['production', 'prod', 'staging']:
     # Development/test endpoints only

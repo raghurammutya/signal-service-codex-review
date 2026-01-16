@@ -42,11 +42,13 @@ class SignalWatermarkService:
             # Try to get from config service first
             try:
                 from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
                 
-                environment = os.getenv("ENVIRONMENT", "production")
+                # Use environment from config_service (no fallbacks)
                 config_client = ConfigServiceClient(
                     service_name="signal_service", 
-                    environment=environment
+                    environment=settings.environment,
+                    timeout=5
                 )
                 
                 # Get watermark secret (required for marketplace signals)
@@ -63,17 +65,8 @@ class SignalWatermarkService:
                 log_info(f"Watermark service configured from config service - policy: {self._enforcement_policy}")
                 
             except ImportError:
-                # Fallback to environment variables
-                self._watermark_secret = os.getenv("WATERMARK_SECRET")
-                enforcement = os.getenv("WATERMARK_ENFORCEMENT_ENABLED", "true")
-                self._enforcement_enabled = enforcement.lower() != "false"
-                
-                # Get enforcement policy from environment
-                policy = os.getenv("WATERMARK_ENFORCEMENT_POLICY", "auto-enforce")
-                self._enforcement_policy = policy if policy in ["audit-only", "auto-enforce"] else "auto-enforce"
-                
-                if not self._watermark_secret:
-                    logger.warning("WATERMARK_SECRET not configured - marketplace signals won't be watermarked")
+                # No environment fallbacks allowed per architecture
+                raise RuntimeError("Failed to import config_service but no environment fallbacks allowed per Architecture Principle #1")
                     
         except Exception as e:
             log_error(f"Failed to load watermark config: {e}")
@@ -144,8 +137,21 @@ class SignalWatermarkService:
         try:
             import httpx
             
-            # Get marketplace service URL
-            marketplace_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
+            # Get marketplace service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                marketplace_url = config_client.get_config("MARKETPLACE_SERVICE_URL")
+                if not marketplace_url:
+                    raise ValueError("MARKETPLACE_SERVICE_URL not found in config_service")
+            except Exception as e:
+                return {"success": False, "error": f"Failed to get marketplace URL from config_service: {e}. No environment fallbacks allowed per architecture."}
             
             # Get gateway secret for authentication
             gateway_secret = await self._get_gateway_secret()
@@ -195,20 +201,22 @@ class SignalWatermarkService:
             return signal_data
     
     async def _get_gateway_secret(self) -> Optional[str]:
-        """Get gateway secret from config service or environment"""
-        gateway_secret = os.getenv("GATEWAY_SECRET")
-        if not gateway_secret:
-            try:
-                from common.config_service.client import ConfigServiceClient
-                environment = os.getenv("ENVIRONMENT", "production")
-                config_client = ConfigServiceClient(
-                    service_name="signal_service",
-                    environment=environment
-                )
-                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-            except Exception:
-                pass
-        return gateway_secret
+        """Get gateway secret from config service exclusively (Architecture Principle #1: Config service exclusivity)"""
+        try:
+            from common.config_service.client import ConfigServiceClient
+            from app.core.config import settings
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            gateway_secret = config_client.get_secret("GATEWAY_SECRET")
+            if not gateway_secret:
+                raise ValueError("GATEWAY_SECRET not found in config_service")
+            return gateway_secret
+        except Exception as e:
+            raise RuntimeError(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
             
     def verify_watermark(
         self,
@@ -433,25 +441,37 @@ class SignalWatermarkService:
         try:
             import httpx
             
-            # Get marketplace service URL
-            marketplace_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
+            # Get marketplace service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                marketplace_url = config_client.get_config("MARKETPLACE_SERVICE_URL")
+                if not marketplace_url:
+                    raise ValueError("MARKETPLACE_SERVICE_URL not found in config_service")
+            except Exception as e:
+                return {"success": False, "error": f"Failed to get marketplace URL from config_service: {e}. No environment fallbacks allowed per architecture."}
             
-            # Get gateway secret for authentication
-            gateway_secret = os.getenv("GATEWAY_SECRET")
-            if not gateway_secret:
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service",
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                return {"success": False, "error": "Gateway secret not available"}
+            # Get gateway secret for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
+                if not gateway_secret:
+                    raise ValueError("GATEWAY_SECRET not found in config_service")
+            except Exception as e:
+                return {"success": False, "error": f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture."}
             
             # Prepare leak detection request data 
             # Note: This function should only be called with signal_data that was already 

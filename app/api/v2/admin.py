@@ -33,8 +33,21 @@ def verify_admin_token(token: Optional[str] = None) -> Optional[str]:
             detail="Admin token required"
         )
     
-    # Simple development token check
-    expected_token = os.getenv('ADMIN_TOKEN', 'dev-admin-token')
+    # Admin token from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        from common.config_service.client import ConfigServiceClient
+        from app.core.config import settings
+        
+        config_client = ConfigServiceClient(
+            service_name="signal_service",
+            environment=settings.environment,
+            timeout=5
+        )
+        expected_token = config_client.get_secret("ADMIN_TOKEN")
+        if not expected_token:
+            raise ValueError("ADMIN_TOKEN not found in config_service")
+    except Exception as e:
+        raise RuntimeError(f"Failed to get admin token from config_service: {e}. No environment fallbacks allowed per architecture.")
     if token != expected_token:
         raise HTTPException(
             status_code=403,

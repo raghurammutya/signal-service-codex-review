@@ -37,21 +37,41 @@ class SignalExecutor:
     
     # MinIO configuration - fail fast if not properly configured
     # Match marketplace storage service bucket naming convention exactly
-    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    BUCKET_MAP = {
-        "development": "stocksblitz-scripts-dev",
-        "staging": "stocksblitz-scripts-staging", 
-        "production": "stocksblitz-scripts-prod",
-        "dev": "stocksblitz-scripts-dev",
-        "prod": "stocksblitz-scripts-prod",
-    }
+    # Get environment and MinIO bucket from config_service (Architecture Principle #1: Config service exclusivity)
+    from app.core.config import settings
+    ENVIRONMENT = settings.environment
     
-    # CRITICAL: No default values - fail fast if not configured
-    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
-    MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
-    MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY") 
-    MINIO_USE_SSL = os.getenv("MINIO_USE_SSL", "false").lower() == "true"
-    MINIO_BUCKET = BUCKET_MAP.get(ENVIRONMENT.lower())
+    # CRITICAL: MinIO config from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        from common.config_service.client import ConfigServiceClient
+        
+        client = ConfigServiceClient(
+            service_name="signal_service",
+            environment=ENVIRONMENT,
+            timeout=5
+        )
+        
+        MINIO_ENDPOINT = client.get_secret("MINIO_ENDPOINT")
+        MINIO_ACCESS_KEY = client.get_secret("MINIO_ACCESS_KEY")
+        MINIO_SECRET_KEY = client.get_secret("MINIO_SECRET_KEY")
+        MINIO_USE_SSL_STR = client.get_config("MINIO_USE_SSL", required=True)
+        if not MINIO_USE_SSL_STR:
+            raise ValueError("MINIO_USE_SSL not found in config_service")
+        MINIO_USE_SSL = MINIO_USE_SSL_STR.lower() == "true"
+        
+        # Get MinIO bucket from config_service (no hardcoded mapping)
+        MINIO_BUCKET = client.get_config("MINIO_BUCKET")
+        if not MINIO_BUCKET:
+            raise ValueError("MINIO_BUCKET not found in config_service")
+            
+        if not all([MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_USE_SSL_STR, MINIO_BUCKET]):
+            raise ValueError("MinIO configuration incomplete in config_service")
+            
+    except Exception as e:
+        raise RuntimeError(f"Failed to get MinIO configuration from config_service: {e}. No environment fallbacks allowed per architecture.")
     
     # Personal namespace prefix (matching algo_engine)
     PERSONAL_PREFIX = "personal"
@@ -206,8 +226,12 @@ class SignalExecutor:
         try:
             import httpx
             
-            # Get marketplace service URL
-            marketplace_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
+            # Get marketplace service URL from config_service (Architecture Principle #1: Config service exclusivity)
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
+            if not marketplace_url:
+                log_error("MARKETPLACE_SERVICE_URL not configured in config_service")
+                return None
             
             # Get internal API key for service-to-service authentication
             try:
@@ -399,7 +423,8 @@ class SignalExecutor:
             Dict with execution results and any signals generated
         """
         # SECURITY: Disable script execution in production
-        environment = os.getenv('ENVIRONMENT', 'development')
+        # Use environment from config_service (already loaded in ENVIRONMENT variable)
+        environment = ENVIRONMENT
         if environment in ['production', 'prod', 'staging']:
             raise RuntimeError(
                 f"Script execution is disabled in {environment} environment for security reasons. "

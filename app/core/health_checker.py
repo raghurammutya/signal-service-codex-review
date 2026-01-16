@@ -121,11 +121,12 @@ class HealthChecker:
         """Perform all health checks"""
         start_time = time.time()
         
-        # Run all checks concurrently
+        # Run all checks concurrently (including config_service per architecture standards)
         checks = await asyncio.gather(
             self._check_api_responsiveness(),
             self._check_database_health(),
             self._check_redis_health(),
+            self._check_config_service_health(),
             self._check_signal_processing_health(),
             self._check_external_services_health(),
             self._check_system_resources(),
@@ -138,7 +139,7 @@ class HealthChecker:
         
         # Process check results
         check_names = [
-            'api', 'database', 'redis', 'signal_processing', 
+            'api', 'database', 'redis', 'config_service', 'signal_processing', 
             'external_services', 'system_resources', 'cache', 
             'backpressure', 'error_tracking', 'model_configuration'
         ]
@@ -590,6 +591,85 @@ class HealthChecker:
                 'status': ComponentStatus.DOWN.value,
                 'error': str(e),
                 'message': 'Error rate check failed',
+                'timestamp': datetime.utcnow().isoformat()
+            }
+    
+    async def _check_config_service_health(self) -> Dict[str, Any]:
+        """
+        Check config_service connectivity and health per Architecture Standards.
+        
+        ARCHITECTURE COMPLIANCE:
+        - Config service is MANDATORY (Architecture Principle #1)
+        - Health checks MUST verify config_service connectivity
+        """
+        try:
+            start_time = time.time()
+            
+            # Import config service client
+            try:
+                import sys
+                import os
+                sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+                from common.config_service.client import ConfigServiceClient
+            except ImportError:
+                return {
+                    'status': ComponentStatus.DOWN.value,
+                    'error': 'Config service client not available',
+                    'message': 'CRITICAL: Config service is mandatory per architecture',
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            
+            # Create client and test connectivity
+            # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
+            try:
+                from app.core.config import settings
+                environment = settings.environment
+            except Exception as e:
+                raise RuntimeError(f"Failed to get environment from config_service for health check: {e}. No environment fallbacks allowed per architecture.")
+            
+            client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=environment,
+                timeout=5
+            )
+            
+            # Test health check endpoint
+            health_check_success = client.health_check()
+            
+            # Test configuration retrieval
+            try:
+                test_config = client.get_config("SERVICE_VERSION", required=False)
+                config_access_success = True
+            except Exception:
+                config_access_success = False
+                
+            response_time_ms = (time.time() - start_time) * 1000
+            
+            # Determine status
+            if health_check_success and config_access_success:
+                status = ComponentStatus.UP
+                message = f"Config service healthy: {response_time_ms:.2f}ms response"
+            elif health_check_success:
+                status = ComponentStatus.DEGRADED
+                message = f"Config service degraded: health OK but config access failed"
+            else:
+                status = ComponentStatus.DOWN
+                message = "Config service unreachable"
+            
+            return {
+                'status': status.value,
+                'response_time_ms': round(response_time_ms, 2),
+                'health_check_success': health_check_success,
+                'config_access_success': config_access_success,
+                'message': message,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            return {
+                'status': ComponentStatus.DOWN.value,
+                'error': str(e),
+                'message': 'CRITICAL: Config service connectivity failed',
                 'timestamp': datetime.utcnow().isoformat()
             }
     

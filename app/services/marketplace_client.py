@@ -148,24 +148,21 @@ class MarketplaceClient:
         
         try:
             # Use gateway headers for authentication since marketplace API requires it
-            # Get the real gateway secret, not the internal API key
-            gateway_secret = os.getenv("GATEWAY_SECRET") 
-            if not gateway_secret:
-                # Try to get from config service
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service", 
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                logger.error("GATEWAY_SECRET not found - marketplace API calls will fail")
-                return {"signals": []}
+            # Get the real gateway secret from config_service (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
+                if not gateway_secret:
+                    raise ValueError("GATEWAY_SECRET not found in config_service")
+            except Exception as e:
+                raise RuntimeError(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 
             headers = {
                 "X-User-ID": user_id,
@@ -215,23 +212,21 @@ class MarketplaceClient:
         client = self._get_client()
         
         try:
-            # Use gateway headers for authentication
-            gateway_secret = os.getenv("GATEWAY_SECRET") 
-            if not gateway_secret:
-                # Try to get from config service
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service", 
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                logger.error("GATEWAY_SECRET not found - marketplace API calls will fail")
+            # Use gateway headers for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service", 
+                    environment=settings.environment,
+                    timeout=5
+                )
+                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
+                if not gateway_secret:
+                    raise ValueError("GATEWAY_SECRET not found in config_service")
+            except Exception as e:
+                logger.error(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 return {"subscriptions": [], "total_count": 0}
             
             headers = {
@@ -308,23 +303,21 @@ class MarketplaceClient:
         client = self._get_client()
         
         try:
-            # Use gateway headers for authentication
-            gateway_secret = os.getenv("GATEWAY_SECRET") 
-            if not gateway_secret:
-                # Try to get from config service
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service", 
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                logger.error("GATEWAY_SECRET not found - marketplace API calls will fail")
+            # Use gateway headers for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service", 
+                    environment=settings.environment,
+                    timeout=5
+                )
+                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
+                if not gateway_secret:
+                    raise ValueError("GATEWAY_SECRET not found in config_service")
+            except Exception as e:
+                logger.error(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 return {"signal_groups": []}
             
             headers = {
@@ -379,23 +372,21 @@ class MarketplaceClient:
         client = self._get_client()
         
         try:
-            # Use gateway headers for authentication
-            gateway_secret = os.getenv("GATEWAY_SECRET") 
-            if not gateway_secret:
-                # Try to get from config service
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service", 
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                logger.error("GATEWAY_SECRET not found - marketplace API calls will fail")
+            # Use gateway headers for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service", 
+                    environment=settings.environment,
+                    timeout=5
+                )
+                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
+                if not gateway_secret:
+                    raise ValueError("GATEWAY_SECRET not found in config_service")
+            except Exception as e:
+                logger.error(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 return {"has_access": False, "access_level": "none"}
             
             headers = {
@@ -430,16 +421,27 @@ def create_marketplace_client() -> MarketplaceClient:
     Returns:
         MarketplaceClient instance
     """
-    base_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
-    internal_api_key = os.getenv("INTERNAL_API_KEY", "")
-    
-    # Try to get internal API key from config service if not in environment
-    if not internal_api_key:
-        try:
-            from common.config_service.client import ConfigServiceClient
-            environment = os.getenv("ENVIRONMENT", "production")
-            config_client = ConfigServiceClient(
-                service_name="signal_service", 
+    # Get marketplace URL and API key from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        from common.config_service.client import ConfigServiceClient
+        from app.core.config import settings
+        
+        config_client = ConfigServiceClient(
+            service_name="signal_service",
+            environment=settings.environment,
+            timeout=5
+        )
+        
+        base_url = config_client.get_config("MARKETPLACE_SERVICE_URL")
+        if not base_url:
+            raise ValueError("MARKETPLACE_SERVICE_URL not found in config_service")
+            
+        internal_api_key = config_client.get_secret("INTERNAL_API_KEY")
+        if not internal_api_key:
+            raise ValueError("INTERNAL_API_KEY not found in config_service")
+            
+    except Exception as e:
+        raise RuntimeError(f"Failed to get marketplace configuration from config_service: {e}. No environment fallbacks allowed per architecture.") 
                 environment=environment
             )
             internal_api_key = config_client.get_secret("INTERNAL_API_KEY")

@@ -130,21 +130,35 @@ async def get_database_connection():
     if _engine and _async_session_factory:
         return _engine, _async_session_factory
     
-    # Get database URL
-    database_url = os.getenv('DATABASE_URL') or os.getenv('TIMESCALEDB_URL')
-    environment = os.getenv('ENVIRONMENT', 'development')
+    # Get database URL from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        from common.config_service.client import ConfigServiceClient
+        
+        # ARCHITECTURE COMPLIANCE: Environment MUST be provided externally (no defaults)
+        environment = os.getenv("ENVIRONMENT")
+        if not environment:
+            raise ValueError("ENVIRONMENT variable not set. Config service requires explicit environment - no defaults allowed per architecture.")
+            
+        client = ConfigServiceClient(
+            service_name="signal_service",
+            environment=environment,
+            timeout=5
+        )
+        database_url = client.get_secret("DATABASE_URL")
+        # Use the same environment (no additional config call needed)
+    except Exception as e:
+        logger.error(f"Failed to get database URL from config_service: {e}")
+        raise ValueError(f"Config service failure: {e}. No fallbacks allowed per architecture.")
     
     if not database_url:
-        # In production, database is required
-        if environment in ['production', 'prod', 'staging']:
-            raise DatabaseConnectionError(
-                f"Database URL not configured for {environment} environment. "
-                "Set DATABASE_URL or TIMESCALEDB_URL environment variable."
-            )
-        
-        # Development fallback - return mock
-        logger.warning("No database URL configured, using mock database for development")
-        mock_db = MockDatabase()
+        # ARCHITECTURE COMPLIANCE: No silent fallbacks (fail-fast per Architecture Principle #1)
+        raise DatabaseConnectionError(
+            f"Database URL not configured in config_service for {environment} environment. "
+            "Config service is mandatory - no fallbacks allowed."
+        )
         await mock_db.connect()
         return None, None
     
@@ -161,78 +175,53 @@ async def get_database_connection():
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
         
-        # In production, fail hard
-        if environment in ['production', 'prod', 'staging']:
-            raise DatabaseConnectionError(f"Production database connection failed: {e}")
-        
-        # Development fallback
-        logger.warning("Using mock database for development")
-        mock_db = MockDatabase()
-        await mock_db.connect()
-        return None, None
+        # ARCHITECTURE COMPLIANCE: No environment-based fallbacks (fail-fast per Architecture Principle #1)
+        raise DatabaseConnectionError(f"Database connection failed for {environment} environment: {e}. No fallbacks allowed per architecture.")
 
 
 @asynccontextmanager
 async def get_timescaledb_session():
     """Get TimescaleDB session with proper error handling."""
-    import os
-    environment = os.getenv('ENVIRONMENT', 'development')
-    
+    # ARCHITECTURE COMPLIANCE: No environment-based fallbacks (fail-fast per Architecture Principle #1)
     try:
         engine, session_factory = await get_database_connection()
         
         if session_factory is None:
-            if environment in ['production', 'prod', 'staging']:
-                raise DatabaseConnectionError(
-                    "Database connection failed in production environment. "
-                    "Mock sessions are not allowed in production."
-                )
-            else:
-                # Use mock session only in development
-                logger.warning("Using mock database session in development environment")
-                session = MockSession()
-                try:
-                    yield session
-                finally:
-                    await session.close()
-        else:
-            # Use real session
-            async with session_factory() as session:
-                yield session
+            raise DatabaseConnectionError(
+                "Database connection failed - no session factory available. "
+                "Config service must be properly configured. No fallbacks allowed per architecture."
+            )
+        
+        # Use real session only
+        async with session_factory() as session:
+            yield session
                 
     except Exception as e:
         logger.error(f"Database session error: {e}")
-        if environment in ['production', 'prod', 'staging']:
-            # Never fall back to mock in production
-            raise DatabaseConnectionError(
-                f"Critical database error in {environment}: {e}. "
-                "Service cannot continue without database connection."
-            ) from e
-        else:
-            # Fallback to mock session only in development
-            logger.warning("Falling back to mock database session in development")
-            session = MockSession()
-            try:
-                yield session
-            finally:
-                await session.close()
+        # ARCHITECTURE COMPLIANCE: No mock fallbacks for any environment
+        raise DatabaseConnectionError(
+            f"Critical database error: {e}. "
+            "Service cannot continue without proper database connection. No fallbacks allowed per architecture."
+        ) from e
 
 
 @contextmanager  
 def get_timescaledb_session_sync():
     """Synchronous version - deprecated, use async version."""
-    logger.warning("Using deprecated sync database session")
-    session = MockSession()
-    try:
-        yield session
-    finally:
-        pass
+    # ARCHITECTURE COMPLIANCE: No mock fallbacks allowed per Architecture Principle #1
+    raise DatabaseConnectionError(
+        "Synchronous database sessions are not supported. "
+        "Use async version with proper config_service configuration. No mock fallbacks allowed per architecture."
+    )
 
 
 def get_database():
     """Get database instance - deprecated, use get_database_connection."""
-    logger.warning("Using deprecated get_database function")
-    return MockDatabase()
+    # ARCHITECTURE COMPLIANCE: No mock fallbacks allowed per Architecture Principle #1
+    raise DatabaseConnectionError(
+        "Legacy get_database function is not supported. "
+        "Use get_database_connection with proper config_service configuration. No mock fallbacks allowed per architecture."
+    )
 
 
 class DatabaseHealthChecker:
@@ -245,11 +234,11 @@ class DatabaseHealthChecker:
             engine, _ = await get_database_connection()
             
             if engine is None:
-                return {
-                    "status": "mock",
-                    "message": "Using mock database",
-                    "connection_time_ms": 0
-                }
+                # ARCHITECTURE COMPLIANCE: No mock database status allowed
+                raise DatabaseConnectionError(
+                    "Database engine not available. Config service must be properly configured. "
+                    "No mock database allowed per architecture."
+                )
             
             # Test connection
             import time

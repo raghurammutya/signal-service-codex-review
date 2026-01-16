@@ -13,12 +13,20 @@ from app.core.circuit_breaker import get_all_circuit_breaker_metrics, get_circui
 from app.services.greeks_calculation_engine import GreeksCalculationEngine
 from app.services.vectorized_pyvollib_engine import VectorizedPyvolibGreeksEngine
 
+# Import standardized error handling (architecture compliance)
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from common.errors.standardized_errors import (
+    internal_server_error, invalid_input_error, resource_not_found_error
+)
+
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 
 
-@router.get("/monitoring/circuit-breakers")
+@router.get("/circuit-breakers")
 async def get_circuit_breaker_status():
     """
     Get status of all circuit breakers protecting Greeks calculations.
@@ -52,10 +60,10 @@ async def get_circuit_breaker_status():
         
     except Exception as e:
         logger.error(f"Circuit breaker monitoring failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Circuit breaker monitoring failed: {e}")
+        internal_server_error("Circuit breaker monitoring failed", {"error": str(e)})
 
 
-@router.get("/monitoring/circuit-breakers/{breaker_type}")
+@router.get("/circuit-breakers/{breaker_type}")
 async def get_specific_circuit_breaker(breaker_type: str):
     """
     Get detailed metrics for a specific circuit breaker.
@@ -103,10 +111,10 @@ async def get_specific_circuit_breaker(breaker_type: str):
         
     except Exception as e:
         logger.error(f"Circuit breaker {breaker_type} monitoring failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Circuit breaker monitoring failed: {e}")
+        internal_server_error(f"Circuit breaker {breaker_type} monitoring failed", {"error": str(e)})
 
 
-@router.get("/monitoring/performance/greeks")
+@router.get("/performance/greeks")
 async def get_greeks_performance_metrics():
     """
     Get performance metrics for Greeks calculations.
@@ -180,10 +188,10 @@ async def get_greeks_performance_metrics():
         
     except Exception as e:
         logger.error(f"Performance metrics collection failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Performance monitoring failed: {e}")
+        internal_server_error("Performance monitoring failed", {"error": str(e)})
 
 
-@router.get("/monitoring/model-configuration")
+@router.get("/model-configuration")
 async def get_model_configuration_status():
     """
     Monitor the Greeks model configuration from config_service.
@@ -234,7 +242,7 @@ async def get_model_configuration_status():
         }
 
 
-@router.get("/monitoring/alerts")
+@router.get("/alerts")
 async def get_active_alerts():
     """
     Get active alerts and warnings for the Signal Service.
@@ -294,10 +302,10 @@ async def get_active_alerts():
         
     except Exception as e:
         logger.error(f"Alert monitoring failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Alert monitoring failed: {e}")
+        internal_server_error("Alert monitoring failed", {"error": str(e)})
 
 
-@router.post("/monitoring/circuit-breakers/{breaker_type}/reset")
+@router.post("/circuit-breakers/{breaker_type}/reset")
 async def reset_circuit_breaker(breaker_type: str):
     """
     Reset a specific circuit breaker to CLOSED state.
@@ -320,10 +328,10 @@ async def reset_circuit_breaker(breaker_type: str):
         
     except Exception as e:
         logger.error(f"Circuit breaker reset failed for {breaker_type}: {e}")
-        raise HTTPException(status_code=500, detail=f"Circuit breaker reset failed: {e}")
+        internal_server_error(f"Circuit breaker reset failed for {breaker_type}", {"error": str(e)})
 
 
-@router.get("/monitoring/metrics/prometheus")
+@router.get("/metrics/prometheus")
 async def get_prometheus_metrics():
     """
     Export metrics in Prometheus format for scraping.
@@ -358,4 +366,4 @@ async def get_prometheus_metrics():
         
     except Exception as e:
         logger.error(f"Prometheus metrics export failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Metrics export failed: {e}")
+        internal_server_error("Prometheus metrics export failed", {"error": str(e)})
