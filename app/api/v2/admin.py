@@ -17,7 +17,12 @@ import os
 # Production-grade admin token verification
 def verify_admin_token(token: Optional[str] = None) -> Optional[str]:
     """Production-grade admin token verification"""
-    environment = os.getenv('ENVIRONMENT', 'development')
+    # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
+    try:
+        from app.core.config import settings
+        environment = settings.environment
+    except Exception as e:
+        raise RuntimeError(f"Failed to get environment from config_service for admin auth gating: {e}. No environment fallbacks allowed per architecture.")
     
     # In production, completely block admin endpoints
     if environment in ['production', 'prod', 'staging']:
