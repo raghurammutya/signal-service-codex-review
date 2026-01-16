@@ -402,8 +402,9 @@ class SignalExecutor:
         environment = os.getenv('ENVIRONMENT', 'development')
         if environment in ['production', 'prod', 'staging']:
             raise RuntimeError(
-                "Script execution is disabled in production environment for security reasons. "
-                "Use pre-compiled signal libraries or contact administrators for signal deployment."
+                f"Script execution is disabled in {environment} environment for security reasons. "
+                "Use pre-compiled signal libraries or contact administrators for signal deployment. "
+                "See SCRIPT_EXECUTION_POLICY.md for migration guidance and alternative approaches."
             )
         
         try:

@@ -244,21 +244,85 @@ if environment not in ['production', 'prod', 'staging']:
     @app.get("/api/v2/admin/health")
     async def admin_health():
         """Detailed health status - development only."""
+        # Get real health status from health checker if available
+        try:
+            from app.api.health import get_health_checker
+            checker = get_health_checker()
+            if checker:
+                detailed_health = await checker.check_health(detailed=True)
+                return {
+                    "status": detailed_health.get("status", "unknown"),
+                    "database": detailed_health.get("database", {}).get("status", "unknown"),
+                    "redis": detailed_health.get("redis", {}).get("status", "unknown"), 
+                    "signal_processor": detailed_health.get("signal_processor", {}).get("status", "unknown"),
+                    "details": detailed_health
+                }
+        except Exception as e:
+            logger.warning(f"Could not get detailed health: {e}")
+        
+        # Fallback for development
         return {
             "status": "healthy",
             "database": "healthy", 
             "redis": "healthy",
             "signal_processor": "healthy",
+            "note": "Development fallback - real health checking unavailable"
         }
 
     @app.get("/api/v2/admin/metrics")
     async def admin_metrics():
         """Return metrics snapshot - development only."""
-        return {
-            "backpressure_level": "LOW",
-            "active_subscriptions": 10,
-            "processed_signals": 100,
-        }
+        # Try to get real metrics
+        try:
+            # Get basic system metrics
+            import psutil
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            memory = psutil.virtual_memory()
+            
+            # Try to get Redis-based metrics if available
+            active_subscriptions = 0
+            processed_signals = 0
+            try:
+                from app.utils.redis import get_redis_client
+                redis_client = await get_redis_client()
+                
+                # Get subscription count if keys exist
+                sub_keys = await redis_client.keys("subscription:*")
+                active_subscriptions = len(sub_keys) if sub_keys else 0
+                
+                # Get signal count if available
+                signal_count = await redis_client.get("metrics:signals_processed")
+                processed_signals = int(signal_count) if signal_count else 0
+                
+            except Exception:
+                # Redis unavailable, use fallback values
+                pass
+            
+            # Determine backpressure based on system load
+            backpressure_level = "LOW"
+            if cpu_percent > 80 or memory.percent > 90:
+                backpressure_level = "HIGH"
+            elif cpu_percent > 60 or memory.percent > 75:
+                backpressure_level = "MEDIUM"
+                
+            return {
+                "backpressure_level": backpressure_level,
+                "active_subscriptions": active_subscriptions,
+                "processed_signals": processed_signals,
+                "cpu_percent": round(cpu_percent, 1),
+                "memory_percent": round(memory.percent, 1),
+                "note": "Development metrics with real system data"
+            }
+            
+        except Exception as e:
+            logger.warning(f"Could not get real metrics: {e}")
+            # Fallback to static values with clear indication
+            return {
+                "backpressure_level": "LOW",
+                "active_subscriptions": 0,
+                "processed_signals": 0,
+                "note": "Development fallback - real metrics unavailable"
+            }
 
     @app.get("/api/v2/admin/audit-trail")
     async def admin_audit_trail(user_id: str = None, limit: int = 10):
