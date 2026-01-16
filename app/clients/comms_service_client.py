@@ -33,10 +33,24 @@ class CommsServiceClient:
         logger.info(f"CommsServiceClient initialized with URL: {self.comms_service_url}")
     
     def _get_comms_service_url(self) -> str:
-        """Get comms service URL from config service"""
-        # Use config service to get comms_service URL
-        # Fallback to standard naming convention if not available
-        return getattr(settings, 'COMMS_SERVICE_URL', 'http://comms-service:8086')
+        """Get comms service URL from config service exclusively (Architecture Principle #1: Config service exclusivity)"""
+        try:
+            from common.config_service.client import ConfigServiceClient
+            from app.core.config import settings
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            
+            comms_url = config_client.get_service_url("comms_service")
+            if not comms_url:
+                raise ValueError("comms_service URL not found in config_service")
+            return comms_url
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get comms service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

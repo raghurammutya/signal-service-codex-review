@@ -49,10 +49,24 @@ class AlertServiceClient:
         logger.info(f"AlertServiceClient initialized with URL: {self.alert_service_url}")
     
     def _get_alert_service_url(self) -> str:
-        """Get alert service URL from config service"""
-        # Use config service to get alert_service URL
-        # Fallback to standard naming convention if not available
-        return getattr(settings, 'ALERT_SERVICE_URL', 'http://alert-service:8085')
+        """Get alert service URL from config service exclusively (Architecture Principle #1: Config service exclusivity)"""
+        try:
+            from common.config_service.client import ConfigServiceClient
+            from app.core.config import settings
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            
+            alert_url = config_client.get_service_url("alert_service")
+            if not alert_url:
+                raise ValueError("alert_service URL not found in config_service")
+            return alert_url
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get alert service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

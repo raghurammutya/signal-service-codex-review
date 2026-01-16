@@ -13,7 +13,9 @@ from app.core.distributed_health_manager import DistributedHealthManager
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+# Architecture Principle #3: API versioning is mandatory
+# Health endpoints are versioned for consistency with all API endpoints
+router = APIRouter(prefix="/api/v1/health", tags=["health"])
 
 # Global health checker instance (will be initialized in main.py)
 health_checker: HealthChecker = None
@@ -31,7 +33,7 @@ def get_distributed_health():
         raise HTTPException(status_code=503, detail="Distributed health manager not initialized")
     return distributed_health
 
-@router.get("/health", response_class=PlainTextResponse)
+@router.get("", response_class=PlainTextResponse)
 async def basic_health_check():
     """
     Basic health check endpoint - returns 200 OK if service is running
@@ -39,7 +41,7 @@ async def basic_health_check():
     """
     return "OK"
 
-@router.get("/health/live")
+@router.get("/live")
 async def liveness_probe():
     """
     Kubernetes liveness probe - checks if the service should be restarted
@@ -56,7 +58,7 @@ async def liveness_probe():
         logger.error(f"Liveness probe failed: {e}")
         raise HTTPException(status_code=503, detail="Service not alive")
 
-@router.get("/health/ready")
+@router.get("/ready")
 async def readiness_probe(checker: HealthChecker = Depends(get_health_checker)):
     """
     Kubernetes readiness probe - checks if service is ready to handle requests
@@ -83,7 +85,7 @@ async def readiness_probe(checker: HealthChecker = Depends(get_health_checker)):
         logger.error(f"Readiness probe failed: {e}")
         raise HTTPException(status_code=503, detail="Service not ready")
 
-@router.get("/health/detailed")
+@router.get("/detailed")
 async def detailed_health_check(checker: HealthChecker = Depends(get_health_checker)):
     """
     Detailed health check with all component information
@@ -110,7 +112,7 @@ async def detailed_health_check(checker: HealthChecker = Depends(get_health_chec
         logger.error(f"Detailed health check failed: {e}")
         raise HTTPException(status_code=500, detail=f"Health check failed: {e}")
 
-@router.get("/health/cluster")
+@router.get("/cluster")
 async def cluster_health_check(dist_health: DistributedHealthManager = Depends(get_distributed_health)):
     """
     Cluster-wide health check showing all Signal Service instances

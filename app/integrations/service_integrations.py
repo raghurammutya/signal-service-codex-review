@@ -12,9 +12,24 @@ class SignalServiceIntegrations:
     """Handles integrations with Calendar, Alert, and Messaging services for Signal Service"""
     
     def __init__(self):
-        self.calendar_base_url = "http://stocksblitz-calendar-service:8011"
-        self.alert_base_url = "http://stocksblitz-alert-service:8010"
-        self.messaging_base_url = "http://stocksblitz-messaging-service:8012"
+        # Get service URLs from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+        try:
+            from common.config_service.client import ConfigServiceClient
+            from app.core.config import settings
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            
+            self.calendar_base_url = config_client.get_service_url("calendar_service")
+            self.alert_base_url = config_client.get_service_url("alert_service") 
+            self.messaging_base_url = config_client.get_service_url("messaging_service")
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get service URLs from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+            
         self.timeout = 3.0  # Very short timeout for signal processing
         
     async def _make_request(self, method: str, url: str, data: Optional[Dict] = None, params: Optional[Dict] = None) -> Optional[Dict]:

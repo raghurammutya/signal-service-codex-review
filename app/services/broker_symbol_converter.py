@@ -18,7 +18,26 @@ class BrokerSymbolConverter:
     """
     
     def __init__(self, instrument_service_url: str = None):
-        self.instrument_service_url = instrument_service_url or settings.INSTRUMENT_SERVICE_URL or "http://instrument-service:8008"
+        # Get instrument service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+        if instrument_service_url is None:
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                
+                instrument_service_url = config_client.get_service_url("instrument_service")
+                if not instrument_service_url:
+                    raise ValueError("instrument_service URL not found in config_service")
+                    
+            except Exception as e:
+                raise RuntimeError(f"Failed to get instrument service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+        
+        self.instrument_service_url = instrument_service_url
         self.cache = {}  # Simple in-memory cache
         self.cache_ttl = 3600  # 1 hour cache
         self.session: Optional[aiohttp.ClientSession] = None

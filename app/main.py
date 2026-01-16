@@ -212,9 +212,9 @@ except ImportError as exc:
     except ImportError as fallback_exc:
         logger.warning("Could not import simple monitoring router: %s", fallback_exc)
 
-@app.get("/")
+@app.get("/api/v1")
 async def root():
-    """Root endpoint"""
+    """Root endpoint - Architecture Principle #3: API versioning is mandatory"""
     return {
         "service": "signal_service",
         "version": "1.0.0",

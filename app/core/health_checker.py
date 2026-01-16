@@ -368,11 +368,25 @@ class HealthChecker:
     async def _check_external_services_health(self) -> Dict[str, Any]:
         """Check connectivity to external services"""
         try:
-            external_services = {
-                'instrument_service': 'http://localhost:8008/health',
-                'ticker_service': 'http://localhost:8001/health',
-                'subscription_service': 'http://localhost:8005/health'
-            }
+            # Get external service URLs from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                
+                external_services = {
+                    'instrument_service': f"{config_client.get_service_url('instrument_service')}/health",
+                    'ticker_service': f"{config_client.get_service_url('ticker_service')}/health", 
+                    'subscription_service': f"{config_client.get_service_url('subscription_service')}/health"
+                }
+                
+            except Exception as e:
+                raise RuntimeError(f"Failed to get service URLs from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
             
             service_statuses = {}
             all_healthy = True

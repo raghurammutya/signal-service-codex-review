@@ -65,8 +65,24 @@ class ProductionHistoricalDataManager:
         logger.info("ProductionHistoricalDataManager initialized with ticker_service integration")
     
     def _get_ticker_service_url(self) -> str:
-        """Get ticker service URL from config"""
-        return getattr(settings, 'TICKER_SERVICE_URL', 'http://localhost:8089')
+        """Get ticker service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)"""
+        try:
+            from common.config_service.client import ConfigServiceClient
+            from app.core.config import settings
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            
+            ticker_url = config_client.get_service_url("ticker_service")
+            if not ticker_url:
+                raise ValueError("ticker_service URL not found in config_service")
+            return ticker_url
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get ticker service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

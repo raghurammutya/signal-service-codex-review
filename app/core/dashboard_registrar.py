@@ -13,9 +13,42 @@ logger = logging.getLogger(__name__)
 class DashboardRegistrar:
     """Manages registration with the dynamic dashboard"""
     
-    def __init__(self, dashboard_url: str = "http://localhost:8500"):
+    def __init__(self, dashboard_url: str = None, service_url: str = None):
+        # Get URLs from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+        if dashboard_url is None:
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                dashboard_url = config_client.get_config("DASHBOARD_SERVICE_URL")
+                if not dashboard_url:
+                    raise ValueError("DASHBOARD_SERVICE_URL not found in config_service")
+            except Exception as e:
+                raise RuntimeError(f"Failed to get dashboard URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+        
+        if service_url is None:
+            try:
+                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                
+                config_client = ConfigServiceClient(
+                    service_name="signal_service",
+                    environment=settings.environment,
+                    timeout=5
+                )
+                service_url = config_client.get_config("SIGNAL_SERVICE_URL")
+                if not service_url:
+                    raise ValueError("SIGNAL_SERVICE_URL not found in config_service")
+            except Exception as e:
+                raise RuntimeError(f"Failed to get service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+                
         self.dashboard_url = dashboard_url
-        self.service_url = "http://localhost:8003"
+        self.service_url = service_url
         self.registration_endpoint = f"{dashboard_url}/api/services/register"
         self.health_update_endpoint = f"{dashboard_url}/api/services/health"
         self.registration_interval = 30  # seconds
