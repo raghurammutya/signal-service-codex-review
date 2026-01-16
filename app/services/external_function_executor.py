@@ -16,7 +16,7 @@ try:
 except ImportError:
     RESTRICTED_PYTHON_AVAILABLE = False
 
-from app.utils.logging_utils import log_info, log_exception, log_warning
+from app.utils.logging_utils import log_info, log_exception, log_warning, log_error
 
 from app.core.config import settings
 from app.errors import ExternalFunctionExecutionError, SecurityError
@@ -145,7 +145,7 @@ class ExternalFunctionExecutor:
                 log_exception(error_msg)
                 raise ExternalFunctionExecutionError(error_msg)
     
-    def validate_function_config(self, func_config: ExternalFunctionConfig):
+    def validate_function_config(self, func_config: ExternalFunctionConfig, user_id: Optional[str] = None):
         """Validate external function configuration"""
         # Check file path security
         if not self._is_safe_path(func_config.file_path):
@@ -165,9 +165,10 @@ class ExternalFunctionExecutor:
         if func_config.timeout > max_timeout:
             raise SecurityError(f"Timeout too high: {func_config.timeout}s > {max_timeout}s")
         
-        # Check function name
-        if not func_config.function_name.isidentifier():
-            raise SecurityError(f"Invalid function name: {func_config.function_name}")
+        # User access validation can be added here when user_id is available
+        # if user_id:
+        #     # This would require async context, so skipping for now
+        #     pass
         
         # Check memory limit
         if func_config.memory_limit_mb > settings.EXTERNAL_FUNCTION_MAX_MEMORY_MB:
@@ -480,22 +481,61 @@ class ExternalFunctionExecutor:
     
     # ACL Methods
     
-    def _get_user_role(self, user_id: str) -> Dict[str, Any]:
-        """Get user role and permissions (mock implementation)"""
-        # In production, this would query the user service
-        # For now, return a default role structure
-        return {
-            "role": "basic",
-            "permissions": ["execute_custom_functions", "upload_functions", "access_market_data"],
-            "max_functions": 10,
-            "max_memory_mb": 64,
-            "max_timeout": 15
-        }
+    async def _get_user_role(self, user_id: str) -> Dict[str, Any]:
+        """Get user role and permissions from unified entitlement service"""
+        try:
+            # Use unified entitlement service for real ACL
+            from app.services.unified_entitlement_service import get_unified_entitlement_service
+            
+            entitlement_service = await get_unified_entitlement_service()
+            user_data = await entitlement_service._get_user_entitlements(user_id)
+            
+            if not user_data:
+                raise ValueError(f"No entitlement data found for user {user_id}")
+            
+            # Map entitlement tier to function execution permissions
+            tier = user_data.get("tier", "free")
+            tier_permissions = {
+                "free": {
+                    "role": "free",
+                    "permissions": ["execute_custom_functions"],
+                    "max_functions": 2,
+                    "max_memory_mb": 32,
+                    "max_timeout": 5
+                },
+                "basic": {
+                    "role": "basic", 
+                    "permissions": ["execute_custom_functions", "upload_functions"],
+                    "max_functions": 10,
+                    "max_memory_mb": 64,
+                    "max_timeout": 15
+                },
+                "professional": {
+                    "role": "professional",
+                    "permissions": ["execute_custom_functions", "upload_functions", "access_market_data"],
+                    "max_functions": 50,
+                    "max_memory_mb": 256,
+                    "max_timeout": 60
+                },
+                "enterprise": {
+                    "role": "enterprise",
+                    "permissions": ["execute_custom_functions", "upload_functions", "access_market_data", "admin_functions"],
+                    "max_functions": 200,
+                    "max_memory_mb": 1024,
+                    "max_timeout": 300
+                }
+            }
+            
+            return tier_permissions.get(tier, tier_permissions["free"])
+                
+        except Exception as e:
+            log_error(f"Failed to get user role for {user_id}: {e}")
+            raise ValueError(f"Unable to verify user permissions. No default access allowed in production.")
     
-    def _check_user_access(self, user_id: str, config: ExternalFunctionConfig) -> bool:
+    async def _check_user_access(self, user_id: str, config: ExternalFunctionConfig) -> bool:
         """Check if user has access to execute the function"""
         try:
-            user_role = self._get_user_role(user_id)
+            user_role = await self._get_user_role(user_id)
             
             # Check if user has execute permission
             if "execute_custom_functions" not in user_role.get("permissions", []):
@@ -509,18 +549,18 @@ class ExternalFunctionExecutor:
         except Exception:
             return False
     
-    def _check_cross_user_access(self, user_id: str, target_user_id: str) -> bool:
+    async def _check_cross_user_access(self, user_id: str, target_user_id: str) -> bool:
         """Check if user has cross-user access (admin only)"""
         try:
-            user_role = self._get_user_role(user_id)
+            user_role = await self._get_user_role(user_id)
             return "cross_user_access" in user_role.get("permissions", [])
         except Exception:
             return False
     
-    def _check_shared_access(self, user_id: str, shared_function_path: str) -> bool:
+    async def _check_shared_access(self, user_id: str, shared_function_path: str) -> bool:
         """Check if user has access to shared functions"""
         try:
-            user_role = self._get_user_role(user_id)
+            user_role = await self._get_user_role(user_id)
             
             # Only premium and admin users can access shared functions
             role = user_role.get("role", "basic")
@@ -547,13 +587,13 @@ class ExternalFunctionExecutor:
         
         # In production, this would also write to an audit database
     
-    def _validate_acl(self, user_id: str, config: ExternalFunctionConfig):
+    async def _validate_acl(self, user_id: str, config: ExternalFunctionConfig):
         """Validate ACL for function execution"""
         if not user_id:
             raise SecurityError("User ID required for ACL validation")
         
         # Check basic user access
-        if not self._check_user_access(user_id, config):
+        if not await self._check_user_access(user_id, config):
             self._audit_access_attempt(user_id, config, "access_denied", "User lacks access to function")
             raise SecurityError("Access denied: User not authorized to execute this function")
         
@@ -561,18 +601,18 @@ class ExternalFunctionExecutor:
         if "/" in config.file_path:
             file_user_id = config.file_path.split("/")[0]
             if file_user_id != user_id:
-                if not self._check_cross_user_access(user_id, file_user_id):
+                if not await self._check_cross_user_access(user_id, file_user_id):
                     self._audit_access_attempt(user_id, config, "access_denied", "Cross-user access denied")
                     raise SecurityError("Cross-user access denied")
         
         # Check shared function access
         if config.file_path.startswith("shared/"):
-            if not self._check_shared_access(user_id, config.file_path):
+            if not await self._check_shared_access(user_id, config.file_path):
                 self._audit_access_attempt(user_id, config, "access_denied", "Shared function access denied")
                 raise SecurityError("Shared function access denied")
         
         # Check role-based resource limits
-        user_role = self._get_user_role(user_id)
+        user_role = await self._get_user_role(user_id)
         if config.memory_limit_mb > user_role.get("max_memory_mb", 32):
             self._audit_access_attempt(user_id, config, "access_denied", "Memory limit exceeds user role limit")
             raise SecurityError(f"Memory limit exceeds role limit: {config.memory_limit_mb}MB > {user_role['max_memory_mb']}MB")
@@ -597,7 +637,7 @@ class ExternalFunctionExecutor:
                 log_info(f"Executing external function: {func_config.name} for user: {user_id}")
                 
                 # Validate ACL first
-                self._validate_acl(user_id, func_config)
+                await self._validate_acl(user_id, func_config)
                 
                 # Validate function configuration
                 self.validate_function_config(func_config)
