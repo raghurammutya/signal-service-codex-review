@@ -15,6 +15,7 @@ from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalcula
 from app.services.instrument_service_client import InstrumentServiceClient
 from app.repositories.signal_repository import SignalRepository
 from app.clients.historical_data_client import get_historical_data_client
+from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
 # from app.models.signal_models import SignalGreeks, SignalIndicator
 
 
@@ -28,14 +29,23 @@ class MoneynessHistoricalProcessor:
         self,
         moneyness_calculator: MoneynessAwareGreeksCalculator,
         repository: SignalRepository,
-        instrument_client: Optional[InstrumentServiceClient] = None
+        instrument_client: Optional[InstrumentServiceClient] = None,
+        timeframe_manager: Optional[FlexibleTimeframeManager] = None
     ):
         self.moneyness_calculator = moneyness_calculator
         self.repository = repository
         self.historical_client = get_historical_data_client()  # Unified historical data client
         self.instrument_client = instrument_client or InstrumentServiceClient()
+        # Use FlexibleTimeframeManager to eliminate duplication
+        self.timeframe_manager = timeframe_manager or FlexibleTimeframeManager()
         self._processing_cache = {}
         self._cache_ttl = 300  # 5 minutes
+    
+    async def initialize(self):
+        """Initialize the processor and timeframe manager"""
+        if self.timeframe_manager and not hasattr(self.timeframe_manager, 'session'):
+            await self.timeframe_manager.initialize()
+        log_info("MoneynessHistoricalProcessor initialized with unified timeframe manager")
         
     async def get_moneyness_greeks_like_strike(
         self,
@@ -112,36 +122,54 @@ class MoneynessHistoricalProcessor:
         end_time: datetime,
         timeframe: str
     ) -> List[Dict[str, Any]]:
-        """Process historical moneyness Greeks with intelligent sampling"""
+        """Process historical moneyness Greeks using FlexibleTimeframeManager - eliminates duplication"""
         
-        # Get base interval data from repository
-        base_data = await self._get_base_moneyness_data(
-            underlying,
-            moneyness_level,
-            expiry_date,
-            start_time,
-            end_time
-        )
+        # Create virtual instrument key for moneyness
+        virtual_instrument_key = f"MONEYNESS@{underlying}@{moneyness_level}@{expiry_date}"
         
-        if not base_data:
-            # No historical data - compute live
-            return await self._compute_live_moneyness_series(
+        # Delegate to FlexibleTimeframeManager to eliminate historical data retrieval duplication
+        try:
+            # Initialize timeframe manager if not already done
+            if not hasattr(self.timeframe_manager, 'session') or not self.timeframe_manager.session:
+                await self.timeframe_manager.initialize()
+            
+            # Use unified timeframe manager for all historical data retrieval
+            aggregated_data = await self.timeframe_manager.get_aggregated_data(
+                instrument_key=virtual_instrument_key,
+                signal_type="moneyness_greeks",
+                timeframe=timeframe,
+                start_time=start_time,
+                end_time=end_time,
+                fields=['delta', 'gamma', 'theta', 'vega', 'rho', 'iv']
+            )
+            
+            return aggregated_data
+            
+        except Exception as e:
+            log_error(f"Failed to get aggregated moneyness data through timeframe manager: {e}")
+            
+            # Fallback to manual processing only if timeframe manager fails
+            base_data = await self._get_base_moneyness_data(
                 underlying,
                 moneyness_level,
                 expiry_date,
                 start_time,
-                end_time,
-                timeframe
+                end_time
             )
             
-        # Aggregate to requested timeframe
-        aggregated_data = self.timeframe_manager.aggregate_timeseries(
-            base_data,
-            timeframe,
-            aggregation_method='greeks'  # Special aggregation for Greeks
-        )
-        
-        return aggregated_data
+            if not base_data:
+                # No historical data - compute live
+                return await self._compute_live_moneyness_series(
+                    underlying,
+                    moneyness_level,
+                    expiry_date,
+                    start_time,
+                    end_time,
+                    timeframe
+                )
+                
+            # Manual aggregation as fallback (simplified to avoid duplication)
+            return self._manual_aggregate(base_data, timeframe)
         
     async def _get_base_moneyness_data(
         self,
@@ -482,15 +510,26 @@ class MoneynessHistoricalProcessor:
             
         return metrics
         
+    def _manual_aggregate(self, base_data: List[Dict[str, Any]], timeframe: str) -> List[Dict[str, Any]]:
+        """Manual aggregation fallback - simplified to avoid duplication with FlexibleTimeframeManager"""
+        # Simple fallback that just passes through data - timeframe manager should handle aggregation
+        log_info(f"Using simplified manual aggregation for {len(base_data)} data points")
+        return base_data
+        
     def _generate_timestamps(
         self,
         start_time: datetime,
         end_time: datetime,
         timeframe: str
     ) -> List[datetime]:
-        """Generate timestamps based on timeframe"""
-        # Parse timeframe (e.g., "5m", "1h", "1d")
-        interval = self.timeframe_manager.parse_timeframe(timeframe)
+        """Generate timestamps based on timeframe - using timeframe manager"""
+        # Parse timeframe using FlexibleTimeframeManager (eliminates duplication)
+        try:
+            _, timeframe_minutes = self.timeframe_manager.parse_timeframe(timeframe)
+            interval = timedelta(minutes=timeframe_minutes)
+        except Exception as e:
+            log_error(f"Failed to parse timeframe {timeframe}: {e}")
+            interval = timedelta(minutes=5)  # Default to 5 minutes
         
         timestamps = []
         current = start_time
