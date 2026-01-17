@@ -531,13 +531,13 @@ class MoneynessHistoricalProcessor:
                 data_point = result["data"][-1]  # Get most recent
                 return float(data_point.get("close", 0))
             
-            # PRODUCTION: No mock fallback allowed - fail fast
+            # No synthetic fallback allowed - fail fast
             log_error(f"No spot price data available for {underlying} at {timestamp}")
             raise ValueError(f"Spot price data unavailable from ticker_service. No synthetic data allowed in production.")
             
         except Exception as e:
             log_error(f"Error getting spot price from ticker_service: {e}")
-            # PRODUCTION: Fail fast instead of mock data
+            # Fail fast instead of synthetic data
             raise ValueError(f"Failed to retrieve spot price from ticker_service: {e}. No fallbacks allowed in production.")
         
     async def _get_historical_spot_prices(
@@ -583,13 +583,13 @@ class MoneynessHistoricalProcessor:
                     log_info(f"Retrieved {len(prices)} historical spot prices from ticker_service")
                     return prices
             
-            # PRODUCTION: No mock fallback allowed - fail fast
+            # No synthetic fallback allowed - fail fast
             log_error(f"No historical price data available for {underlying} from {start_time} to {end_time}")
             raise ValueError("Historical price data unavailable from ticker_service. No synthetic data allowed in production.")
             
         except Exception as e:
             log_error(f"Error getting historical spot prices from ticker_service: {e}")
-            # PRODUCTION: Fail fast instead of mock data
+            # Fail fast instead of synthetic data
             raise ValueError(f"Failed to retrieve historical prices from ticker_service: {e}. No fallbacks allowed in production.")
         
     async def _get_historical_moneyness_options(
@@ -601,7 +601,7 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> List[Dict[str, Any]]:
         """Get options at moneyness level for historical timestamp"""
-        # PRODUCTION: Historical option data must come from ticker_service - fail fast if unavailable
+        # Historical option data must come from ticker_service - fail fast if unavailable
         try:
             from app.adapters import EnhancedTickerAdapter
             ticker_adapter = EnhancedTickerAdapter()
@@ -630,7 +630,7 @@ class MoneynessHistoricalProcessor:
         underlying: str
     ) -> Dict[str, float]:
         """Calculate Greeks for historical options"""
-        # PRODUCTION: Use actual Greeks calculator - fail fast if unavailable
+        # Use actual Greeks calculator - fail fast if unavailable
         try:
             if not self.greeks_calculator:
                 raise ValueError("Greeks calculator not initialized")

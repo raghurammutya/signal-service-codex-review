@@ -181,7 +181,7 @@ class StreamAbuseProtectionService:
                 logger.warning(f"Unauthenticated connection denied for client {client_id} (stream: {stream_type.value})")
                 return False, "Authentication required for all stream access"
             
-            # PRODUCTION: Connection-level validation should check user capabilities, not specific streams
+            # Connection-level validation checks user capabilities, not specific streams
             # Specific stream access is validated at subscription time with real stream keys
             entitlement_service = await get_unified_entitlement_service()
             user_data = await entitlement_service._get_user_entitlements(user_id)

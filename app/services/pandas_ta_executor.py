@@ -555,7 +555,7 @@ class PandasTAExecutor:
 
         except Exception as e:
             log_exception(f"Failed to execute strategy: {e}")
-            # PRODUCTION: Fail fast instead of mock results
+            # Fail fast instead of synthetic results
             raise ValueError(f"Technical indicator strategy execution failed: {e}. No mock data allowed in production.")
     
     def _execute_strategy_sync(self, df: pd.DataFrame, strategy_dict: Dict) -> pd.DataFrame:

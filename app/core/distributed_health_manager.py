@@ -190,7 +190,7 @@ class DistributedHealthManager:
     
     async def _get_request_rate(self) -> float:
         """Get current request rate (requests per minute)"""
-        # PRODUCTION: Get real request rate from metrics system
+        # Get real request rate from metrics system
         try:
             from app.metrics.threshold_metrics import get_metrics_collector
             metrics_collector = get_metrics_collector()

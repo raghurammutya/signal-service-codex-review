@@ -328,7 +328,7 @@ class HealthChecker:
             # Test signal computation performance
             start_time = time.time()
             
-            # PRODUCTION: Real signal computation test using actual signal processor
+            # Real signal computation test using actual signal processor
             test_instrument = 'NSE@HEALTH@equity_options@2025-07-10@call@21500'
             
             try:

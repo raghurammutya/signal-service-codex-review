@@ -594,7 +594,7 @@ class ScalableSignalProcessor:
     async def compute_moneyness_greeks(self, underlying: str, moneyness_level: str, timeframe: str):
         """Compute moneyness-based Greeks using real moneyness calculator"""
         try:
-            # PRODUCTION: Use real moneyness Greeks calculator instead of synthetic data
+            # Use moneyness-aware Greeks calculator with real market data
             from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
             from app.adapters.ticker_adapter import EnhancedTickerAdapter
             
@@ -610,7 +610,7 @@ class ScalableSignalProcessor:
             
             # Calculate real moneyness Greeks
             calculator = MoneynessAwareGreeksCalculator()
-            # PRODUCTION: Get expiry date from instrument service instead of hardcoding
+            # Get expiry date from instrument service
             try:
                 from app.services.instrument_service_client import InstrumentServiceClient
                 instrument_client = InstrumentServiceClient()
@@ -647,8 +647,8 @@ class ScalableSignalProcessor:
         except Exception as e:
             log_exception(f"Moneyness Greeks failed for {underlying}: {e}")
             self.metrics['errors'] += 1
-            # PRODUCTION: Fail fast instead of returning synthetic data
-            raise ValueError(f"Failed to compute moneyness Greeks for {underlying} {moneyness_level}: {e}. No synthetic data allowed in production.")
+            # Fail fast - no synthetic fallback data allowed
+            raise ValueError(f"Failed to compute moneyness Greeks for {underlying} {moneyness_level}: {e}. No synthetic data allowed.")
     
     async def _publish_computation_result(self, instrument_key: str, computation_type: str, result: Dict):
         """Publish computation result"""

@@ -824,7 +824,7 @@ class UniversalCalculator:
         context: Dict[str, Any]
     ) -> pd.DataFrame:
         """Fetch historical data for instrument"""
-        # PRODUCTION: Historical data must come from ticker_service - fail fast if unavailable
+        # Historical data must come from ticker_service - fail fast if unavailable
         try:
             from app.adapters import EnhancedTickerAdapter
             ticker_adapter = EnhancedTickerAdapter()

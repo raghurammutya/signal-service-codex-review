@@ -276,7 +276,7 @@ async def get_historical_moneyness_greeks(
         )
         
         if not data:
-            # PRODUCTION: Historical data must come from ticker_service - fail fast if unavailable
+            # Historical data must come from ticker_service - fail fast if unavailable
             log_error(f"No historical moneyness data found in cache for {underlying} {expiry_date} {moneyness_level}")
             raise HTTPException(
                 status_code=503,

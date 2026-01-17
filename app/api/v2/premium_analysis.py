@@ -215,7 +215,7 @@ async def premium_analysis_strike_range(
                 }
                 option_chain_data.append(option_dict)
                 
-                # PRODUCTION: Get real market price from market data service - fail fast if unavailable
+                # Get real market price from market data service - fail fast if unavailable
                 try:
                     # Use ticker service for real market data (Architecture compliance)
                     from app.adapters import EnhancedTickerAdapter
@@ -307,7 +307,7 @@ async def premium_analysis_term_structure(request: TermStructureRequest):
                     }
                     option_chain_data.append(option_dict)
                     
-                    # PRODUCTION: Get real market price from ticker service - fail fast if unavailable
+                    # Get real market price from ticker service - fail fast if unavailable
                     try:
                         from app.adapters import EnhancedTickerAdapter
                         ticker_adapter = EnhancedTickerAdapter()
@@ -382,7 +382,7 @@ async def get_arbitrage_opportunities(
     try:
         log_info(f"[AGENT-2] Arbitrage scan for {symbol}, min severity: {min_severity}")
         
-        # PRODUCTION: Fetch live option chain data for arbitrage detection - fail fast if unavailable
+        # Fetch live option chain data for arbitrage detection - fail fast if unavailable
         try:
             from app.adapters import EnhancedTickerAdapter
             ticker_adapter = EnhancedTickerAdapter()

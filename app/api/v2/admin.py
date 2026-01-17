@@ -372,12 +372,12 @@ async def trigger_scaling_action(
         Scaling action result
     """
     try:
-        # PRODUCTION: Integrate with real scaling infrastructure
+        # Integrate with scaling infrastructure
         from app.scaling.scalable_signal_processor import ScalableSignalProcessor
         
         log_warning(f"Manual scaling triggered: {action} by {instances} instances")
         
-        # PRODUCTION: Real scaling implementation via Kubernetes API
+        # Execute scaling via Kubernetes API
         result = await _execute_k8s_scaling_action(action, instances)
         
         if not result.get("success", False):
