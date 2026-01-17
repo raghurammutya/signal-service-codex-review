@@ -9,6 +9,14 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from app.utils.redis import get_redis_client
+from app.core.config import settings
+
+# PRODUCTION SAFETY: Prevent test router from being used in production
+if settings.environment.lower() in ['production', 'prod', 'staging']:
+    raise RuntimeError(
+        "Test fallback router cannot be used in production environment. "
+        "This router contains synthetic test data and should only be used in development/testing."
+    )
 
 router = APIRouter(prefix="/api/v2/signals", tags=["signals"])
 

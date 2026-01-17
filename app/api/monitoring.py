@@ -289,9 +289,6 @@ async def get_active_alerts():
                     'timestamp': datetime.utcnow().isoformat()
                 })
         
-        # Check for performance issues (mock data)
-        # In production, this would check actual performance metrics
-        
         return {
             'total_alerts': len(alerts),
             'critical_alerts': len([a for a in alerts if a['severity'] == 'critical']),
@@ -350,16 +347,22 @@ async def get_prometheus_metrics():
             metrics.append(f'signal_service_circuit_breaker_rejections_total{{type="{breaker_type}"}} {data["metrics"]["rejected_requests"]}')
             metrics.append(f'signal_service_circuit_breaker_failure_rate{{type="{breaker_type}"}} {data["metrics"]["failure_rate"]}')
         
-        # Performance metrics (mock data)
-        metrics.extend([
-            'signal_service_greeks_calculations_total 1650',
-            'signal_service_vectorized_calculations_total 450',
-            'signal_service_individual_calculations_total 1200',
-            'signal_service_avg_calculation_time_ms{type="vectorized"} 8.5',
-            'signal_service_avg_calculation_time_ms{type="individual"} 45.0',
-            'signal_service_model_configuration_errors_total 2',
-            'signal_service_calculation_timeouts_total 1'
-        ])
+        # Processing metrics from the running signal processor
+        try:
+            from app.services.signal_processor import get_signal_processor
+            processor = await get_signal_processor()
+            proc_metrics = processor.get_metrics()
+            
+            metrics.extend([
+                f'signal_service_processing_total {proc_metrics.get("total_processed", 0)}',
+                f'signal_service_processing_errors_total {proc_metrics.get("total_errors", 0)}',
+                f'signal_service_processing_average_time_ms {proc_metrics.get("average_processing_time_ms", 0)}',
+                f'signal_service_active_streams {proc_metrics.get("active_streams", 0)}',
+                f'signal_service_processor_running {1 if proc_metrics.get("is_running") else 0}'
+            ])
+        except Exception as e:
+            logger.error(f"Failed to get processing metrics: {e}")
+            metrics.append('signal_service_metrics_collection_failures_total 1')
         
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse('\n'.join(metrics))
