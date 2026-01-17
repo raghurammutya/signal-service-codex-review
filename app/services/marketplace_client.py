@@ -148,24 +148,11 @@ class MarketplaceClient:
         
         try:
             # Use gateway headers for authentication since marketplace API requires it
-            # Get the real gateway secret, not the internal API key
-            gateway_secret = os.getenv("GATEWAY_SECRET") 
+            # Get the real gateway secret from config_service
+            from app.core.config import settings
+            gateway_secret = settings.gateway_secret
             if not gateway_secret:
-                # Try to get from config service
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service", 
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                logger.error("GATEWAY_SECRET not found - marketplace API calls will fail")
-                return {"signals": []}
+                raise RuntimeError("Gateway secret not available from config_service - required for marketplace authentication")
                 
             headers = {
                 "X-User-ID": user_id,

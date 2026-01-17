@@ -139,7 +139,8 @@ class SignalWatermarkService:
             import httpx
             
             # Get marketplace service URL
-            marketplace_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
             
             # Get gateway secret for authentication
             gateway_secret = await self._get_gateway_secret()
@@ -428,7 +429,8 @@ class SignalWatermarkService:
             import httpx
             
             # Get marketplace service URL
-            marketplace_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
             
             # Get gateway secret for authentication
             gateway_secret = os.getenv("GATEWAY_SECRET")

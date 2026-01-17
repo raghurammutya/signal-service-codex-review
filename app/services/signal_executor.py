@@ -47,11 +47,15 @@ class SignalExecutor:
         "prod": "stocksblitz-scripts-prod",
     }
     
-    # CRITICAL: No default values - fail fast if not configured
-    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
-    MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
-    MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY") 
-    MINIO_USE_SSL = os.getenv("MINIO_USE_SSL", "false").lower() == "true"
+    # CRITICAL: Config service required - no environment variable fallbacks
+    from app.core.config import settings
+    try:
+        MINIO_ENDPOINT = settings.get_config("signal_service.minio_endpoint", required=True)
+        MINIO_ACCESS_KEY = settings.get_config("MINIO_ACCESS_KEY", required=True)  
+        MINIO_SECRET_KEY = settings.get_config("MINIO_SECRET_KEY", required=True)
+        MINIO_USE_SSL = settings.get_config("signal_service.minio_use_ssl", default="false").lower() == "true"
+    except Exception as e:
+        raise RuntimeError(f"MinIO configuration requires config_service integration - {e}")
     MINIO_BUCKET = BUCKET_MAP.get(ENVIRONMENT.lower())
     
     # Personal namespace prefix (matching algo_engine)
@@ -207,8 +211,9 @@ class SignalExecutor:
         try:
             import httpx
             
-            # Get marketplace service URL
-            marketplace_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
+            # Get marketplace service URL from config_service
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
             
             # Get internal API key for service-to-service authentication
             try:

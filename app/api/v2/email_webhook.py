@@ -42,8 +42,9 @@ async def process_email_webhook(
     Sprint 5A: Enables SDK to receive and process emails.
     """
     try:
-        # Verify webhook secret if configured
-        expected_secret = os.getenv("EMAIL_WEBHOOK_SECRET")
+        # Verify webhook secret from config_service  
+        from app.core.config import settings
+        expected_secret = getattr(settings, 'EMAIL_WEBHOOK_SECRET', None)
         if expected_secret and x_webhook_secret != expected_secret:
             raise HTTPException(status_code=401, detail="Invalid webhook secret")
         

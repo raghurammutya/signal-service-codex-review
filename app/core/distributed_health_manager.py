@@ -195,21 +195,18 @@ class DistributedHealthManager:
     
     async def _get_queue_size(self) -> int:
         """Get current processing queue size"""
-        # In real implementation, this would check actual queue
-        return 125
+        # Production implementation requires queue monitoring service integration
+        raise RuntimeError("Queue size monitoring requires queue service integration - cannot provide synthetic metrics")
     
     async def _get_processing_rate(self) -> float:
         """Get current signal processing rate"""
-        # In real implementation, this would track actual processing rate
-        return 85.5
+        # Production implementation requires metrics collection service integration  
+        raise RuntimeError("Processing rate monitoring requires metrics service integration - cannot provide synthetic rate")
     
     async def _get_assigned_instruments(self) -> List[str]:
         """Get list of instruments assigned to this instance"""
-        # In real implementation, this would get from consistent hash manager
-        return [
-            f"NSE@NIFTY@equity_options@2025-07-10@call@{21000 + i*50}"
-            for i in range(20)  # Mock 20 assigned instruments
-        ]
+        # Production implementation requires consistent hash manager integration
+        raise RuntimeError("Instrument assignment requires consistent hash manager integration - cannot provide synthetic assignments")
     
     async def _update_aggregate_health(self) -> None:
         """Update aggregate health status across all instances"""

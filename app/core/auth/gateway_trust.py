@@ -113,16 +113,10 @@ async def get_current_user_from_gateway(
             # ... your logic here
     """
     # =========================================================================
-    # PRODUCTION ENFORCEMENT: No auth bypasses allowed in any environment
+    # PRODUCTION ENFORCEMENT: Strict gateway authentication only
     # =========================================================================
-    # Gateway authentication is MANDATORY in all environments for production compliance
-    # No bypasses allowed - all requests must be properly authenticated via gateway
-    
-    logger.error("Authentication failed: Gateway authentication required - no direct access allowed")
-    raise HTTPException(
-        status_code=403,
-        detail="Gateway authentication required - direct access forbidden"
-    )
+    # All requests must come through API Gateway with proper headers
+    # No development bypasses allowed
 
     # =========================================================================
     # PRODUCTION MODE: Strict gateway authentication

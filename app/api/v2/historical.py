@@ -275,36 +275,11 @@ async def get_historical_moneyness_greeks(
         )
         
         if not data:
-            # Generate data points if not cached
-            # This is a simplified version - in production, query historical data
-            time_series = []
-            current_time = start_time
-            
-            while current_time <= end_time:
-                # Mock historical data point
-                point = {
-                    "timestamp": current_time,
-                    "moneyness_level": moneyness_level,
-                    "aggregated_greeks": {
-                        "all": {
-                            "delta": 0.5 if moneyness_level == "ATM" else 0.05,
-                            "gamma": 0.02,
-                            "theta": -0.05,
-                            "vega": 0.15,
-                            "rho": 0.03,
-                            "iv": 0.25
-                        }
-                    }
-                }
-                time_series.append(TimeSeriesDataPoint(
-                    timestamp=current_time,
-                    value=point["aggregated_greeks"]["all"],
-                    metadata={"moneyness_level": moneyness_level}
-                ))
-                
-                # Increment by timeframe
-                tf_minutes = int(timeframe.rstrip('m'))
-                current_time += timedelta(minutes=tf_minutes)
+            # Production requires historical data service integration - no synthetic data
+            raise HTTPException(
+                status_code=503,
+                detail=f"Historical moneyness data unavailable - requires historical data service integration for {underlying}/{moneyness_level}"
+            )
         else:
             # Convert cached data to response format
             time_series = []

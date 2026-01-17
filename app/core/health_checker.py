@@ -272,38 +272,8 @@ class HealthChecker:
                     'timestamp': datetime.utcnow().isoformat()
                 }
             
-            # Test signal computation performance
-            start_time = time.time()
-            
-            # Mock signal computation test
-            test_instrument = 'NSE@HEALTH@equity_options@2025-07-10@call@21500'
-            
-            # In real implementation, this would call actual signal processor
-            await asyncio.sleep(0.01)  # Simulate 10ms computation
-            
-            processing_time_ms = (time.time() - start_time) * 1000
-            
-            # Check backpressure levels if available
-            backpressure_level = 'LOW'  # Would get from actual backpressure monitor
-            
-            # Determine status
-            if processing_time_ms <= self.thresholds['signal_processing_time_ms']['healthy']:
-                status = ComponentStatus.UP
-                message = f"Signal processing healthy: {processing_time_ms:.2f}ms"
-            elif processing_time_ms <= self.thresholds['signal_processing_time_ms']['unhealthy']:
-                status = ComponentStatus.DEGRADED
-                message = f"Signal processing slow: {processing_time_ms:.2f}ms"
-            else:
-                status = ComponentStatus.DOWN
-                message = f"Signal processing critical: {processing_time_ms:.2f}ms"
-            
-            return {
-                'status': status.value,
-                'processing_time_ms': round(processing_time_ms, 2),
-                'backpressure_level': backpressure_level,
-                'message': message,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # Production requires signal processor performance monitoring integration
+            raise RuntimeError("Signal processor health check requires actual signal processor integration - cannot provide synthetic performance metrics")
             
         except Exception as e:
             return {
