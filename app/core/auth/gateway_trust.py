@@ -53,10 +53,17 @@ def verify_gateway_secret(gateway_secret: Optional[str]) -> bool:
     # (prevents timing attacks)
     import secrets
     expected = settings.gateway_secret
+    
+    if not expected:
+        logger.error("settings.gateway_secret is not configured - denying all requests")
+        return False
+        
     is_valid = secrets.compare_digest(gateway_secret, expected)
 
     if not is_valid:
-        logger.warning("Gateway secret invalid - denying access")
+        logger.warning(f"Gateway secret invalid - denying access. Expected length: {len(expected)}, Received length: {len(gateway_secret)}")
+    else:
+        logger.debug("Gateway secret validation successful")
 
     return is_valid
 

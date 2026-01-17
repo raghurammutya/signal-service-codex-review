@@ -390,18 +390,31 @@ class HealthChecker:
     async def _check_cache_performance(self) -> Dict[str, Any]:
         """Check cache performance and hit rates"""
         try:
-            # Get cache statistics (would be from actual cache manager)
-            # Mock cache stats for now
-            cache_stats = {
-                'total_requests': 10000,
-                'cache_hits': 8200,
-                'cache_misses': 1800,
-                'hit_rate_percent': 82.0
-            }
+            # Production requires real cache metrics integration - no synthetic data
+            if not self.redis_client:
+                raise RuntimeError("Cache performance monitoring requires Redis connection - cannot provide synthetic metrics")
             
-            hit_rate = cache_stats['hit_rate_percent']
+            # Get actual cache statistics from Redis
+            info = await self.redis_client.info('stats')
+            keyspace_hits = int(info.get('keyspace_hits', 0))
+            keyspace_misses = int(info.get('keyspace_misses', 0))
             
-            # Determine status
+            total_requests = keyspace_hits + keyspace_misses
+            if total_requests == 0:
+                # No cache activity yet
+                return {
+                    'status': ComponentStatus.UP.value,
+                    'hit_rate_percent': 0.0,
+                    'total_requests': 0,
+                    'cache_hits': 0,
+                    'cache_misses': 0,
+                    'message': 'Cache initialized but no requests processed yet',
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            
+            hit_rate = (keyspace_hits / total_requests) * 100
+            
+            # Determine status based on actual hit rate
             if hit_rate >= self.thresholds['cache_hit_rate_percent']['healthy']:
                 status = ComponentStatus.UP
                 message = f"Cache performing well: {hit_rate:.1f}% hit rate"
@@ -415,9 +428,9 @@ class HealthChecker:
             return {
                 'status': status.value,
                 'hit_rate_percent': hit_rate,
-                'total_requests': cache_stats['total_requests'],
-                'cache_hits': cache_stats['cache_hits'],
-                'cache_misses': cache_stats['cache_misses'],
+                'total_requests': total_requests,
+                'cache_hits': keyspace_hits,
+                'cache_misses': keyspace_misses,
                 'message': message,
                 'timestamp': datetime.utcnow().isoformat()
             }
@@ -426,90 +439,43 @@ class HealthChecker:
             return {
                 'status': ComponentStatus.DOWN.value,
                 'error': str(e),
-                'message': 'Cache performance check failed',
+                'message': 'Cache performance check failed - requires Redis integration',
                 'timestamp': datetime.utcnow().isoformat()
             }
     
     async def _check_backpressure_status(self) -> Dict[str, Any]:
         """Check current backpressure levels"""
         try:
-            # Mock backpressure data (would get from actual backpressure monitor)
-            backpressure_data = {
-                'level': 'MEDIUM',
-                'queue_size': 750,
-                'processing_rate': 85.5,
-                'memory_usage_percent': 65.2
-            }
-            
-            level = backpressure_data['level']
-            
-            # Determine status based on backpressure level
-            if level in ['LOW']:
-                status = ComponentStatus.UP
-                message = f"Backpressure normal: {level}"
-            elif level in ['MEDIUM', 'HIGH']:
-                status = ComponentStatus.DEGRADED
-                message = f"Backpressure elevated: {level}"
-            else:  # CRITICAL
-                status = ComponentStatus.DOWN
-                message = f"Backpressure critical: {level}"
-            
-            return {
-                'status': status.value,
-                'backpressure_level': level,
-                'queue_size': backpressure_data['queue_size'],
-                'processing_rate': backpressure_data['processing_rate'],
-                'message': message,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # Production requires real backpressure monitoring integration - no synthetic data
+            raise RuntimeError(
+                "Backpressure monitoring requires message queue service integration - "
+                "cannot provide synthetic queue metrics. Must integrate with actual "
+                "queue monitoring service to get real queue depth and processing rates."
+            )
             
         except Exception as e:
             return {
                 'status': ComponentStatus.DOWN.value,
                 'error': str(e),
-                'message': 'Backpressure check failed',
+                'message': 'Backpressure check failed - requires queue service integration',
                 'timestamp': datetime.utcnow().isoformat()
             }
     
     async def _check_error_rates(self) -> Dict[str, Any]:
         """Check error rates and trends"""
         try:
-            # Mock error tracking data (would get from actual error tracker)
-            error_data = {
-                'total_requests_5min': 5000,
-                'errors_5min': 25,
-                'error_rate_percent': 0.5,
-                'error_trend': 'stable'
-            }
-            
-            error_rate = error_data['error_rate_percent']
-            
-            # Determine status based on error rate
-            if error_rate <= self.thresholds['error_rate_percent']['healthy']:
-                status = ComponentStatus.UP
-                message = f"Error rate normal: {error_rate:.1f}%"
-            elif error_rate <= self.thresholds['error_rate_percent']['unhealthy']:
-                status = ComponentStatus.DEGRADED
-                message = f"Error rate elevated: {error_rate:.1f}%"
-            else:
-                status = ComponentStatus.DOWN
-                message = f"Error rate critical: {error_rate:.1f}%"
-            
-            return {
-                'status': status.value,
-                'error_rate_percent': error_rate,
-                'total_requests_5min': error_data['total_requests_5min'],
-                'errors_5min': error_data['errors_5min'],
-                'error_trend': error_data['error_trend'],
-                'message': message,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # Production requires real error tracking service integration - no synthetic data
+            raise RuntimeError(
+                "Error rate monitoring requires metrics/logging service integration - "
+                "cannot provide synthetic error metrics. Must integrate with actual "
+                "error tracking service to get real error rates and trends."
+            )
             
         except Exception as e:
             return {
                 'status': ComponentStatus.DOWN.value,
                 'error': str(e),
-                'message': 'Error rate check failed',
+                'message': 'Error rate check failed - requires metrics service integration',
                 'timestamp': datetime.utcnow().isoformat()
             }
     
