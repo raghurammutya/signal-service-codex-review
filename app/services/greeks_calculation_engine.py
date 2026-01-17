@@ -413,13 +413,12 @@ class GreeksCalculationEngine:
                 else:
                     volatility = 0.2  # Default volatility
                 
-                # Calculate Greeks with circuit breaker protection
+                # Calculate Greeks with circuit breaker protection - fail fast in production
                 cache_key = f"greeks_{underlying_price}_{strike}_{time_to_expiry}_{volatility}_{option_type}"
                 greeks = await self._individual_breaker.execute(
                     self.calculate_all_greeks,
                     underlying_price, strike, time_to_expiry, volatility, 
                     option_type, None, greeks_to_calculate,
-                    fallback_value={greek: None for greek in greeks_to_calculate},
                     cache_key=cache_key
                 )
                 

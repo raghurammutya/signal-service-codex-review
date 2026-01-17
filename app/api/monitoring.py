@@ -257,8 +257,48 @@ async def get_active_alerts():
                     'timestamp': datetime.utcnow().isoformat()
                 })
         
-        # Check for performance issues (mock data)
-        # In production, this would check actual performance metrics
+        # Check for performance issues using real metrics
+        try:
+            # Get actual Greeks calculation performance metrics
+            greeks_engine = GreeksCalculationEngine()
+            vectorized_engine = VectorizedPyvolibGreeksEngine()
+            
+            # Check if any circuit breakers indicate performance degradation
+            for name, metrics_data in metrics.items():
+                if metrics_data['metrics']['failure_rate'] > 0.1:  # 10% failure rate threshold
+                    alerts.append({
+                        'severity': 'warning',
+                        'source': name,
+                        'message': f'High failure rate detected: {metrics_data["metrics"]["failure_rate"]:.2%}',
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'metadata': {
+                            'failure_rate': metrics_data['metrics']['failure_rate'],
+                            'total_requests': metrics_data['metrics']['total_requests'],
+                            'failed_requests': metrics_data['metrics']['failed_requests']
+                        }
+                    })
+                    
+                # Check for high response times indicating performance issues
+                if 'avg_response_time' in metrics_data['metrics'] and metrics_data['metrics']['avg_response_time'] > 1000:  # 1 second threshold
+                    alerts.append({
+                        'severity': 'critical' if metrics_data['metrics']['avg_response_time'] > 5000 else 'warning',
+                        'source': name,
+                        'message': f'High response time: {metrics_data["metrics"]["avg_response_time"]}ms',
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'metadata': {
+                            'avg_response_time': metrics_data['metrics']['avg_response_time']
+                        }
+                    })
+        except Exception as perf_e:
+            logger.warning(f"Could not gather performance metrics: {perf_e}")
+            # Add a warning alert about metrics collection failure
+            alerts.append({
+                'severity': 'warning',
+                'source': 'monitoring_system',
+                'message': 'Performance metrics collection failed - monitoring degraded',
+                'timestamp': datetime.utcnow().isoformat(),
+                'metadata': {'error': str(perf_e)}
+            })
         
         return {
             'total_alerts': len(alerts),

@@ -168,10 +168,9 @@ class SyncDatabaseSession:
         self.async_session = None
         
     def __enter__(self):
-        # For synchronous code, we need to provide a way to get the async session
-        # In practice, this should be replaced with proper async usage
-        logger.warning("Synchronous database session usage - should migrate to async")
-        return self
+        # Synchronous database operations not supported in production - fail fast
+        logger.error("Synchronous database session usage not supported - must use async get_timescaledb_session")
+        raise DatabaseConnectionError("Synchronous database operations are deprecated and not supported - use async get_timescaledb_session instead")
         
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -202,9 +201,9 @@ class SyncDatabaseSession:
 
 
 def get_timescaledb_session():
-    """Get synchronous database session (deprecated)."""
-    logger.warning("Synchronous database session requested - should use async version")
-    return SyncDatabaseSession()
+    """Get synchronous database session (deprecated) - fails fast in production."""
+    logger.error("Synchronous database session requested - not supported, use async get_timescaledb_session")
+    raise DatabaseConnectionError("Synchronous database sessions are deprecated and not supported - use async get_timescaledb_session instead")
 
 
 # Async version for new code

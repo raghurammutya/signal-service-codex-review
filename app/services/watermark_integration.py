@@ -180,12 +180,16 @@ class SignalWatermarkService:
                     log_error(
                         f"Marketplace watermarking failed: {response.status_code} - {response.text}"
                     )
-                    return signal_data
+                    # Fail secure - do not return unwatermarked data 
+                    raise WatermarkError(f"Watermarking failed with status {response.status_code} - failing secure to preserve business trust")
                     
+        except WatermarkError:
+            # Re-raise watermark errors to maintain fail-secure behavior
+            raise
         except Exception as e:
             log_error(f"Failed to watermark signal via marketplace service: {e}")
-            # Return original data on error (fail open for availability)
-            return signal_data
+            # Fail secure - do not return unwatermarked data on unexpected errors
+            raise WatermarkError(f"Watermarking service error: {e} - failing secure to preserve business trust")
     
     async def _get_gateway_secret(self) -> Optional[str]:
         """Get gateway secret from config service settings only"""
