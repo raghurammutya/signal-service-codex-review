@@ -77,20 +77,8 @@ class EntitlementMiddleware:
             except ValueError:
                 pass
         
-        # Check Authorization header for JWT token
-        auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            # In production, decode JWT to extract user_id
-            # For now, check if there's a user ID in query params
-            pass
-        
-        # Check query parameters
-        user_id_param = request.query_params.get("user_id")
-        if user_id_param:
-            try:
-                return int(user_id_param)
-            except ValueError:
-                pass
+        # Production: No Authorization header or query parameter bypasses allowed
+        # All authentication must come through API Gateway headers only
         
         # No user ID found
         raise HTTPException(

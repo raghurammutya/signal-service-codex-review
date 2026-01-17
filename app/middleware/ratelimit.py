@@ -143,23 +143,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return True, limit
             
     def _get_user_id(self, request: Request) -> Optional[str]:
-        """Extract user ID from request"""
-        # Check JWT token
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            # Production requires proper JWT validation - no placeholder identities
-            raise RuntimeError("JWT validation requires proper implementation - cannot use placeholder user identity")
-            
-        # Check API key
-        api_key = request.headers.get("X-API-Key")
-        if api_key:
-            return f"api_key_{api_key[:8]}"
-            
-        # Check query parameter
-        user_id = request.query_params.get("user_id")
+        """Extract user ID from request - gateway headers only"""
+        # Production: Only accept user ID from gateway headers
+        # No Authorization header parsing or JWT bypass allowed
+        user_id = request.headers.get("X-User-ID")
         if user_id:
             return user_id
             
+        # Production: No fallback authentication methods allowed
+        # All requests must come through API Gateway with proper headers
         return None
         
     def _get_endpoint_key(self, path: str) -> str:
