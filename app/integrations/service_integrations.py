@@ -343,11 +343,59 @@ class SignalProcessingIntegration:
         results = {}
         alerts_to_send = []
         
-        for indicator in indicators:
-            # Simulate signal computation (replace with actual logic)
-            computed_value = 50.0  # Placeholder
-            threshold = thresholds.get(indicator, 0.0)
+        # PRODUCTION: Use real signal computation instead of placeholder
+        try:
+            from app.services.pandas_ta_executor import PandasTAExecutor
+            from app.adapters.ticker_adapter import EnhancedTickerAdapter
+            from app.schemas.config_schema import TechnicalIndicatorConfig
+            from app.utils.redis import get_redis_client
             
+            ticker_adapter = EnhancedTickerAdapter()
+            try:
+                historical_data = await ticker_adapter.get_historical_data(
+                    symbol=symbol,
+                    timeframe="1day",
+                    periods=50
+                )
+            finally:
+                await ticker_adapter.close()
+            
+            if historical_data.empty:
+                raise ValueError(f"No historical data available for {symbol}")
+            
+            redis_client = await get_redis_client()
+            ta_executor = PandasTAExecutor(redis_client)
+            
+            indicator_configs = [
+                TechnicalIndicatorConfig(
+                    name=indicator,
+                    parameters={},
+                    output_key=indicator
+                )
+                for indicator in indicators
+            ]
+            
+            strategy_dict = ta_executor.build_strategy(indicator_configs)
+            indicator_results = await ta_executor.execute_strategy(
+                historical_data,
+                strategy_dict,
+                indicator_configs
+            )
+            
+        except Exception as e:
+            raise ValueError(f"Failed to compute indicators for {symbol}: {e}. No placeholder values allowed in production.")
+        
+        for indicator in indicators:
+            value = indicator_results.get(indicator)
+            if isinstance(value, dict):
+                numeric_values = [v for v in value.values() if isinstance(v, (int, float))]
+                value = numeric_values[0] if numeric_values else None
+            
+            if value is None:
+                raise ValueError(f"Indicator {indicator} returned no numeric value for {symbol}")
+            
+            computed_value = float(value)
+            threshold = thresholds.get(indicator, 0.0)
             results[indicator] = computed_value
             
             # Check threshold breach

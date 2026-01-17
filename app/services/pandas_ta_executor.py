@@ -33,7 +33,7 @@ class PandasTAExecutor:
         self.ticker_adapter = EnhancedTickerAdapter()
         
         if not PANDAS_TA_AVAILABLE:
-            log_warning("pandas_ta not available - Technical indicators will use mock values")
+            log_warning("pandas_ta not available - technical indicator results will be unavailable")
         
         log_info("PandasTAExecutor initialized")
     
@@ -556,7 +556,8 @@ class PandasTAExecutor:
 
         except Exception as e:
             log_exception(f"Failed to execute strategy: {e}")
-            return self.mock_indicator_results(indicators)
+            # PRODUCTION: Fail fast instead of mock results
+            raise ValueError(f"Technical indicator strategy execution failed: {e}. No mock data allowed in production.")
     
     def _execute_strategy_sync(self, df: pd.DataFrame, strategy_dict: Dict) -> pd.DataFrame:
         """Synchronous strategy execution (for thread pool)"""
@@ -577,29 +578,6 @@ class PandasTAExecutor:
             log_exception(f"Strategy execution failed: {e}")
             return df
     
-    def mock_indicator_results(self, indicators: List[TechnicalIndicatorConfig]) -> Dict[str, Any]:
-        """Generate mock results when pandas_ta is not available"""
-        results = {}
-        
-        mock_values = {
-            'sma': 100.0,
-            'ema': 99.5,
-            'rsi': 55.0,
-            'macd': {'macd': 1.5, 'signal': 1.2, 'histogram': 0.3},
-            'bb': {'upper': 105.0, 'middle': 100.0, 'lower': 95.0},
-            'stoch': {'k': 60.0, 'd': 55.0},
-            'adx': 25.0,
-            'atr': 2.5,
-            'cci': 10.0,
-            'mfi': 45.0,
-            'willr': -30.0
-        }
-        
-        for indicator in indicators:
-            indicator_name = indicator.name.lower()
-            results[indicator.output_key] = mock_values.get(indicator_name, 50.0)
-        
-        return results
     
     async def cache_results(
         self, 

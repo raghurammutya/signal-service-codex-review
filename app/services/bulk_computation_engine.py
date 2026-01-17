@@ -294,7 +294,8 @@ class TechnicalIndicatorCalculator:
         """Calculate RSI for price series"""
         
         if len(prices) < period + 1:
-            return 50.0  # Neutral RSI
+            # PRODUCTION: Fail fast when insufficient data instead of returning placeholder
+            raise ValueError(f"Insufficient price data for RSI calculation: {len(prices)} prices, need at least {period + 1}")
         
         deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
         gains = [delta if delta > 0 else 0 for delta in deltas]
@@ -473,10 +474,8 @@ class BulkComputationEngine:
     ) -> List[OptionData]:
         """Process a batch of options"""
         
-        # Run in thread pool to avoid blocking the event loop
-        return await asyncio.get_event_loop().run_in_executor(
-            self.thread_pool,
-            self._compute_option_batch,
+        # Run the async computation directly since it's now async
+        return await self._compute_option_batch(
             options,
             underlying_price,
             time_to_expiry,
@@ -485,7 +484,7 @@ class BulkComputationEngine:
             compute_technical_indicators
         )
     
-    def _compute_option_batch(
+    async def _compute_option_batch(
         self,
         options: List[OptionData],
         underlying_price: float,
@@ -497,72 +496,105 @@ class BulkComputationEngine:
         """Compute Greeks and technical indicators for a batch of options"""
         
         updated_options = []
+        ticker_adapter = None
+        if compute_technical_indicators:
+            from app.adapters.ticker_adapter import EnhancedTickerAdapter
+            ticker_adapter = EnhancedTickerAdapter()
         
-        for option in options:
-            try:
-                # Create a copy to avoid modifying the original
-                updated_option = OptionData(
-                    instrument_key=option.instrument_key,
-                    symbol=option.symbol,
-                    strike_price=option.strike_price,
-                    option_type=option.option_type,
-                    expiry_date=option.expiry_date,
-                    ltp=option.ltp,
-                    volume=option.volume,
-                    oi=option.oi,
-                    bid=option.bid,
-                    ask=option.ask
-                )
-                
-                if compute_greeks and option.ltp > 0:
-                    # Calculate implied volatility first
-                    iv = GreeksCalculator.calculate_implied_volatility(
-                        option.ltp,
-                        underlying_price,
-                        option.strike_price,
-                        time_to_expiry,
-                        risk_free_rate,
-                        option.option_type
+        try:
+            for option in options:
+                try:
+                    # Create a copy to avoid modifying the original
+                    updated_option = OptionData(
+                        instrument_key=option.instrument_key,
+                        symbol=option.symbol,
+                        strike_price=option.strike_price,
+                        option_type=option.option_type,
+                        expiry_date=option.expiry_date,
+                        ltp=option.ltp,
+                        volume=option.volume,
+                        oi=option.oi,
+                        bid=option.bid,
+                        ask=option.ask
                     )
-                    updated_option.iv = round(iv, 4)
                     
-                    # Calculate Greeks using implied volatility
-                    if iv > 0:
-                        updated_option.delta = round(GreeksCalculator.calculate_delta(
-                            underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv, option.option_type
-                        ), 4)
+                    if compute_greeks and option.ltp > 0:
+                        # Calculate implied volatility first
+                        iv = GreeksCalculator.calculate_implied_volatility(
+                            option.ltp,
+                            underlying_price,
+                            option.strike_price,
+                            time_to_expiry,
+                            risk_free_rate,
+                            option.option_type
+                        )
+                        updated_option.iv = round(iv, 4)
                         
-                        updated_option.gamma = round(GreeksCalculator.calculate_gamma(
-                            underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv
-                        ), 6)
-                        
-                        updated_option.theta = round(GreeksCalculator.calculate_theta(
-                            underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv, option.option_type
-                        ), 4)
-                        
-                        updated_option.vega = round(GreeksCalculator.calculate_vega(
-                            underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv
-                        ), 4)
-                        
-                        updated_option.rho = round(GreeksCalculator.calculate_rho(
-                            underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv, option.option_type
-                        ), 4)
-                
-                if compute_technical_indicators:
-                    # For technical indicators, we would need historical price data
-                    # This is a simplified implementation using current price
-                    updated_option.rsi = 50.0  # Neutral RSI (would use actual historical data)
-                    updated_option.sma_5 = option.ltp  # Would calculate from 5-period data
-                    updated_option.sma_20 = option.ltp  # Would calculate from 20-period data
-                    updated_option.bollinger_upper = option.ltp * 1.02  # Simplified
-                    updated_option.bollinger_lower = option.ltp * 0.98  # Simplified
-                
-                updated_options.append(updated_option)
-                
-            except Exception as e:
-                logger.error(f"Error computing option {option.instrument_key}: {e}")
-                # Add the original option without computed values
-                updated_options.append(option)
+                        # Calculate Greeks using implied volatility
+                        if iv > 0:
+                            updated_option.delta = round(GreeksCalculator.calculate_delta(
+                                underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv, option.option_type
+                            ), 4)
+                            
+                            updated_option.gamma = round(GreeksCalculator.calculate_gamma(
+                                underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv
+                            ), 6)
+                            
+                            updated_option.theta = round(GreeksCalculator.calculate_theta(
+                                underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv, option.option_type
+                            ), 4)
+                            
+                            updated_option.vega = round(GreeksCalculator.calculate_vega(
+                                underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv
+                            ), 4)
+                            
+                            updated_option.rho = round(GreeksCalculator.calculate_rho(
+                                underlying_price, option.strike_price, time_to_expiry, risk_free_rate, iv, option.option_type
+                            ), 4)
+                    
+                    if compute_technical_indicators:
+                        # PRODUCTION: Calculate real technical indicators instead of placeholder values
+                        try:
+                            # Get historical data for the option
+                            historical_data = await ticker_adapter.get_historical_data(
+                                symbol=option.instrument_key,
+                                timeframe="1day",
+                                periods=30  # Get 30 days of data for indicators
+                            )
+                            
+                            if historical_data.empty:
+                                raise ValueError(f"No historical data available for {option.instrument_key}")
+                            
+                            # Extract closing prices
+                            prices = historical_data['close'].tolist()
+                            
+                            # Calculate real technical indicators
+                            updated_option.rsi = TechnicalIndicatorCalculator.calculate_rsi(prices, 14)
+                            updated_option.sma_5 = TechnicalIndicatorCalculator.calculate_sma(prices, 5)
+                            updated_option.sma_20 = TechnicalIndicatorCalculator.calculate_sma(prices, 20)
+                            
+                            # Calculate Bollinger Bands
+                            middle, upper, lower = TechnicalIndicatorCalculator.calculate_bollinger_bands(prices, 20, 2.0)
+                            updated_option.bollinger_upper = upper
+                            updated_option.bollinger_lower = lower
+                            
+                        except Exception as e:
+                            # PRODUCTION: Fail fast instead of using placeholder values
+                            logger.error(f"Failed to calculate technical indicators for {option.instrument_key}: {e}")
+                            raise ValueError(
+                                f"Unable to calculate technical indicators for {option.instrument_key}: {e}. "
+                                "No placeholder values allowed in production."
+                            )
+                    
+                    updated_options.append(updated_option)
+                    
+                except Exception as e:
+                    logger.error(f"Error computing option {option.instrument_key}: {e}")
+                    # Add the original option without computed values
+                    updated_options.append(option)
+        finally:
+            if ticker_adapter:
+                await ticker_adapter.close()
         
         return updated_options
     

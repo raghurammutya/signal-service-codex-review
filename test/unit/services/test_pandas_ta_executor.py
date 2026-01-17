@@ -612,18 +612,6 @@ class TestPandasTAExecutor:
         assert params['slow'] == 26
         assert params['signal'] == 9
 
-    def test_mock_indicator_results(self, executor, sample_config):
-        """Test mock results generation"""
-        results = executor.mock_indicator_results(sample_config.technical_indicators)
-        
-        assert 'sma_20' in results
-        assert 'rsi_14' in results
-        assert 'macd' in results
-        
-        assert isinstance(results['sma_20'], float)
-        assert isinstance(results['rsi_14'], float)
-        assert isinstance(results['macd'], dict)
-
     async def test_cache_results(self, executor, sample_config, sample_context, mock_redis):
         """Test results caching"""
         results = {'sma_20': 100.0, 'rsi_14': 55.0}
