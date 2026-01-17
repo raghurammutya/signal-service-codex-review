@@ -44,9 +44,14 @@ def _get_config_client():
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
         from common.config_service.client import ConfigServiceClient
 
+        # Environment must be provided via ENVIRONMENT env var for bootstrap
+        environment = os.getenv("ENVIRONMENT")
+        if not environment:
+            raise ValueError("ENVIRONMENT environment variable is required for config_service bootstrap")
+        
         client = ConfigServiceClient(
             service_name="signal_service",
-            environment=os.getenv("ENVIRONMENT", "prod"),
+            environment=environment,
             timeout=30
         )
 
@@ -119,25 +124,13 @@ def _get_from_config_service(key: str, required: bool = True, is_secret: bool = 
         return default
 
 
-def _get_config_int(key: str, default: int) -> int:
-    val = _get_from_config_service(key, required=False, is_secret=False)
-    try:
-        return int(val) if val else default
-    except ValueError:
-        logger.warning("Config %s is not int: %s", key, val)
-        return default
+# _get_config_int removed - use explicit config_service calls with required validation
 
 
-def _get_config_bool(key: str, default: bool) -> bool:
-    val = _get_from_config_service(key, required=False, is_secret=False)
-    if val is None or val == "":
-        return default
-    return str(val).lower() in ("1", "true", "yes", "on")
+# _get_config_bool removed - use explicit config_service calls with required validation
 
 
-def _get_config_str(key: str, default: str = "") -> str:
-    val = _get_from_config_service(key, required=False, is_secret=False)
-    return val if val else default
+# _get_config_str removed - use explicit config_service calls with required validation
 
 
 def _get_service_url(service_name: str, fallback_port: Optional[int] = None) -> str:
@@ -166,13 +159,9 @@ def _get_service_url(service_name: str, fallback_port: Optional[int] = None) -> 
         except Exception as e:
             logger.warning(f"Failed to get service URL for {service_name}: {e}")
 
-    # If config_service unavailable and we have a fallback port, use it
-    if fallback_port:
-        return f"http://localhost:{fallback_port}"
-
-    # Otherwise fail-fast
-    logger.critical(f"Service URL not available: {service_name}")
-    sys.exit(1)
+    # No fallbacks allowed - config_service is mandatory
+    logger.critical(f"Service URL not available for {service_name} - config_service required")
+    raise ValueError(f"Service URL for {service_name} not found in config_service")
 
 
 def _bool(val: Optional[str], default: bool = False) -> bool:
@@ -188,17 +177,23 @@ class SignalServiceConfig:
         # Load service name from config_service
         service_name_from_config = _get_from_config_service(
             "signal_service.service_name",
-            required=False,
-            is_secret=False,
-            default="signal_service"
+            required=True,
+            is_secret=False
         )
-        self.service_name = service_name_from_config or "signal_service"
-        self.environment = _get_config_str("ENVIRONMENT", "dev")
+        if not service_name_from_config:
+            raise ValueError("service_name not found in config_service")
+        self.service_name = service_name_from_config
+        self.environment = _get_from_config_service("signal_service.environment", required=True, is_secret=False)
+        if not self.environment:
+            raise ValueError("environment not found in config_service")
         self._load_from_config()
 
     def _load_from_config(self):
-        # PORT - from config_service (fallback to env if absent)
-        self.PORT = _get_config_int("PORT", int(os.getenv("PORT", "8003")))
+        # PORT - from config_service only
+        self.PORT = _get_from_config_service("signal_service.port", required=True, is_secret=False)
+        if not self.PORT:
+            raise ValueError("port not found in config_service")
+        self.PORT = int(self.PORT)
 
         # Required secrets from config_service (MANDATORY - fail-fast)
         self.DATABASE_URL = _get_from_config_service("DATABASE_URL", required=True, is_secret=True)
@@ -209,15 +204,31 @@ class SignalServiceConfig:
         if not self.REDIS_URL:
             raise ValueError("REDIS_URL not found in config_service")
 
-        # Redis Sentinel (optional)
-        self.REDIS_SENTINEL_ENABLED = _get_config_bool("REDIS_SENTINEL_ENABLED", False)
-        self.REDIS_SENTINEL_HOSTS = _get_config_str("REDIS_SENTINEL_HOSTS", "")
-        self.REDIS_SENTINEL_MASTER_NAME = _get_config_str("REDIS_SENTINEL_MASTER_NAME", "signal-master")
+        # Redis Sentinel - from config_service only
+        sentinel_enabled = _get_from_config_service("signal_service.redis_sentinel_enabled", required=True, is_secret=False)
+        if not sentinel_enabled:
+            raise ValueError("redis_sentinel_enabled not found in config_service")
+        self.REDIS_SENTINEL_ENABLED = sentinel_enabled.lower() == "true"
+        self.REDIS_SENTINEL_HOSTS = _get_from_config_service("signal_service.redis_sentinel_hosts", required=True, is_secret=False)
+        if not self.REDIS_SENTINEL_HOSTS:
+            raise ValueError("redis_sentinel_hosts not found in config_service")
+        self.REDIS_SENTINEL_MASTER_NAME = _get_from_config_service("signal_service.redis_sentinel_master_name", required=True, is_secret=False)
+        if not self.REDIS_SENTINEL_MASTER_NAME:
+            raise ValueError("redis_sentinel_master_name not found in config_service")
 
         # Service URLs from config_service
-        self.TICKER_SERVICE_URL = _get_service_url("ticker_service", fallback_port=8089)
-        self.INSTRUMENT_SERVICE_URL = _get_config_str("INSTRUMENT_SERVICE_URL", "http://instrument-service:8008")
-        self.MARKETPLACE_SERVICE_URL = _get_service_url("marketplace_service", fallback_port=8090)
+        self.TICKER_SERVICE_URL = _get_from_config_service("signal_service.ticker_service_url", required=True, is_secret=False)
+        if not self.TICKER_SERVICE_URL:
+            raise ValueError("ticker_service_url not found in config_service")
+        self.INSTRUMENT_SERVICE_URL = _get_from_config_service("signal_service.instrument_service_url", required=True, is_secret=False)
+        if not self.INSTRUMENT_SERVICE_URL:
+            raise ValueError("instrument_service_url not found in config_service")
+        self.MARKETPLACE_SERVICE_URL = _get_from_config_service("signal_service.marketplace_service_url", required=True, is_secret=False)
+        if not self.MARKETPLACE_SERVICE_URL:
+            raise ValueError("marketplace_service_url not found in config_service")
+        self.USER_SERVICE_URL = _get_from_config_service("signal_service.user_service_url", required=True, is_secret=False)
+        if not self.USER_SERVICE_URL:
+            raise ValueError("user_service_url not found in config_service")
 
         # Gateway authentication secrets
         self.gateway_secret = _get_from_config_service(
@@ -242,52 +253,107 @@ class SignalServiceConfig:
             is_secret=True
         )
 
-        # Cache & Performance Settings (optional with defaults)
-        self.CACHE_TTL_SECONDS = _get_config_int("CACHE_TTL_SECONDS", 300)
-        self.MAX_BATCH_SIZE = _get_config_int("MAX_BATCH_SIZE", 100)
-        self.MAX_CPU_CORES = _get_config_int("MAX_CPU_CORES", 4)
+        # Cache & Performance Settings - from config_service only
+        cache_ttl = _get_from_config_service("signal_service.cache_ttl_seconds", required=True, is_secret=False)
+        if not cache_ttl:
+            raise ValueError("cache_ttl_seconds not found in config_service")
+        self.CACHE_TTL_SECONDS = int(cache_ttl)
+        max_batch = _get_from_config_service("signal_service.max_batch_size", required=True, is_secret=False)
+        if not max_batch:
+            raise ValueError("max_batch_size not found in config_service")
+        self.MAX_BATCH_SIZE = int(max_batch)
+        max_cores = _get_from_config_service("signal_service.max_cpu_cores", required=True, is_secret=False)
+        if not max_cores:
+            raise ValueError("max_cpu_cores not found in config_service")
+        self.MAX_CPU_CORES = int(max_cores)
 
-        # Greeks calculation config (can come from config_service)
-        greeks_rate = _get_from_config_service("GREEKS_RISK_FREE_RATE", required=False, is_secret=False, default="0.06")
+        # Greeks calculation config - from config_service only
+        greeks_rate = _get_from_config_service("signal_service.greeks_risk_free_rate", required=True, is_secret=False)
+        if not greeks_rate:
+            raise ValueError("greeks_risk_free_rate not found in config_service")
         self.GREEKS_RISK_FREE_RATE = float(greeks_rate)
 
-        # Redis Stream Config
-        self.REDIS_TICK_STREAM_PREFIX = _get_config_str("REDIS_TICK_STREAM_PREFIX", "tick_stream:")
-        self.CONSUMER_GROUP_NAME = _get_config_str("CONSUMER_GROUP_NAME", "signal_processors")
-        self.CONSUMER_NAME = os.getenv("HOSTNAME", _get_config_str("CONSUMER_NAME", "signal_processor_1"))
+        # Redis Stream Config - from config_service only
+        self.REDIS_TICK_STREAM_PREFIX = _get_from_config_service("signal_service.redis_tick_stream_prefix", required=True, is_secret=False)
+        if not self.REDIS_TICK_STREAM_PREFIX:
+            raise ValueError("redis_tick_stream_prefix not found in config_service")
+        self.CONSUMER_GROUP_NAME = _get_from_config_service("signal_service.consumer_group_name", required=True, is_secret=False)
+        if not self.CONSUMER_GROUP_NAME:
+            raise ValueError("consumer_group_name not found in config_service")
+        self.CONSUMER_NAME = _get_from_config_service("signal_service.consumer_name", required=True, is_secret=False)
+        if not self.CONSUMER_NAME:
+            raise ValueError("consumer_name not found in config_service")
 
-        # WebSocket Config
-        self.WEBSOCKET_MAX_CONNECTIONS = _get_config_int("WEBSOCKET_MAX_CONNECTIONS", 10000)
-        self.WEBSOCKET_HEARTBEAT_INTERVAL = _get_config_int("WEBSOCKET_HEARTBEAT_INTERVAL", 30)
+        # WebSocket Config - from config_service only
+        ws_max_conn = _get_from_config_service("signal_service.websocket_max_connections", required=True, is_secret=False)
+        if not ws_max_conn:
+            raise ValueError("websocket_max_connections not found in config_service")
+        self.WEBSOCKET_MAX_CONNECTIONS = int(ws_max_conn)
+        ws_heartbeat = _get_from_config_service("signal_service.websocket_heartbeat_interval", required=True, is_secret=False)
+        if not ws_heartbeat:
+            raise ValueError("websocket_heartbeat_interval not found in config_service")
+        self.WEBSOCKET_HEARTBEAT_INTERVAL = int(ws_heartbeat)
 
-        # Subscription Config
-        self.DEFAULT_SUBSCRIPTION_LEASE_SECONDS = _get_config_int("DEFAULT_SUBSCRIPTION_LEASE_SECONDS", 300)
-        self.MAX_INDICATORS_PER_TIMEFRAME = _get_config_int("MAX_INDICATORS_PER_TIMEFRAME", 50)
+        # Subscription Config - from config_service only
+        lease_seconds = _get_from_config_service("signal_service.default_subscription_lease_seconds", required=True, is_secret=False)
+        if not lease_seconds:
+            raise ValueError("default_subscription_lease_seconds not found in config_service")
+        self.DEFAULT_SUBSCRIPTION_LEASE_SECONDS = int(lease_seconds)
+        max_indicators = _get_from_config_service("signal_service.max_indicators_per_timeframe", required=True, is_secret=False)
+        if not max_indicators:
+            raise ValueError("max_indicators_per_timeframe not found in config_service")
+        self.MAX_INDICATORS_PER_TIMEFRAME = int(max_indicators)
 
-        # ACL Cache
-        self.ACL_CACHE_ENABLED = _get_config_bool("ACL_CACHE_ENABLED", True)
-        self.ACL_CACHE_TTL_SECONDS = _get_config_int("ACL_CACHE_TTL_SECONDS", 300)
+        # ACL Cache - from config_service only
+        acl_enabled = _get_from_config_service("signal_service.acl_cache_enabled", required=True, is_secret=False)
+        if not acl_enabled:
+            raise ValueError("acl_cache_enabled not found in config_service")
+        self.ACL_CACHE_ENABLED = acl_enabled.lower() == "true"
+        acl_ttl = _get_from_config_service("signal_service.acl_cache_ttl_seconds", required=True, is_secret=False)
+        if not acl_ttl:
+            raise ValueError("acl_cache_ttl_seconds not found in config_service")
+        self.ACL_CACHE_TTL_SECONDS = int(acl_ttl)
 
-        # Celery (optional)
-        celery_broker = _get_from_config_service("CELERY_BROKER_URL", required=False, is_secret=True)
-        self.CELERY_BROKER_URL = celery_broker or _get_config_str("CELERY_BROKER_URL", "")
+        # Celery - from config_service only
+        self.CELERY_BROKER_URL = _get_from_config_service("signal_service.celery_broker_url", required=True, is_secret=True)
+        if not self.CELERY_BROKER_URL:
+            raise ValueError("celery_broker_url not found in config_service")
+        self.CELERY_RESULT_BACKEND = _get_from_config_service("signal_service.celery_result_backend", required=True, is_secret=True)
+        if not self.CELERY_RESULT_BACKEND:
+            raise ValueError("celery_result_backend not found in config_service")
+        async_enabled = _get_from_config_service("signal_service.async_computation_enabled", required=True, is_secret=False)
+        if not async_enabled:
+            raise ValueError("async_computation_enabled not found in config_service")
+        self.ASYNC_COMPUTATION_ENABLED = async_enabled.lower() == "true"
 
-        celery_backend = _get_from_config_service("CELERY_RESULT_BACKEND", required=False, is_secret=True)
-        self.CELERY_RESULT_BACKEND = celery_backend or _get_config_str("CELERY_RESULT_BACKEND", "")
+        # Metrics - from config_service only
+        metrics_enabled = _get_from_config_service("signal_service.metrics_enabled", required=True, is_secret=False)
+        if not metrics_enabled:
+            raise ValueError("metrics_enabled not found in config_service")
+        self.METRICS_ENABLED = metrics_enabled.lower() == "true"
+        metrics_port = _get_from_config_service("signal_service.metrics_port", required=True, is_secret=False)
+        if not metrics_port:
+            raise ValueError("metrics_port not found in config_service")
+        self.METRICS_PORT = int(metrics_port)
+        metrics_interval = _get_from_config_service("signal_service.metrics_update_interval_seconds", required=True, is_secret=False)
+        if not metrics_interval:
+            raise ValueError("metrics_update_interval_seconds not found in config_service")
+        self.METRICS_UPDATE_INTERVAL_SECONDS = int(metrics_interval)
 
-        self.ASYNC_COMPUTATION_ENABLED = _get_config_bool("ASYNC_COMPUTATION_ENABLED", False)
+        # Usage Tracking - from config_service only
+        tracking_enabled = _get_from_config_service("signal_service.usage_tracking_enabled", required=True, is_secret=False)
+        if not tracking_enabled:
+            raise ValueError("usage_tracking_enabled not found in config_service")
+        self.USAGE_TRACKING_ENABLED = tracking_enabled.lower() == "true"
+        usage_batch = _get_from_config_service("signal_service.usage_batch_size", required=True, is_secret=False)
+        if not usage_batch:
+            raise ValueError("usage_batch_size not found in config_service")
+        self.USAGE_BATCH_SIZE = int(usage_batch)
 
-        # Metrics
-        self.METRICS_ENABLED = _get_config_bool("METRICS_ENABLED", True)
-        self.METRICS_PORT = _get_config_int("METRICS_PORT", self.PORT)
-        self.METRICS_UPDATE_INTERVAL_SECONDS = _get_config_int("METRICS_UPDATE_INTERVAL_SECONDS", 60)
-
-        # Usage Tracking
-        self.USAGE_TRACKING_ENABLED = _get_config_bool("USAGE_TRACKING_ENABLED", True)
-        self.USAGE_BATCH_SIZE = _get_config_int("USAGE_BATCH_SIZE", 100)
-
-        # Subscription Service URL (optional)
-        self.SUBSCRIPTION_SERVICE_URL = _get_config_str("SUBSCRIPTION_SERVICE_URL", "")
+        # Subscription Service URL - from config_service only
+        self.SUBSCRIPTION_SERVICE_URL = _get_from_config_service("signal_service.subscription_service_url", required=True, is_secret=False)
+        if not self.SUBSCRIPTION_SERVICE_URL:
+            raise ValueError("subscription_service_url not found in config_service")
 
         logger.info("✓ Configuration loaded from config_service and environment")
 

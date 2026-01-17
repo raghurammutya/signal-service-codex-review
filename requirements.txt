@@ -18,7 +18,7 @@ pandas>=2.2.0
 numpy>=2.2.6
 
 # Shared architecture
-# stocksblitz-shared==1.0.0  # TODO: Uncomment after PyPI publication
+# stocksblitz-shared==1.0.0
 
 # Service-specific packages for signals/analytics
 pandas-ta>=0.4.67b0  # Technical analysis indicators (requires Python 3.12+, numpy 2.x)

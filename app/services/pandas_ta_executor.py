@@ -33,7 +33,8 @@ class PandasTAExecutor:
         self.ticker_adapter = EnhancedTickerAdapter()
         
         if not PANDAS_TA_AVAILABLE:
-            log_warning("pandas_ta not available - Technical indicators will use mock values")
+            from app.errors import TechnicalIndicatorError
+            raise TechnicalIndicatorError("pandas_ta library not available - technical indicators require pandas_ta library")
         
         log_info("PandasTAExecutor initialized")
     
@@ -149,7 +150,7 @@ class PandasTAExecutor:
                     
                     return self.format_dataframe(df)
             
-            # Enhanced Fallback: Try to get historical data from ticker_service
+            # Try to get historical data from ticker_service - required for accurate indicators
             try:
                 historical_manager = await get_historical_data_manager()
                 if historical_manager and context.instrument_key:
@@ -198,16 +199,13 @@ class PandasTAExecutor:
                             return self.format_dataframe(df)
                         
             except Exception as e:
-                log_warning(f"Historical data fallback failed: {e}")
+                from app.errors import TechnicalIndicatorError
+                log_exception(f"Historical data retrieval failed: {e}")
+                raise TechnicalIndicatorError(f"Failed to retrieve sufficient historical data for technical indicators: {e}") from e
             
-            # Final fallback: create minimal DataFrame from current tick
-            current_tick = self.extract_ohlcv_from_tick(context.tick_data, context.timestamp)
-            if current_tick:
-                df = pd.DataFrame([current_tick])
-                log_warning("Using single-tick DataFrame - indicator accuracy may be limited")
-                return self.format_dataframe(df)
-            
-            return None
+            # No fallback to single-tick DataFrame - insufficient for reliable indicators
+            from app.errors import TechnicalIndicatorError
+            raise TechnicalIndicatorError("No historical data available for technical indicator calculation")
             
         except Exception as e:
             log_exception(f"Failed to prepare DataFrame: {e}")
@@ -270,15 +268,13 @@ class PandasTAExecutor:
     def format_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Format DataFrame for pandas_ta"""
         try:
-            # Ensure required columns exist
+            # Ensure required columns exist - no synthetic data injection
             required_columns = ['open', 'high', 'low', 'close', 'volume']
             
-            for col in required_columns:
-                if col not in df.columns:
-                    if col == 'volume':
-                        df[col] = 0  # Default volume
-                    else:
-                        df[col] = df['close'] if 'close' in df.columns else 0
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                log_warning(f"Missing required OHLCV columns: {missing_columns} - cannot process without complete data")
+                return pd.DataFrame()  # Return empty DataFrame instead of synthetic data
             
             # Convert to numeric
             for col in required_columns:
@@ -291,13 +287,8 @@ class PandasTAExecutor:
             
             # Ensure minimum data points for indicators
             if len(df) < 2:
-                # Duplicate last row to have minimum data
-                if len(df) == 1:
-                    df = pd.concat([df, df], ignore_index=True)
-                else:
-                    # Create dummy data
-                    dummy_row = {col: 100.0 for col in required_columns}
-                    df = pd.DataFrame([dummy_row, dummy_row])
+                log_warning("Insufficient data points for technical analysis - need at least 2 periods")
+                return pd.DataFrame()  # Return empty DataFrame instead of synthetic data
             
             return df
             
@@ -361,7 +352,8 @@ class PandasTAExecutor:
         """Build pandas_ta strategy from indicator configurations"""
         try:
             if not PANDAS_TA_AVAILABLE:
-                return {}
+                from app.errors import TechnicalIndicatorError
+                raise TechnicalIndicatorError("pandas_ta library not available - cannot build strategy without pandas_ta")
             
             strategy_dict = {}
             
@@ -507,9 +499,8 @@ class PandasTAExecutor:
             # Second pass: Execute pandas_ta indicators if any
             if pandas_ta_indicators:
                 if not PANDAS_TA_AVAILABLE:
-                    # Use mock values
-                    for indicator in pandas_ta_indicators:
-                        results[indicator.output_key] = None
+                    from app.errors import TechnicalIndicatorError
+                    raise TechnicalIndicatorError("pandas_ta library not available - cannot execute technical indicators")
                 else:
                     log_info(f"Executing {len(pandas_ta_indicators)} pandas_ta indicators")
 
@@ -555,8 +546,9 @@ class PandasTAExecutor:
             return results
 
         except Exception as e:
+            from app.errors import TechnicalIndicatorError
             log_exception(f"Failed to execute strategy: {e}")
-            return self.mock_indicator_results(indicators)
+            raise TechnicalIndicatorError(f"Strategy execution failed: {e}") from e
     
     def _execute_strategy_sync(self, df: pd.DataFrame, strategy_dict: Dict) -> pd.DataFrame:
         """Synchronous strategy execution (for thread pool)"""
@@ -574,32 +566,12 @@ class PandasTAExecutor:
             return df
             
         except Exception as e:
+            from app.errors import TechnicalIndicatorError
             log_exception(f"Strategy execution failed: {e}")
-            return df
+            raise TechnicalIndicatorError(f"pandas_ta strategy execution failed: {e}") from e
     
-    def mock_indicator_results(self, indicators: List[TechnicalIndicatorConfig]) -> Dict[str, Any]:
-        """Generate mock results when pandas_ta is not available"""
-        results = {}
-        
-        mock_values = {
-            'sma': 100.0,
-            'ema': 99.5,
-            'rsi': 55.0,
-            'macd': {'macd': 1.5, 'signal': 1.2, 'histogram': 0.3},
-            'bb': {'upper': 105.0, 'middle': 100.0, 'lower': 95.0},
-            'stoch': {'k': 60.0, 'd': 55.0},
-            'adx': 25.0,
-            'atr': 2.5,
-            'cci': 10.0,
-            'mfi': 45.0,
-            'willr': -30.0
-        }
-        
-        for indicator in indicators:
-            indicator_name = indicator.name.lower()
-            results[indicator.output_key] = mock_values.get(indicator_name, 50.0)
-        
-        return results
+    # Note: mock_indicator_results function removed - production code must fail fast
+    # when pandas_ta library is not available rather than returning mock data
     
     async def cache_results(
         self, 

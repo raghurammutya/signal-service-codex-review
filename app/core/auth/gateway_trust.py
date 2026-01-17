@@ -113,40 +113,16 @@ async def get_current_user_from_gateway(
             # ... your logic here
     """
     # =========================================================================
-    # DEVELOPMENT MODE: Allow direct access for testing
+    # PRODUCTION ENFORCEMENT: No auth bypasses allowed in any environment
     # =========================================================================
-    import os
-    allow_direct_access = os.getenv("ALLOW_DIRECT_ACCESS", "false").lower() == "true"
-    is_development = settings.environment != "production"
-
-    if allow_direct_access and is_development:
-        # Development mode: Allow direct access without gateway
-        logger.warning("DEVELOPMENT MODE: Direct access allowed (bypass gateway auth)")
-
-        # Try to extract user_id from Authorization header
-        if authorization and authorization.startswith("Bearer "):
-            # Extract user_id from JWT (simplified - no validation in dev mode)
-            try:
-                import jwt
-                token = authorization.replace("Bearer ", "")
-                # Decode without verification (dev mode only!)
-                payload = jwt.decode(token, options={"verify_signature": False})
-                user_id = payload.get("sub", "dev-user")
-                logger.debug(f"Development mode: Extracted user_id={user_id} from JWT")
-            except Exception as e:
-                logger.warning(f"Failed to decode JWT in dev mode: {e}")
-                user_id = "dev-user"
-        elif x_user_id:
-            # Use provided X-User-ID header
-            user_id = x_user_id
-        else:
-            # Default dev user
-            user_id = "dev-user"
-
-        return {
-            "user_id": user_id,
-            "from_gateway": "dev",
-        }
+    # Gateway authentication is MANDATORY in all environments for production compliance
+    # No bypasses allowed - all requests must be properly authenticated via gateway
+    
+    logger.error("Authentication failed: Gateway authentication required - no direct access allowed")
+    raise HTTPException(
+        status_code=403,
+        detail="Gateway authentication required - direct access forbidden"
+    )
 
     # =========================================================================
     # PRODUCTION MODE: Strict gateway authentication

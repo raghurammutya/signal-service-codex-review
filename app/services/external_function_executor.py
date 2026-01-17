@@ -481,16 +481,22 @@ class ExternalFunctionExecutor:
     # ACL Methods
     
     def _get_user_role(self, user_id: str) -> Dict[str, Any]:
-        """Get user role and permissions (mock implementation)"""
-        # In production, this would query the user service
-        # For now, return a default role structure
-        return {
-            "role": "basic",
-            "permissions": ["execute_custom_functions", "upload_functions", "access_market_data"],
-            "max_functions": 10,
-            "max_memory_mb": 64,
-            "max_timeout": 15
-        }
+        """Get user role and permissions from user service"""
+        # Production implementation must query user service - no mock data
+        try:
+            # Query user service for actual permissions
+            from app.clients.user_service_client import UserServiceClient
+            user_client = UserServiceClient()
+            user_data = user_client.get_user_permissions_sync(user_id)
+            
+            if not user_data:
+                raise ValueError(f"User {user_id} not found or has no permissions")
+                
+            return user_data
+        except Exception as e:
+            # Fail fast for security - no default permissions
+            from app.errors import SecurityError
+            raise SecurityError(f"Failed to get user permissions for {user_id}: {e}") from e
     
     def _check_user_access(self, user_id: str, config: ExternalFunctionConfig) -> bool:
         """Check if user has access to execute the function"""

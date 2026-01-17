@@ -36,7 +36,9 @@ class CommsServiceClient:
         """Get comms service URL from config service"""
         # Use config service to get comms_service URL
         # Fallback to standard naming convention if not available
-        return getattr(settings, 'COMMS_SERVICE_URL', 'http://comms-service:8086')
+        if hasattr(settings, 'COMMS_SERVICE_URL'):
+            return settings.COMMS_SERVICE_URL
+        raise RuntimeError("COMMS_SERVICE_URL not configured in config_service - cannot operate without service URL")
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

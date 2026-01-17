@@ -573,4 +573,4 @@ class PodAssignmentManager:
     
     async def get_instrument_pod(self, instrument_key: str) -> Optional[str]:
         """Get the pod assigned to an instrument"""
-        return self.instrument_assignments.get(instrument_key)  -- TODO: Use EXPLAIN ANALYZE to check performance
+        return self.instrument_assignments.get(instrument_key)

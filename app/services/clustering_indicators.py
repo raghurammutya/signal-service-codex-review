@@ -297,7 +297,8 @@ def persistent_peaks(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
-            return _mock_persistent_peaks(df)
+            from app.errors import ComputationError
+            raise ComputationError("findpeaks library not available - advanced peak detection requires findpeaks library")
 
         fp = findpeaks(method=method, lookahead=lookahead, verbose=0)
 
@@ -324,8 +325,9 @@ def persistent_peaks(
         return peak_df
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error in persistent peak detection: {e}")
-        return _mock_persistent_peaks(df)
+        raise ComputationError(f"Failed to compute persistent peaks: {e}") from e
 
 
 @register_indicator(
@@ -355,7 +357,8 @@ def persistent_valleys(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
-            return _mock_persistent_valleys(df)
+            from app.errors import ComputationError
+            raise ComputationError("findpeaks library not available - advanced valley detection requires findpeaks library")
 
         fp = findpeaks(method=method, lookahead=lookahead, verbose=0)
 
@@ -383,8 +386,9 @@ def persistent_valleys(
         return valley_df
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error in persistent valley detection: {e}")
-        return _mock_persistent_valleys(df)
+        raise ComputationError(f"Failed to compute persistent valleys: {e}") from e
 
 
 @register_indicator(
@@ -414,7 +418,8 @@ def peaks_ranked_by_persistence(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
-            return _mock_ranked_peaks(df)
+            from app.errors import ComputationError
+            raise ComputationError("findpeaks library not available - peak ranking requires findpeaks library")
 
         peaks_df = persistent_peaks(df, method='topology')
 
@@ -428,43 +433,10 @@ def peaks_ranked_by_persistence(
         return peaks_df
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error ranking peaks by persistence: {e}")
-        return _mock_ranked_peaks(df)
+        raise ComputationError(f"Failed to rank peaks by persistence: {e}") from e
 
 
-# =============================================================================
-# Mock Functions
-# =============================================================================
-
-def _mock_persistent_peaks(df: pd.DataFrame) -> pd.DataFrame:
-    """Mock persistent peaks"""
-    # Return some simple peaks
-    peaks = []
-    for i in range(10, len(df), 20):
-        if i < len(df):
-            peaks.append({
-                'index': i,
-                'timestamp': df.index[i],
-                'price': float(df['high'].iloc[i]),
-                'persistence': 0.8
-            })
-    return pd.DataFrame(peaks) if peaks else pd.DataFrame(columns=['index', 'timestamp', 'price', 'persistence'])
-
-
-def _mock_persistent_valleys(df: pd.DataFrame) -> pd.DataFrame:
-    """Mock persistent valleys"""
-    valleys = []
-    for i in range(15, len(df), 20):
-        if i < len(df):
-            valleys.append({
-                'index': i,
-                'timestamp': df.index[i],
-                'price': float(df['low'].iloc[i]),
-                'persistence': 0.75
-            })
-    return pd.DataFrame(valleys) if valleys else pd.DataFrame(columns=['index', 'timestamp', 'price', 'persistence'])
-
-
-def _mock_ranked_peaks(df: pd.DataFrame) -> pd.DataFrame:
-    """Mock ranked peaks"""
-    return _mock_persistent_peaks(df)
+# Note: Mock functions removed - production code must handle missing dependencies properly
+# by raising ComputationError when findpeaks library is not available

@@ -52,7 +52,9 @@ class AlertServiceClient:
         """Get alert service URL from config service"""
         # Use config service to get alert_service URL
         # Fallback to standard naming convention if not available
-        return getattr(settings, 'ALERT_SERVICE_URL', 'http://alert-service:8085')
+        if hasattr(settings, 'ALERT_SERVICE_URL'):
+            return settings.ALERT_SERVICE_URL
+        raise RuntimeError("ALERT_SERVICE_URL not configured in config_service - cannot operate without service URL")
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

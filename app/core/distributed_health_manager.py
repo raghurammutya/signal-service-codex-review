@@ -62,14 +62,26 @@ class DistributedHealthManager:
     def _get_host_ip(self) -> str:
         """Get host IP address"""
         try:
+            # Get IP from environment first (for containerized deployments)
+            import os
+            pod_ip = os.environ.get('POD_IP')
+            if pod_ip:
+                return pod_ip
+            
             # Connect to external address to determine local IP
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
+            # Use cluster DNS or gateway instead of hardcoded public IP
+            gateway_ip = os.environ.get('GATEWAY_IP', '10.96.0.1')  # Kubernetes default service subnet
+            s.connect((gateway_ip, 80))
             ip = s.getsockname()[0]
             s.close()
             return ip
         except Exception:
-            return "127.0.0.1"
+            # Last resort fallback - get from hostname resolution
+            try:
+                return socket.gethostbyname(socket.gethostname())
+            except Exception:
+                return "127.0.0.1"
     
     async def register_instance(self, health_checker) -> None:
         """Register this instance in the distributed registry"""
@@ -178,9 +190,8 @@ class DistributedHealthManager:
     
     async def _get_request_rate(self) -> float:
         """Get current request rate (requests per minute)"""
-        # In real implementation, this would track actual request rates
-        # For now, return a mock value
-        return 450.0
+        # Production implementation requires metrics collection service integration
+        raise RuntimeError("Request rate monitoring requires metrics service integration - cannot provide synthetic metrics")
     
     async def _get_queue_size(self) -> int:
         """Get current processing queue size"""

@@ -37,7 +37,8 @@ class SignalExecutor:
     
     # MinIO configuration - fail fast if not properly configured
     # Match marketplace storage service bucket naming convention exactly
-    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+    from app.core.config import settings
+    ENVIRONMENT = settings.environment
     BUCKET_MAP = {
         "development": "stocksblitz-scripts-dev",
         "staging": "stocksblitz-scripts-staging", 
@@ -307,8 +308,13 @@ class SignalExecutor:
                     metadata = json.loads(meta_response.read())
                     meta_response.close()
                     meta_response.release_conn()
-                except:
-                    pass  # Metadata is optional
+                except json.JSONDecodeError as e:
+                    log_warning(f"Invalid JSON in metadata file {metadata_path}: {e}")
+                except Exception as e:
+                    # Metadata file doesn't exist or other MinIO error - this is expected/optional
+                    # Use log_info with debug level since log_debug not available
+                    if "NoSuchKey" not in str(e):  # Only log non-404 errors
+                        log_info(f"Metadata file {metadata_path} error (non-critical): {e}")
                 
                 return {
                     "content": content,

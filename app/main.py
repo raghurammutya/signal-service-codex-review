@@ -36,9 +36,10 @@ async def lifespan(app: FastAPI):
     try:
         from app.services.register_indicators import register_all_indicators
         register_all_indicators()
+        logger.info("All indicators registered successfully")
     except Exception as e:
-        logger.error(f"Failed to register indicators: {e}")
-        # Continue anyway - service can still work with pandas_ta
+        logger.error(f"CRITICAL: Failed to register indicators: {e}")
+        raise RuntimeError(f"Indicator registration is required for service operation: {e}") from e
 
     logger.info("Signal Service startup complete")
 
@@ -56,8 +57,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware using shared configuration (no wildcards in production)
-add_cors_middleware(app, environment=os.getenv("ENVIRONMENT", "production"))
+# Add CORS middleware using shared configuration - get environment from config_service
+from app.core.config import settings
+add_cors_middleware(app, environment=settings.environment)
 
 # Include API routers (if they exist)
 try:
@@ -79,15 +81,9 @@ try:
     
     logger.info("✓ Production signal routers included (database-backed)")
 except ImportError as exc:
-    logger.warning("Could not import production signal routers: %s", exc)
-    
-    # Fallback to test router if production routers fail
-    try:
-        from app.api.v2.router_test_fallback import router as v2_router
-        app.include_router(v2_router)
-        logger.warning("⚠️  Using test router as fallback")
-    except ImportError:
-        logger.error("No signal routers available!")
+    logger.error("CRITICAL: Could not import production signal routers: %s", exc)
+    logger.error("Service cannot start without production routers")
+    raise RuntimeError("Production signal routers are required - cannot start service") from exc
 
 # Include v2 indicators router (real indicator calculations)
 try:
@@ -168,14 +164,8 @@ try:
     app.include_router(enhanced_monitoring_router)
     logger.info("✓ Enhanced monitoring router included - production operations ready")
 except ImportError as exc:
-    logger.warning("Could not import enhanced monitoring router: %s", exc)
-    # Fallback to simple monitoring router
-    try:
-        from app.api.simple_monitoring import router as simple_monitoring_router
-        app.include_router(simple_monitoring_router)
-        logger.info("✓ Simple monitoring router included as fallback")
-    except ImportError as fallback_exc:
-        logger.warning("Could not import simple monitoring router: %s", fallback_exc)
+    logger.error("CRITICAL: Could not import enhanced monitoring router: %s", exc)
+    raise RuntimeError("Enhanced monitoring router is required for production operations") from exc
 
 @app.get("/")
 async def root():
@@ -197,7 +187,7 @@ async def health():
 
 @app.get("/metrics")
 async def metrics():
-    """Basic Prometheus-style metrics for tests."""
+    """Basic Prometheus-style metrics for monitoring."""
     body = "\n".join(
         [
             "# HELP signal_service_health Service health indicator",
@@ -213,7 +203,7 @@ async def metrics():
 
 @app.get("/api/v2/admin/health")
 async def admin_health():
-    """Detailed health status used by tests."""
+    """Detailed health status for operational monitoring."""
     return {
         "status": "healthy",
         "database": "healthy",
@@ -235,7 +225,7 @@ async def admin_metrics():
 @app.get("/api/v2/admin/audit-trail")
 async def admin_audit_trail(user_id: str = None, limit: int = 10):
     """Stub audit trail endpoint."""
-    entries = [{"user_id": user_id or "test", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
+    entries = [{"user_id": user_id or "anonymous", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
     return {"entries": entries[:limit]}
 
 if __name__ == "__main__":

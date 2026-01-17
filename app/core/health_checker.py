@@ -316,10 +316,11 @@ class HealthChecker:
     async def _check_external_services_health(self) -> Dict[str, Any]:
         """Check connectivity to external services"""
         try:
+            from app.core.config import settings
             external_services = {
-                'instrument_service': 'http://localhost:8008/health',
-                'ticker_service': 'http://localhost:8001/health',
-                'subscription_service': 'http://localhost:8005/health'
+                'instrument_service': f"{settings.INSTRUMENT_SERVICE_URL}/health",
+                'ticker_service': f"{settings.TICKER_SERVICE_URL}/health", 
+                'subscription_service': f"{settings.SUBSCRIPTION_SERVICE_URL}/health"
             }
             
             service_statuses = {}

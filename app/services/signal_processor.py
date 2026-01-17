@@ -450,8 +450,12 @@ class SignalProcessor:
                 await self.redis_client.xgroup_create(
                     stream_name, self.consumer_group, id='0', mkstream=True
                 )
-            except Exception:
-                pass  # Group already exists
+            except Exception as e:
+                # Only ignore BUSYGROUP error, log all others
+                error_str = str(e).upper()
+                if 'BUSYGROUP' not in error_str:
+                    log_error(f"Failed to create consumer group for {stream_name}: {e}")
+                # BUSYGROUP means group already exists, which is expected
             
             log_info(f"Starting configuration updates consumer for stream: {stream_name}")
             
@@ -538,8 +542,12 @@ class SignalProcessor:
                             )
                             self.active_streams.add(stream_name)
                             log_info(f"Added stream to monitoring: {stream_name}")
-                        except Exception:
-                            pass  # Group already exists
+                        except Exception as e:
+                            # Only ignore BUSYGROUP error, log all others
+                            error_str = str(e).upper()
+                            if 'BUSYGROUP' not in error_str:
+                                log_error(f"Failed to create consumer group for {stream_name}: {e}")
+                            # BUSYGROUP means group already exists, which is expected
                 
                 # Read from all active streams
                 if self.active_streams:
@@ -812,10 +820,9 @@ class SignalProcessor:
     async def fetch_from_timescaledb(self, instrument_key: str, interval: str) -> Optional[Dict]:
         """Fetch data from TimescaleDB"""
         try:
-            # Implementation depends on TimescaleDB schema
-            # This is a placeholder for the actual implementation
-            log_info(f"Fetching data from TimescaleDB: {instrument_key}, {interval}")
-            return None
+            # Production implementation requires TimescaleDB integration
+            from app.errors import DataAccessError
+            raise DataAccessError(f"TimescaleDB integration required for historical data - cannot fetch {instrument_key} data for {interval}")
             
         except Exception as e:
             error = handle_data_access_error(e, "fetch", "timescaledb")
@@ -1073,14 +1080,9 @@ class SignalProcessor:
             if data:
                 return json.loads(data)
                 
-            # Fallback to mock data
-            return {
-                'last_price': 100.0,
-                'bid': 99.95,
-                'ask': 100.05,
-                'volume': 10000,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # No mock data in production - fail fast if data not available
+            log_error(f"Market data not available for {instrument_key}")
+            return None
             
         except Exception as e:
             log_error(f"Error getting market data for {instrument_key}: {e}")

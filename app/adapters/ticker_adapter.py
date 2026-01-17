@@ -369,35 +369,12 @@ class EnhancedTickerAdapter:
     ) -> Dict[str, Any]:
         """
         Calculate indicators with timezone and currency awareness.
-        This is a placeholder for actual indicator calculation logic.
+        Production implementation requires pandas_ta_executor integration.
         """
         try:
-            # In production, this would interface with pandas_ta_executor
-            # or other indicator calculation services
-            
-            indicators = {
-                "instrument_key": instrument_key,
-                "timestamp": exchange_time.isoformat(),
-                "currency": currency,
-                "indicators": {}
-            }
-            
-            # Example: Simple moving average calculation
-            if historical_data and len(historical_data) >= 20:
-                prices = [float(d.get("ltp", 0)) for d in historical_data[-20:]]
-                sma_20 = sum(prices) / len(prices)
-                indicators["indicators"]["SMA_20"] = {
-                    "value": sma_20,
-                    "currency": currency
-                }
-            
-            # Add current price
-            indicators["indicators"]["LTP"] = {
-                "value": float(ltp),
-                "currency": currency
-            }
-            
-            return indicators
+            # Production implementation requires indicator calculation service integration
+            from app.errors import ComputationError
+            raise ComputationError(f"Indicator calculation requires pandas_ta_executor integration - cannot compute indicators for {instrument_key}")
             
         except Exception as e:
             logger.exception("Error calculating indicators: %s", e)

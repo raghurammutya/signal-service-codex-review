@@ -13,9 +13,14 @@ logger = logging.getLogger(__name__)
 class DashboardRegistrar:
     """Manages registration with the dynamic dashboard"""
     
-    def __init__(self, dashboard_url: str = "http://localhost:8500"):
+    def __init__(self, dashboard_url: str = None):
+        if dashboard_url is None:
+            from app.core.config import settings
+            if not hasattr(settings, 'DASHBOARD_URL'):
+                raise RuntimeError("DASHBOARD_URL not configured in config_service - cannot register with dashboard")
+            dashboard_url = settings.DASHBOARD_URL
         self.dashboard_url = dashboard_url
-        self.service_url = "http://localhost:8003"
+        self.service_url = f"http://localhost:{getattr(settings, 'PORT', 8003)}"
         self.registration_endpoint = f"{dashboard_url}/api/services/register"
         self.health_update_endpoint = f"{dashboard_url}/api/services/health"
         self.registration_interval = 30  # seconds

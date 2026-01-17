@@ -147,9 +147,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Check JWT token
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            # In production, decode JWT to get user ID
-            # For now, use a placeholder
-            return "user_from_jwt"
+            # Production requires proper JWT validation - no placeholder identities
+            raise RuntimeError("JWT validation requires proper implementation - cannot use placeholder user identity")
             
         # Check API key
         api_key = request.headers.get("X-API-Key")

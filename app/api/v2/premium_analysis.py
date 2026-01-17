@@ -206,19 +206,8 @@ async def premium_analysis_strike_range(
         while current_strike <= strike_max:
             # Create both CE and PE options for each strike
             for option_type in ['CE', 'PE']:
-                option_dict = {
-                    'strike': current_strike,
-                    'expiry_date': expiry_date,
-                    'option_type': option_type,
-                    'volatility': 0.2,  # Default volatility
-                    'underlying_price': underlying_price
-                }
-                option_chain_data.append(option_dict)
-                
-                # Mock market price (in production, this would come from market data)
-                # For demonstration, use a simple pricing model
-                market_price = _mock_market_price(underlying_price, current_strike, option_type, expiry_date)
-                market_prices.append(market_price)
+                # Production premium analysis requires real market data - cannot operate with synthetic pricing
+                raise HTTPException(status_code=501, detail="Strike range premium analysis requires market data service integration - cannot provide synthetic pricing")
             
             current_strike += strike_step
         
@@ -280,20 +269,8 @@ async def premium_analysis_term_structure(request: TermStructureRequest):
             option_chain_data = []
             market_prices = []
             
-            for strike in request.strikes:
-                for option_type in ['CE', 'PE']:
-                    option_dict = {
-                        'strike': strike,
-                        'expiry_date': expiry_date,
-                        'option_type': option_type,
-                        'volatility': 0.2,
-                        'underlying_price': request.underlying_price
-                    }
-                    option_chain_data.append(option_dict)
-                    
-                    # Mock market price
-                    market_price = _mock_market_price(request.underlying_price, strike, option_type, expiry_date)
-                    market_prices.append(market_price)
+            # Production term structure analysis requires real market data across multiple expiries
+            raise HTTPException(status_code=501, detail="Term structure analysis requires market data service integration - cannot provide synthetic pricing across expiries")
             
             # Calculate premium analysis for this expiry
             expiry_analysis = await premium_calculator.calculate_premium_analysis(
@@ -350,56 +327,8 @@ async def get_arbitrage_opportunities(
     try:
         log_info(f"[AGENT-2] Arbitrage scan for {symbol}, min severity: {min_severity}")
         
-        # In production, this would fetch live option chain data
-        # For now, we'll return mock arbitrage opportunities
-        
-        opportunities = [
-            {
-                'opportunity_id': f"ARB_{symbol}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
-                'type': 'mispricing_arbitrage',
-                'symbol': symbol,
-                'strike': 26000.0,
-                'expiry_date': '2025-01-30',
-                'option_type': 'CE',
-                'market_price': 47.30,
-                'theoretical_price': 45.20,
-                'premium_percentage': 4.65,
-                'mispricing_severity': 'MEDIUM',
-                'action': 'sell',
-                'confidence_score': 0.75,
-                'estimated_profit_per_lot': 210.0,
-                'risk_factors': ['volatility_change', 'time_decay'],
-                'recommended_position_size': 1,
-                'entry_condition': 'market_price >= 47.00',
-                'exit_condition': 'theoretical_price + 1.00',
-                'max_holding_period_days': 3,
-                'detected_at': datetime.utcnow().isoformat()
-            }
-        ]
-        
-        # Filter by severity
-        severity_order = {'LOW': 0, 'MEDIUM': 1, 'HIGH': 2, 'EXTREME': 3}
-        min_severity_level = severity_order.get(min_severity, 1)
-        
-        filtered_opportunities = [
-            opp for opp in opportunities 
-            if severity_order.get(opp['mispricing_severity'], 0) >= min_severity_level
-        ]
-        
-        return {
-            'symbol': symbol,
-            'scan_timestamp': datetime.utcnow().isoformat(),
-            'min_severity_filter': min_severity,
-            'expiry_filter': expiry_date,
-            'opportunities_found': len(filtered_opportunities),
-            'opportunities': filtered_opportunities,
-            'summary': {
-                'total_scanned_options': 50,  # Mock value
-                'mispricing_opportunities': len(filtered_opportunities),
-                'avg_premium_percentage': 3.2,
-                'highest_severity_found': 'HIGH'
-            }
-        }
+        # Production arbitrage scan requires live option chain data and real-time pricing
+        raise HTTPException(status_code=501, detail="Arbitrage opportunities scan requires option chain data service integration - cannot provide synthetic arbitrage signals")
         
     except Exception as e:
         log_exception(f"[AGENT-2] Arbitrage opportunities scan failed: {e}")
@@ -470,27 +399,10 @@ def _calculate_summary_stats(results: List[Dict]) -> Dict[str, Any]:
         return {}
 
 
-def _mock_market_price(underlying_price: float, strike: float, option_type: str, expiry_date: str) -> float:
-    """Generate mock market price for demonstration purposes."""
-    # This is a simplified mock - in production, use real market data
-    try:
-        # Parse expiry to calculate time to expiry
-        expiry_dt = datetime.strptime(expiry_date, '%Y-%m-%d')
-        time_to_expiry = max((expiry_dt - datetime.now()).days / 365.25, 1/365.25)
-        
-        # Simple intrinsic + time value calculation
-        if option_type.upper() in ['CE', 'CALL']:
-            intrinsic = max(underlying_price - strike, 0)
-        else:
-            intrinsic = max(strike - underlying_price, 0)
-        
-        # Add some time value (simplified)
-        time_value = 10.0 * time_to_expiry * (abs(underlying_price - strike) / underlying_price * 0.1 + 0.02)
-        
-        return round(intrinsic + time_value, 2)
-        
-    except Exception:
-        return 10.0  # Fallback value
+def _get_real_market_price(underlying_price: float, strike: float, option_type: str, expiry_date: str) -> float:
+    """Get real market price from market data service."""
+    # Production implementation requires market data service integration
+    raise RuntimeError(f"Market price retrieval requires market data service integration - cannot provide pricing for {option_type} strike {strike} expiry {expiry_date}")
 
 
 def _analyze_term_structure_patterns(term_results: Dict, strikes: List[float]) -> Dict[str, Any]:

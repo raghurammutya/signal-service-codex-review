@@ -63,14 +63,8 @@ class SignalWatermarkService:
                 log_info(f"Watermark service configured from config service - policy: {self._enforcement_policy}")
                 
             except ImportError:
-                # Fallback to environment variables
-                self._watermark_secret = os.getenv("WATERMARK_SECRET")
-                enforcement = os.getenv("WATERMARK_ENFORCEMENT_ENABLED", "true")
-                self._enforcement_enabled = enforcement.lower() != "false"
-                
-                # Get enforcement policy from environment
-                policy = os.getenv("WATERMARK_ENFORCEMENT_POLICY", "auto-enforce")
-                self._enforcement_policy = policy if policy in ["audit-only", "auto-enforce"] else "auto-enforce"
+                # Config service integration required - no environment variable fallbacks
+                raise RuntimeError("Config service unavailable and watermark configuration required - cannot operate without config service")
                 
                 if not self._watermark_secret:
                     logger.warning("WATERMARK_SECRET not configured - marketplace signals won't be watermarked")

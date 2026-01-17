@@ -824,24 +824,6 @@ class UniversalCalculator:
         context: Dict[str, Any]
     ) -> pd.DataFrame:
         """Fetch historical data for instrument"""
-        # This would be implemented to fetch from TimescaleDB
-        # For now, return mock data
-        periods = context.get("periods", 100)
-        
-        # Generate sample data
-        dates = pd.date_range(end=datetime.utcnow(), periods=periods, freq="D")
-        base_price = 100
-        
-        data = pd.DataFrame({
-            "open": base_price + np.random.randn(periods).cumsum(),
-            "high": base_price + np.random.randn(periods).cumsum() + 1,
-            "low": base_price + np.random.randn(periods).cumsum() - 1,
-            "close": base_price + np.random.randn(periods).cumsum(),
-            "volume": np.random.randint(1000000, 10000000, periods)
-        }, index=dates)
-        
-        # Ensure high/low are correct
-        data["high"] = data[["open", "high", "close"]].max(axis=1)
-        data["low"] = data[["open", "low", "close"]].min(axis=1)
-        
-        return data
+        # Production implementation requires TimescaleDB integration - no synthetic data
+        from app.errors import DataAccessError
+        raise DataAccessError(f"Historical data retrieval requires TimescaleDB integration - cannot provide synthetic data for {instrument_key}")

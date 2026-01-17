@@ -148,35 +148,39 @@ class StreamAbuseProtectionService:
             if time.time() - cached_time < self._limits_cache_ttl:
                 return cached_limits
         
-        # Default to fallback limits
-        limits = self.FALLBACK_LIMITS[stream_type]
+        # Production requires entitlement verification - no fallback limits
+        if not self.marketplace_client or not user_id:
+            raise RuntimeError(f"Entitlement verification required for stream access - cannot provide {stream_type} limits without marketplace verification")
         
-        # Try to get from marketplace
-        if self.marketplace_client and user_id:
-            try:
-                # Get user's subscription tier from marketplace
-                subscriptions_data = await self.marketplace_client.get_user_subscriptions(user_id)
-                user_subscriptions = subscriptions_data.get("subscriptions", [])
-                
-                # Find the best tier among active subscriptions
-                best_tier = None
-                tier_priority = {"enterprise": 3, "premium": 2, "standard": 1, "free": 0}
-                
-                for subscription in user_subscriptions:
-                    if subscription.get("status") == "active":
-                        tier = subscription.get("tier", "free")
-                        if best_tier is None or tier_priority.get(tier, 0) > tier_priority.get(best_tier, 0):
-                            best_tier = tier
-                
-                # Get tier-specific limits
-                if best_tier:
-                    tier_limits = await self._get_tier_limits(best_tier, stream_type)
-                    if tier_limits:
-                        limits = tier_limits
+        # Get entitlements from marketplace - fail if unavailable
+        try:
+            # Get user's subscription tier from marketplace
+            subscriptions_data = await self.marketplace_client.get_user_subscriptions(user_id)
+            user_subscriptions = subscriptions_data.get("subscriptions", [])
+            
+            # Find the best tier among active subscriptions
+            best_tier = None
+            tier_priority = {"enterprise": 3, "premium": 2, "standard": 1, "free": 0}
+            
+            for subscription in user_subscriptions:
+                if subscription.get("status") == "active":
+                    tier = subscription.get("tier", "free")
+                    if best_tier is None or tier_priority.get(tier, 0) > tier_priority.get(best_tier, 0):
+                        best_tier = tier
+            
+            # Get tier-specific limits - fail if not found
+            if not best_tier:
+                raise RuntimeError(f"No active subscription found for user {user_id} - cannot provide stream access")
+            
+            tier_limits = await self._get_tier_limits(best_tier, stream_type)
+            if not tier_limits:
+                raise RuntimeError(f"Tier limits not available for {best_tier} - cannot provide {stream_type} access")
+            
+            limits = tier_limits
                         
-            except Exception as e:
-                logger.error(f"Error getting user limits from marketplace: {e}")
-                # Fall back to default limits
+        except Exception as e:
+            logger.error(f"Entitlement verification failed for user {user_id}: {e}")
+            raise RuntimeError(f"Stream access denied - entitlement verification required: {e}")
         
         # Cache the result
         self._limits_cache[cache_key] = (limits, time.time())

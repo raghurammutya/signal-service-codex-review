@@ -16,7 +16,6 @@ from app.services.instrument_service_client import InstrumentServiceClient
 from app.repositories.signal_repository import SignalRepository
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
 # from app.models.signal_models import SignalGreeks, SignalIndicator
-# TODO: Add signal models when available
 
 
 class MoneynessHistoricalProcessor:
@@ -509,9 +508,21 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> Optional[float]:
         """Get spot price at specific timestamp"""
-        # This would query historical price data
-        # For now, return mock data
-        return 21500.0 + np.random.normal(0, 100)
+        # Query historical price data from database
+        try:
+            async with self.db_connection() as conn:
+                result = await conn.fetchval(
+                    """
+                    SELECT close_price FROM market_data 
+                    WHERE symbol = $1 AND timestamp <= $2 
+                    ORDER BY timestamp DESC LIMIT 1
+                    """,
+                    underlying, timestamp
+                )
+                return float(result) if result else None
+        except Exception as e:
+            log_error(f"Failed to get historical spot price for {underlying}: {e}")
+            return None
         
     async def _get_historical_spot_prices(
         self,
@@ -520,19 +531,29 @@ class MoneynessHistoricalProcessor:
         end_time: datetime
     ) -> List[Dict[str, Any]]:
         """Get historical spot prices"""
-        # This would query price history
-        # For now, return mock data
-        prices = []
-        current = start_time
-        
-        while current <= end_time:
-            prices.append({
-                'timestamp': current,
-                'price': 21500.0 + np.random.normal(0, 100)
-            })
-            current += timedelta(minutes=5)
-            
-        return prices
+        # Query price history from database
+        try:
+            async with self.db_connection() as conn:
+                results = await conn.fetch(
+                    """
+                    SELECT timestamp, close_price FROM market_data 
+                    WHERE symbol = $1 AND timestamp BETWEEN $2 AND $3 
+                    ORDER BY timestamp ASC
+                    """,
+                    underlying, start_time, end_time
+                )
+                
+                prices = []
+                for row in results:
+                    prices.append({
+                        'timestamp': row['timestamp'],
+                        'price': float(row['close_price'])
+                    })
+                return prices
+        except Exception as e:
+            from app.errors import DataAccessError
+            log_error(f"Failed to get historical prices for {underlying}: {e}")
+            raise DataAccessError(f"Failed to retrieve historical prices for {underlying}: {e}") from e
         
     async def _get_historical_moneyness_options(
         self,
@@ -543,30 +564,9 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> List[Dict[str, Any]]:
         """Get options at moneyness level for historical timestamp"""
-        # This would query historical option data
-        # For now, return mock data based on moneyness
-        
-        if moneyness_level == "ATM":
-            strike = round(spot_price / 50) * 50
-        elif moneyness_level == "OTM":
-            strike = round(spot_price * 1.02 / 50) * 50
-        elif moneyness_level == "ITM":
-            strike = round(spot_price * 0.98 / 50) * 50
-        else:
-            strike = spot_price
-            
-        return [
-            {
-                'strike_price': strike,
-                'option_type': 'call',
-                'expiry_date': expiry_date
-            },
-            {
-                'strike_price': strike,
-                'option_type': 'put',
-                'expiry_date': expiry_date
-            }
-        ]
+        # Production implementation must query real historical option data from database
+        from app.errors import DataAccessError
+        raise DataAccessError(f"Historical option data retrieval requires database implementation - cannot provide moneyness data for {underlying} at {moneyness_level} without complete database integration")
         
     async def _calculate_historical_greeks(
         self,
@@ -575,14 +575,6 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> Dict[str, float]:
         """Calculate Greeks for historical options"""
-        # Aggregate Greeks calculation
-        # For now, return mock data
-        return {
-            'delta': 0.5 + np.random.normal(0, 0.1),
-            'gamma': 0.01 + np.random.normal(0, 0.002),
-            'theta': -50 + np.random.normal(0, 10),
-            'vega': 100 + np.random.normal(0, 20),
-            'rho': 50 + np.random.normal(0, 10),
-            'iv': 0.20 + np.random.normal(0, 0.02),
-            'count': len(options)
-        }
+        # Production implementation must use real pricing models and market data
+        from app.errors import ComputationError
+        raise ComputationError(f"Historical Greeks calculation requires pricing model implementation - cannot compute Greeks without Black-Scholes or equivalent pricing engine integration")

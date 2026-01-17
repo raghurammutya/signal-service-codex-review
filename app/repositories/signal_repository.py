@@ -12,7 +12,6 @@ import logging
 logger = logging.getLogger(__name__)
 from common.storage.database import get_timescaledb_session
 # from app.models.signal_models import SignalGreeks, SignalIndicators
-# TODO: Add signal models when available
 
 
 class DatabaseError(Exception):
@@ -395,7 +394,7 @@ class SignalRepository:
                 results = await conn.fetch("""
                     SELECT timestamp, data
                     FROM signal_custom_timeframes
-                    WHERE instrument_key =#TODO: Ensure index on instrument_key$1
+                    WHERE instrument_key = $1
                       AND signal_type = $2
                       AND timeframe_minutes = $3
                       AND timestamp >= $4

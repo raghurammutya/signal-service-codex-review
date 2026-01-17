@@ -260,21 +260,24 @@ class EnhancedSandbox:
             
             # Execute with existing RestrictedPython logic
             from app.services.external_function_executor import ExternalFunctionExecutor
+            from app.schemas.config_schema import ExternalFunctionConfig
             executor = ExternalFunctionExecutor()
             
-            # Create mock config for compatibility
-            class MockConfig:
-                def __init__(self):
-                    self.function_name = function_name
-                    self.timeout = limits['wall_time_seconds'] 
-                    self.memory_limit_mb = limits['memory_mb']
-                    self.parameters = input_data
+            # Create proper config from schema
+            config = ExternalFunctionConfig(
+                name=function_name,
+                file_path="<inline>",  # Indicates inline script execution
+                function_name=function_name,
+                timeout=limits['wall_time_seconds'],
+                memory_limit_mb=limits['memory_mb'],
+                parameters=input_data
+            )
             
             # Compile and execute
-            compiled_code = executor.compile_function_safely(script_content, MockConfig())
+            compiled_code = executor.compile_function_safely(script_content, config)
             execution_context = {'tick_data': input_data, 'parameters': {}}
             execution_context.update(executor.prepare_execution_context(
-                execution_context, MockConfig()
+                execution_context, config
             ))
             
             # Execute the code

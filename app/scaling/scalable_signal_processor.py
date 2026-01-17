@@ -11,6 +11,7 @@ import json
 
 from app.utils.logging_utils import log_info, log_warning, log_exception
 from app.utils.redis import get_redis_client
+from app.core.config import settings
 
 from .consistent_hash_manager import ConsistentHashManager
 from .pod_assignment_manager import PodAssignmentManager
@@ -44,8 +45,10 @@ class ScalableSignalProcessor:
         self.backpressure_monitor = BackpressureMonitor()
         self.load_shedder = AdaptiveLoadShedder()
         
-        # Work distribution
-        self.worker_pool = WorkerPool(num_workers=8)
+        # Work distribution - configurable via settings
+        self.num_workers = getattr(settings, 'WORKER_POOL_SIZE', 8)
+        self.num_shards = getattr(settings, 'SHARD_COUNT', 10)
+        self.worker_pool = WorkerPool(num_workers=self.num_workers)
         self.computation_workers = []
         
         # Signal processing components (existing)
@@ -66,8 +69,12 @@ class ScalableSignalProcessor:
             'requests_shed': 0
         }
         
+        # Queue metrics tracking for growth rate calculation
+        self.queue_history = []
+        self.start_time = time.time()
+        
         # Configuration
-        self.pod_capacity = int(os.environ.get('POD_CAPACITY', '1000'))
+        self.pod_capacity = getattr(settings, 'POD_CAPACITY', 1000)
         self.heartbeat_interval = 30  # seconds
         
         log_info(f"Initializing ScalableSignalProcessor for pod {self.pod_id}")
@@ -122,7 +129,7 @@ class ScalableSignalProcessor:
         
         try:
             # Start computation workers
-            for i in range(8):
+            for i in range(self.num_workers):
                 worker = ComputationWorker(
                     worker_id=f"{self.pod_id}_worker_{i}",
                     queue=self.worker_pool.workers[f"worker_{i}"],
@@ -144,8 +151,7 @@ class ScalableSignalProcessor:
     async def _start_tick_consumption(self):
         """Start consuming ticks from Redis streams"""
         # Monitor sharded streams
-        NUM_SHARDS = 10
-        stream_keys = [f"stream:shard:{i}" for i in range(NUM_SHARDS)]
+        stream_keys = [f"stream:shard:{i}" for i in range(self.num_shards)]
         
         # Create consumer group
         for stream_key in stream_keys:
@@ -156,8 +162,12 @@ class ScalableSignalProcessor:
                     id='0',
                     mkstream=True
                 )
-            except:
-                pass  # Group exists
+            except Exception as e:
+                # Only ignore BUSYGROUP error, log all others
+                error_str = str(e).upper()
+                if 'BUSYGROUP' not in error_str:
+                    log_error(f"Failed to create consumer group for {stream_key}: {e}")
+                # BUSYGROUP means group already exists, which is expected
         
         # Start consuming
         while self.is_running:
@@ -292,7 +302,7 @@ class ScalableSignalProcessor:
         
         # Calculate queue saturation
         total_queued = pool_metrics['total_tasks_queued']
-        max_queue_capacity = self.worker_pool.num_workers * 1000  # 1000 per worker
+        max_queue_capacity = self.num_workers * 1000  # 1000 per worker
         queue_saturation = min(1.0, total_queued / max_queue_capacity)
         
         # Get resource metrics
@@ -351,6 +361,28 @@ class ScalableSignalProcessor:
     async def _collect_pod_metrics(self) -> Dict:
         """Collect comprehensive pod metrics"""
         pool_metrics = self.worker_pool.get_pool_metrics()
+        current_queue_depth = pool_metrics['total_tasks_queued']
+        current_time = time.time()
+        
+        # Track queue depth history for growth rate calculation
+        self.queue_history.append({
+            'timestamp': current_time,
+            'queue_depth': current_queue_depth
+        })
+        
+        # Keep only last 10 minutes of history
+        cutoff_time = current_time - 600
+        self.queue_history = [h for h in self.queue_history if h['timestamp'] >= cutoff_time]
+        
+        # Calculate queue growth rate
+        queue_growth_rate = 0
+        if len(self.queue_history) >= 2:
+            oldest = self.queue_history[0]
+            newest = self.queue_history[-1]
+            time_diff = newest['timestamp'] - oldest['timestamp']
+            if time_diff > 0:
+                depth_change = newest['queue_depth'] - oldest['queue_depth']
+                queue_growth_rate = depth_change / time_diff  # tasks per second
         
         # Calculate latencies
         computation_times = []
@@ -366,9 +398,9 @@ class ScalableSignalProcessor:
             p99_latency = computation_times[int(len(computation_times) * 0.99)] * 1000
         
         return {
-            'queue_depth': pool_metrics['total_tasks_queued'],
-            'queue_capacity': self.worker_pool.num_workers * 1000,
-            'queue_growth_rate': 0,  # TODO: Calculate rate
+            'queue_depth': current_queue_depth,
+            'queue_capacity': self.num_workers * 1000,
+            'queue_growth_rate': queue_growth_rate,
             'p50_latency': p50_latency,
             'p99_latency': p99_latency,
             'computations_per_second': self.metrics['computations_completed'] / max(1, time.time() - self.start_time),
@@ -496,23 +528,8 @@ class ScalableSignalProcessor:
     async def compute_moneyness_greeks(self, underlying: str, moneyness_level: str, timeframe: str):
         """Compute moneyness-based Greeks"""
         try:
-            # Would integrate with instrument service
-            # This is placeholder
-            result = {
-                'underlying': underlying,
-                'moneyness_level': moneyness_level,
-                'timeframe': timeframe,
-                'iv': 0.25,
-                'aggregated_greeks': {}
-            }
-            
-            await self._publish_computation_result(
-                f"{underlying}_{moneyness_level}",
-                'moneyness_greeks',
-                result
-            )
-            
-            self.metrics['computations_completed'] += 1
+            # Production implementation requires moneyness calculator integration
+            raise RuntimeError(f"Moneyness Greeks computation requires moneyness calculator service integration - cannot compute {moneyness_level} Greeks for {underlying}")
             
         except Exception as e:
             log_exception(f"Moneyness Greeks failed for {underlying}: {e}")

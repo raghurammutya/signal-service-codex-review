@@ -66,7 +66,9 @@ class ProductionHistoricalDataManager:
     
     def _get_ticker_service_url(self) -> str:
         """Get ticker service URL from config"""
-        return getattr(settings, 'TICKER_SERVICE_URL', 'http://localhost:8089')
+        if hasattr(settings, 'TICKER_SERVICE_URL'):
+            return settings.TICKER_SERVICE_URL
+        raise RuntimeError("TICKER_SERVICE_URL not configured in config_service - cannot access ticker service")
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

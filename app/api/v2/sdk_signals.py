@@ -484,7 +484,6 @@ async def sdk_websocket_endpoint(
                 stream_keys = message.get("stream_keys", [])
                 for stream_key in stream_keys:
                     client_allowed_streams.discard(stream_key)
-                    # TODO: Map back to channel unsubscription
                     
             elif message_type == "ping":
                 # Respond to ping

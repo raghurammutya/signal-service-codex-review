@@ -298,18 +298,14 @@ async def trigger_scaling_action(
         Scaling action result
     """
     try:
-        # This would integrate with the Docker orchestrator
-        # For now, return a mock response
+        # Production implementation requires Docker orchestrator integration
+        from fastapi import HTTPException
+        log_warning(f"Manual scaling requested: {action} by {instances} instances - requires orchestrator integration")
         
-        log_warning(f"Manual scaling triggered: {action} by {instances} instances")
-        
-        return {
-            "status": "triggered",
-            "action": action,
-            "instances": instances,
-            "message": "Scaling action queued for execution",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        raise HTTPException(
+            status_code=501, 
+            detail=f"Manual scaling requires Docker orchestrator integration - cannot perform {action} operation"
+        )
         
     except Exception as e:
         log_error(f"Error triggering scaling: {e}")

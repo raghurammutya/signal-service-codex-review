@@ -116,42 +116,8 @@ class InstrumentServiceClient:
         if service_response:
             return service_response
             
-        # Fallback: basic moneyness classification
-        try:
-            parts = option_key.split("@")
-            if len(parts) >= 3:
-                strike_price = float(parts[2])
-                ratio = spot_price / strike_price
-                
-                if 0.98 <= ratio <= 1.02:
-                    moneyness_level = "ATM"
-                elif ratio < 0.85:
-                    moneyness_level = "DITM" if "call" in option_key.lower() else "DOTM"
-                elif ratio < 0.95:
-                    moneyness_level = "ITM" if "call" in option_key.lower() else "OTM"
-                elif ratio < 0.98:
-                    moneyness_level = "SITM" if "call" in option_key.lower() else "SOTM"
-                elif ratio <= 1.02:
-                    moneyness_level = "ATM"
-                elif ratio <= 1.05:
-                    moneyness_level = "SOTM" if "call" in option_key.lower() else "SITM"
-                elif ratio <= 1.15:
-                    moneyness_level = "OTM" if "call" in option_key.lower() else "ITM"
-                else:
-                    moneyness_level = "DOTM" if "call" in option_key.lower() else "DITM"
-            else:
-                moneyness_level = "ATM"  # Default fallback
-                
-        except Exception:
-            moneyness_level = "ATM"  # Safe fallback
-            
-        return {
-            "option_key": option_key,
-            "spot_price": spot_price,
-            "method": method,
-            "moneyness_level": moneyness_level,
-            "source": "fallback_calculation"
-        }
+        # No fallback calculation in production - service must provide data
+        raise RuntimeError(f"Instrument service failed to calculate moneyness for {option_key} - no fallback data in production")
 
     async def get_strikes_by_moneyness(self, underlying_symbol, moneyness_level, expiry_date=None) -> List[Dict[str, Any]]:
         """Get option strikes by moneyness level from service or return fallback data"""
@@ -165,31 +131,13 @@ class InstrumentServiceClient:
         if service_response and service_response.get("strikes"):
             return service_response["strikes"]
             
-        # Fallback to reasonable strike data  
-        base_price = 20000  # Default base price - could be improved with market data
-        strikes = [
-            {
-                "instrument_key": f"{underlying_symbol}@CE@{base_price}",
-                "strike_price": base_price,
-                "option_type": "CE",
-                "expiry_date": expiry_date or datetime.utcnow().date().isoformat(),
-                "underlying_symbol": underlying_symbol,
-                "source": "fallback_data"
-            },
-            {
-                "instrument_key": f"{underlying_symbol}@PE@{base_price}",
-                "strike_price": base_price,
-                "option_type": "PE", 
-                "expiry_date": expiry_date or datetime.utcnow().date().isoformat(),
-                "underlying_symbol": underlying_symbol,
-                "source": "fallback_data"
-            },
-        ]
-        return strikes
+        # No fallback data in production - fail fast if service unavailable
+        raise RuntimeError(f"Strike data not available from instrument service for {underlying_symbol}")
 
     async def get_moneyness_history(self, symbol: str, start_time: datetime, end_time: datetime, interval: str = "5m") -> List[Dict[str, Any]]:
-        """Return empty moneyness history (placeholder)."""
-        return []
+        """Get moneyness history from instrument service."""
+        # Production implementation requires instrument service integration
+        raise RuntimeError(f"Moneyness history service integration not available for {symbol} - production system requires complete implementation")
 
     async def enrich_instrument(self, instrument_data: Dict[str, Any]) -> Dict[str, Any]:
         """Echo back instrument data with a timestamp."""
@@ -207,36 +155,19 @@ class InstrumentServiceClient:
             return None
 
     async def get_atm_iv(self, underlying_symbol: str, expiry_date: str, spot_price: float) -> Optional[float]:
-        """Return a stub ATM IV."""
-        return 0.25
+        """Get ATM implied volatility from instrument service - no fallback data."""
+        raise RuntimeError(f"ATM IV calculation requires instrument service integration - stub data removed")
 
     async def get_otm_delta_strikes(self, underlying_symbol: str, delta_target: float, option_type: str, expiry_date: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Return strikes filtered by option type using stub data."""
-        strikes = await self.get_strikes_by_moneyness(underlying_symbol, f"OTM{int(delta_target*100)}delta", expiry_date)
-        return [s for s in strikes if s.get("option_type") == option_type]
+        """Get OTM delta strikes from instrument service - no fallback data."""
+        raise RuntimeError(f"Delta-based strike calculation requires instrument service integration - stub data removed")
 
     async def get_moneyness_configuration(self) -> Dict[str, Any]:
-        """Return default moneyness configuration."""
-        return self._get_default_moneyness_config()
+        """Get moneyness configuration from instrument service - no default fallback."""
+        raise RuntimeError(f"Moneyness configuration requires instrument service integration - default config removed")
 
-    def _get_default_moneyness_config(self) -> Dict[str, Any]:
-        """Get default moneyness configuration."""
-        return {
-            "levels": {
-                "DITM": {"min_ratio": 0.0, "max_ratio": 0.85, "description": "Deep In The Money"},
-                "ITM": {"min_ratio": 0.85, "max_ratio": 0.95, "description": "In The Money"},
-                "SITM": {"min_ratio": 0.95, "max_ratio": 0.98, "description": "Slightly In The Money"},
-                "ATM": {"min_ratio": 0.98, "max_ratio": 1.02, "description": "At The Money"},
-                "SOTM": {"min_ratio": 1.02, "max_ratio": 1.05, "description": "Slightly Out of The Money"},
-                "OTM": {"min_ratio": 1.05, "max_ratio": 1.15, "description": "Out of The Money"},
-                "DOTM": {"min_ratio": 1.15, "max_ratio": float('inf'), "description": "Deep Out of The Money"},
-            },
-            "delta_levels": {
-                "OTM5delta": {"delta": 0.05, "description": "5 Delta OTM"},
-                "OTM10delta": {"delta": 0.10, "description": "10 Delta OTM"},
-                "OTM25delta": {"delta": 0.25, "description": "25 Delta OTM"},
-            },
-        }
+    # Note: _get_default_moneyness_config removed - production must use instrument service
+    # for moneyness configuration instead of hardcoded defaults
 
     async def close(self):
         """Close HTTP client and cleanup resources"""

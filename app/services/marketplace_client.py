@@ -430,8 +430,9 @@ def create_marketplace_client() -> MarketplaceClient:
     Returns:
         MarketplaceClient instance
     """
-    base_url = os.getenv("MARKETPLACE_SERVICE_URL", "http://marketplace_service:8090")
-    internal_api_key = os.getenv("INTERNAL_API_KEY", "")
+    from app.core.config import settings
+    base_url = settings.MARKETPLACE_SERVICE_URL
+    internal_api_key = settings.internal_api_key or ""
     
     # Try to get internal API key from config service if not in environment
     if not internal_api_key:
