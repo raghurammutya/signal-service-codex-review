@@ -293,8 +293,8 @@ class StreamAbuseProtectionService:
             
         except Exception as e:
             logger.error(f"Error checking connection permission: {e}")
-            # On error, be permissive but log the issue
-            return True, None
+            # Fail secure - cannot verify entitlements, deny connection
+            return False, f"Connection denied - entitlement verification failed: {e}"
     
     async def check_subscription_allowed(
         self,
@@ -388,7 +388,8 @@ class StreamAbuseProtectionService:
             
         except Exception as e:
             logger.error(f"Error checking subscription permission: {e}")
-            return True, None  # Be permissive on error
+            # Fail secure - cannot verify subscription limits, deny subscription
+            return False, f"Subscription denied - entitlement verification failed: {e}"
     
     async def check_message_rate(
         self,
@@ -457,7 +458,8 @@ class StreamAbuseProtectionService:
             
         except Exception as e:
             logger.error(f"Error checking message rate: {e}")
-            return True, None
+            # Fail secure - cannot verify rate limits, deny message
+            return False, f"Message denied - rate limit verification failed: {e}"
     
     async def cleanup_connection(
         self,
