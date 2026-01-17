@@ -113,14 +113,46 @@ async def get_greeks_performance_metrics():
     Compares vectorized vs individual calculation performance.
     """
     try:
-        # Production requires real metrics service integration - no synthetic performance data
-        raise HTTPException(
-            status_code=503,
-            detail="Greeks performance metrics require metrics service integration - "
-                   "cannot provide synthetic performance data. "
-                   "Must integrate with actual metrics collection service for "
-                   "real calculation performance, response times, and error rates."
-        )
+        from app.services.metrics_service import get_metrics_collector
+        
+        metrics_collector = get_metrics_collector()
+        
+        # Get real Greeks performance metrics
+        greeks_metrics = metrics_collector.get_greeks_performance_metrics()
+        system_metrics = metrics_collector.get_system_metrics()
+        cache_metrics = metrics_collector.get_cache_performance_metrics()
+        
+        # Calculate performance insights
+        performance_analysis = {
+            'overall_performance': 'excellent' if greeks_metrics.get('success_rate', 0) > 0.95 else 'good',
+            'throughput_assessment': 'high' if greeks_metrics.get('calculations_per_minute', 0) > 30 else 'moderate',
+            'latency_assessment': 'fast' if greeks_metrics.get('average_duration_ms', 0) < 100 else 'acceptable',
+            'reliability_score': round(greeks_metrics.get('success_rate', 0) * 100, 1)
+        }
+        
+        # Get comparison metrics by calculation type
+        breakdown = greeks_metrics.get('breakdown_by_type', {})
+        performance_comparison = {}
+        
+        for calc_type, metrics in breakdown.items():
+            performance_comparison[calc_type] = {
+                'average_duration_ms': metrics.get('average_duration_ms', 0),
+                'error_rate': metrics.get('error_rate', 0),
+                'total_calculations': metrics.get('count', 0),
+                'performance_grade': 'A' if metrics.get('average_duration_ms', 1000) < 100 else 'B'
+            }
+        
+        return {
+            'summary': greeks_metrics,
+            'performance_analysis': performance_analysis,
+            'calculation_type_comparison': performance_comparison,
+            'cache_performance': cache_metrics,
+            'system_impact': {
+                'cpu_utilization': system_metrics.get('process', {}).get('cpu_percent', 0),
+                'memory_usage_mb': system_metrics.get('process', {}).get('memory_mb', 0)
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        }
         
     except Exception as e:
         logger.error(f"Performance metrics collection failed: {e}")
@@ -265,6 +297,61 @@ async def reset_circuit_breaker(breaker_type: str):
     except Exception as e:
         logger.error(f"Circuit breaker reset failed for {breaker_type}: {e}")
         raise HTTPException(status_code=500, detail=f"Circuit breaker reset failed: {e}")
+
+
+@router.get("/monitoring/health/detailed")
+async def get_detailed_health_status():
+    """
+    Get detailed health status with real metrics and 200ms target response time.
+    Provides comprehensive health assessment for production monitoring.
+    """
+    try:
+        from app.core.enhanced_health_checker import get_enhanced_health_checker
+        
+        health_checker = await get_enhanced_health_checker()
+        detailed_health = await health_checker.check_overall_health()
+        
+        return detailed_health
+        
+    except Exception as e:
+        logger.error(f"Detailed health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {e}")
+
+
+@router.get("/monitoring/metrics/real-time")
+async def get_real_time_metrics():
+    """
+    Get real-time metrics for dashboards and monitoring systems.
+    Returns current performance metrics with minimal latency.
+    """
+    try:
+        from app.services.metrics_service import get_metrics_collector
+        
+        metrics_collector = get_metrics_collector()
+        
+        # Get real-time metrics
+        real_time_data = {
+            'performance': {
+                'request_rate_per_minute': metrics_collector.get_request_rate(window_minutes=1),
+                'processing_rate_per_minute': metrics_collector.get_processing_rate(window_minutes=1),
+                'error_rate': metrics_collector.get_error_rate(window_minutes=5),
+                'average_response_time_ms': metrics_collector.get_average_response_time(window_minutes=5)
+            },
+            'greeks_calculations': metrics_collector.get_greeks_performance_metrics(),
+            'cache_performance': metrics_collector.get_cache_performance_metrics(),
+            'system_resources': metrics_collector.get_system_metrics(),
+            'health_score': metrics_collector.get_health_score(),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        # Export to Redis for other monitoring systems
+        await metrics_collector.export_metrics_to_redis()
+        
+        return real_time_data
+        
+    except Exception as e:
+        logger.error(f"Real-time metrics collection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Real-time metrics failed: {e}")
 
 
 @router.get("/monitoring/metrics/prometheus")

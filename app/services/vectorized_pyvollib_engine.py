@@ -216,26 +216,31 @@ class VectorizedPyvolibGreeksEngine:
         cache_key = f"vectorized_chain_{len(option_chain_data)}_{underlying_price}_{hash(str(sorted(greeks_to_calculate)))}"
         
         try:
-            # Use circuit breaker for vectorized calculations
+            # Use circuit breaker for vectorized calculations - no fallback_value for production
             return await self._vectorized_breaker.execute(
                 self._execute_vectorized_calculation_internal,
                 option_chain_data,
                 underlying_price, 
                 greeks_to_calculate,
                 enable_fallback,
-                fallback_value={'results': [], 'performance': {}, 'method_used': 'circuit_breaker_fallback'},
                 cache_key=cache_key
             )
         except Exception as e:
             log_exception(f"[AGENT-1] Vectorized calculation with circuit breaker failed: {e}")
             
-            if enable_fallback:
-                log_warning(f"[AGENT-1] Falling back to single-option mode for {len(option_chain_data)} options")
+            # Production mode: fail-fast instead of fallback to ensure service reliability
+            import os
+            environment = os.getenv('ENVIRONMENT', 'production')
+            
+            if enable_fallback and environment in ['development', 'test']:
+                log_warning(f"[AGENT-1] DEVELOPMENT MODE: Falling back to single-option mode for {len(option_chain_data)} options")
                 return await self._fallback_option_chain_calculation(
                     option_chain_data, underlying_price, greeks_to_calculate
                 )
             else:
-                raise GreeksCalculationError(f"Vectorized calculation failed: {e}")
+                # Production fail-fast: raise error to ensure visibility of issues
+                log_exception(f"[AGENT-1] PRODUCTION MODE: Vectorized calculation failed, no fallback allowed")
+                raise GreeksCalculationError(f"Vectorized Greeks calculation failed: {e}. Fallback disabled for production reliability.")
 
     async def _execute_vectorized_calculation_internal(
         self,

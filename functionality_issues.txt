@@ -1,0 +1,64 @@
+Functionality: Config Service Bootstrap & Secrets
+- Issues:
+  * Bootstrapping still requires externally set `ENVIRONMENT` env var (app/core/config.py:48-66); ensure deployment scripts always set it.
+  * `ConfigServiceClient` still reads `CONFIG_SERVICE_URL` and `CONFIG_SERVICE_API_KEY` from env vars if not provided programmatically (common/config_service/client.py:19-40), so documentation must cover them.
+  * No automated test coverage metric proves 95% path coverage for bootstrap validation; `tests/config/test_config_bootstrap.py` exists but coverage not measured.
+
+Functionality: Real-Time Signal Processing (pandas_ta + pyvollib engines)
+- Issues:
+  * The pipelines rely on pandas_ta for indicator computations and pyvollib/VectorizedGreeks for Greeks; both have fail-fast wrappers but no instrumentation proving coverage ≥95% (tests exist: `tests/integration/test_signal_processor_integration.py`, `tests/unit/test_signal_processor_vectorized.py`).
+  * Circuit breaker/fallback logic still references “fallback_value” (app/services/vectorized_pyvollib_engine.py) even though production should fail fast, indicating overlapping functionality.
+  * Heavy use of Timescale caching/fetching when data missing (app/services/signal_processor.py:803-829) is still gated by `DataAccessError`; positive path coverage should be validated.
+
+Functionality: Historical Data Retrieval (ticker_service + moneyness)
+- Issues:
+  * `historical.py` relies on ticker service via new client, but if ticker_service unavailable the endpoint raises 503/fail-fast, meaning business benefit only when service is up; needs mocks proving coverage (tests/integration/test_ticker_service_integration.py).
+  * Moneyness historical endpoints still depend on Timescale data through `FlexibleTimeframeManager` and `MoneynessHistoricalProcessor`; if ticker service never responds those flows remain unfilled.
+  * Twice functionality appears (timeframe manager and moneyness processor both fetch aggregated data via ticker service). Ensure they don't duplicate logic.
+
+Functionality: Timeframe Manager & Aggregation Caching
+- Issues:
+  * `FlexibleTimeframeManager` still caches responses but falls back to Timescale fetch when ticker service teardown occurs (app/services/flexible_timeframe_manager.py:78-113). Tests need to cover both success and fail-fast states to reach 95%.
+  * No explicit unit tests verify cache invalidation or TTL, even though business value depends on fresh data.
+
+Functionality: Monitoring / Health / Metrics
+- Issues:
+  * Health checks raise runtime errors when dependencies absent (app/core/health_checker.py:266-306); positive coverage (200ms metrics) still missing.
+  * `distributed_health_manager` returns runtime errors for requests/queue processing rather than actual metrics (app/core/distributed_health_manager.py:191-213).
+  * Monitoring endpoints in `app/api/monitoring.py` still mention “mock data” though real metrics not implemented; no 95% test coverage.
+
+Functionality: Entitlement / Rate Limiting / Access Control
+- Issues:
+  * StreamAbuseProtection still references entitlement verification fallbacks (app/services/stream_abuse_protection.py:151) and needs coverage for both allowed/denied flows.
+  * Middleware now rejects Authorization headers, but tests verifying strict gateway-only operation are not evidenced; coverage is uncertain.
+  * Notification preferences default to `["ui"]` (app/services/signal_delivery_service.py:258); may hide missing entitlement data.
+
+Functionality: Signal Delivery & Notifications
+- Issues:
+  * Consolidated `SignalDeliveryService` still falls back conservatively when comms/alert services fail (app/services/signal_delivery_service.py:250-270) – business value limited if fallback always used.
+  * Unit tests exist (tests/unit/test_signal_delivery_service.py) but no recorded coverage ratio; must confirm tests cover failure + delivery pathways to reach 95%.
+
+Functionality: Marketplace Scripts & Watermarking
+- Issues:
+  * Watermark service now requires config secret validation but still returns original data on error (app/services/watermark_integration.py:170-190), which is fail-open behavior that may undermine business trust.
+  * Custom script execution depends on MinIO; though configs are enforced, script sandboxing documentation still emphasizes limited modules (app/services/signal_executor.py:40-90). Tests (none shown) need to cover MinIO failures.
+
+Functionality: Scaling / Consistent Hash / Backpressure
+- Issues:
+  * Scaling logic depends on Redis-backed hash manager and backpressure monitor; while the implementations exist, there is no explicit test coverage showing distributed coordination for queue growth (tests/unit/test_scaling_components.py touches some, but 95% coverage unknown).
+  * PodAssignmentManager uses Redis client injection but verifying real-world load balancing/metrics still requires integration tests.
+
+Functionality: Service Integrations & CORS
+- Issues:
+  * Integrations client file still contains static URLs for calendar/alert/messaging (app/integrations/service_integrations.py:14-40); config service usage should replace them to keep architecture uniform.
+  * CORS configuration uses `CORS_ALLOWED_ORIGINS` env var (common/cors_config.py:10-65); coverage needs tests for missing/invalid values to ensure fail-fast behavior.
+
+Functionality: Database / Timescale Session Management
+- Issues:
+  * Production Timescale client now uses `settings.DATABASE_URL`, but there are still synchronous wrappers that warn about legacy usage (common/storage/database.py:120-200); ensure there are tests confirming those paths fail fast.
+  * `SignalRepository` and other consumers rely on `get_timescaledb_session`; unit tests should cover pool initialization and connection errors.
+
+Functionality: CORS & Deployment Documentation
+- Issues:
+  * README updates exist but there is no automated check ensuring required env vars present; consider safety net test that fails when configuration missing.
+  * CORS helper fails if wildcard origin provided, yet no tests ensure this logic triggers.

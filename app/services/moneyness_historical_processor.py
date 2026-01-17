@@ -14,7 +14,7 @@ from app.utils.logging_utils import log_info, log_error, log_exception
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.instrument_service_client import InstrumentServiceClient
 from app.repositories.signal_repository import SignalRepository
-from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
+from app.clients.historical_data_client import get_historical_data_client
 # from app.models.signal_models import SignalGreeks, SignalIndicator
 
 
@@ -28,12 +28,11 @@ class MoneynessHistoricalProcessor:
         self,
         moneyness_calculator: MoneynessAwareGreeksCalculator,
         repository: SignalRepository,
-        timeframe_manager: FlexibleTimeframeManager,
         instrument_client: Optional[InstrumentServiceClient] = None
     ):
         self.moneyness_calculator = moneyness_calculator
         self.repository = repository
-        self.timeframe_manager = timeframe_manager
+        self.historical_client = get_historical_data_client()  # Unified historical data client
         self.instrument_client = instrument_client or InstrumentServiceClient()
         self._processing_cache = {}
         self._cache_ttl = 300  # 5 minutes

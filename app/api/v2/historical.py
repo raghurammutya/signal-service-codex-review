@@ -265,15 +265,39 @@ async def get_historical_moneyness_greeks(
         Historical moneyness Greeks time series
     """
     try:
-        # Production requires direct ticker_service integration - no local aggregation or caching
-        # Historical moneyness data must come from ticker_service only
-        raise HTTPException(
-            status_code=503,
-            detail=f"Historical moneyness data requires ticker_service integration - "
-                   f"endpoint not implemented for production deployment. "
-                   f"Cannot serve aggregated or cached data for {underlying}/{moneyness_level}. "
-                   f"Must route through ticker_service historical moneyness API."
-        )
+        # Production implementation: route through ticker_service for historical moneyness data
+        from app.clients.ticker_service_client import ticker_service_context
+        
+        async with ticker_service_context() as ticker_client:
+            # Get historical moneyness data from ticker service
+            result = await ticker_client.get_historical_moneyness_data(
+                underlying=underlying,
+                moneyness_level=moneyness_level,
+                start_time=start_time,
+                end_time=end_time,
+                timeframe=timeframe
+            )
+            
+            if not result:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No historical moneyness data found for {underlying} at moneyness {moneyness_level}"
+                )
+            
+            # Format response according to API schema
+            return {
+                "underlying": underlying,
+                "moneyness_level": moneyness_level,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "timeframe": timeframe,
+                "data": result.get("data", []),
+                "metadata": {
+                    "source": "ticker_service",
+                    "data_points": len(result.get("data", [])),
+                    "expiry_date": expiry_date
+                }
+            }
         
     except HTTPException:
         raise

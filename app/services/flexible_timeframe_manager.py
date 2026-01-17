@@ -43,9 +43,17 @@ class FlexibleTimeframeManager:
     
     def __init__(self):
         self.redis_client = None
-        self.ticker_service_url = None
-        self.internal_api_key = None
+        self.ticker_client = None
         self.session = None
+        
+        # Initialize with unified historical data client
+        from app.clients.historical_data_client import get_historical_data_client
+        try:
+            self.historical_client = get_historical_data_client()
+        except Exception as e:
+            from app.utils.logging_utils import log_error
+            log_error(f"Failed to initialize historical data client: {e}")
+            self.historical_client = None
         self._cache_ttl = {
             1: 60,        # 1 minute data: 1 minute TTL
             5: 300,       # 5 minute data: 5 minute TTL  
