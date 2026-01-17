@@ -583,7 +583,7 @@ class BulkComputationEngine:
                             logger.error(f"Failed to calculate technical indicators for {option.instrument_key}: {e}")
                             raise ValueError(
                                 f"Unable to calculate technical indicators for {option.instrument_key}: {e}. "
-                                "No placeholder values allowed in production."
+                                "No synthetic fallback values allowed."
                             )
                     
                     updated_options.append(updated_option)

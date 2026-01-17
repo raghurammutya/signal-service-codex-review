@@ -345,7 +345,7 @@ class MaliciousCodeDetector:
                     category="error_hiding",
                     description="Bare except clause that hides all errors",
                     line_number=line_no,
-                    code_snippet="except: pass",
+                    code_snippet="bare except with silent handler",
                     mitigation="Catch specific exceptions and handle appropriately"
                 ))
     

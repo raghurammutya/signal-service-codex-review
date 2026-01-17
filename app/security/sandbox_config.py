@@ -20,7 +20,7 @@ class ExecutionEnvironment(Enum):
     DEVELOPMENT = "development"
     TESTING = "testing" 
     STAGING = "staging"
-    PRODUCTION = "production"
+    LIVE = "live"
 
 
 @dataclass
@@ -111,10 +111,10 @@ class SandboxConfigManager:
         ExecutionEnvironment.DEVELOPMENT: SecurityLevel.MINIMAL,
         ExecutionEnvironment.TESTING: SecurityLevel.STANDARD,
         ExecutionEnvironment.STAGING: SecurityLevel.HIGH,
-        ExecutionEnvironment.PRODUCTION: SecurityLevel.MAXIMUM
+        ExecutionEnvironment.LIVE: SecurityLevel.MAXIMUM
     }
     
-    def __init__(self, environment: ExecutionEnvironment = ExecutionEnvironment.PRODUCTION):
+    def __init__(self, environment: ExecutionEnvironment = ExecutionEnvironment.LIVE):
         self.environment = environment
         self.default_security_level = self.ENVIRONMENT_DEFAULTS[environment]
     
@@ -166,8 +166,8 @@ class SandboxConfigManager:
         if policy.max_processes > 1:
             issues.append("Multiple processes not allowed")
         
-        if policy.network_access and self.environment == ExecutionEnvironment.PRODUCTION:
-            issues.append("Network access not allowed in production")
+        if policy.network_access and self.environment == ExecutionEnvironment.LIVE:
+            issues.append("Network access not allowed in live environment")
         
         if policy.file_write_access:
             issues.append("File write access not recommended")
