@@ -277,6 +277,34 @@ class SignalServiceConfig:
             required=False,
             is_secret=True
         )
+        
+        # Email webhook secret (optional)
+        self.EMAIL_WEBHOOK_SECRET = _get_from_config_service(
+            "EMAIL_WEBHOOK_SECRET",
+            required=False,
+            is_secret=True
+        )
+        
+        # Watermark configuration secrets
+        self.WATERMARK_SECRET = _get_from_config_service(
+            "WATERMARK_SECRET",
+            required=False,
+            is_secret=True
+        )
+        
+        self.WATERMARK_ENFORCEMENT_ENABLED = _get_from_config_service(
+            "WATERMARK_ENFORCEMENT_ENABLED",
+            required=False,
+            is_secret=False,
+            default="true"
+        )
+        
+        self.WATERMARK_ENFORCEMENT_POLICY = _get_from_config_service(
+            "WATERMARK_ENFORCEMENT_POLICY",
+            required=False,
+            is_secret=False,
+            default="auto-enforce"
+        )
 
         # Cache & Performance Settings - from config_service only
         cache_ttl = _get_from_config_service("signal_service.cache_ttl_seconds", required=True, is_secret=False)

@@ -22,7 +22,12 @@ class ProductionTimescaleDB:
     """Production TimescaleDB connection manager."""
     
     def __init__(self, database_url: str = None):
-        self.database_url = database_url or os.getenv("DATABASE_URL")
+        if database_url:
+            self.database_url = database_url
+        else:
+            # Must use database URL from config service settings only - no environment variable fallbacks
+            raise DatabaseConnectionError("Database URL must be provided explicitly - no environment variable fallbacks allowed")
+        
         if not self.database_url:
             logger.critical("DATABASE_URL not configured - TimescaleDB connection required")
             raise DatabaseConnectionError("Database URL is required for production deployment")
@@ -123,10 +128,15 @@ _db_instance = None
 
 
 async def get_database() -> ProductionTimescaleDB:
-    """Get or create database instance."""
+    """Get or create database instance using config service settings."""
     global _db_instance
     if _db_instance is None:
-        _db_instance = ProductionTimescaleDB()
+        # Import settings to get DATABASE_URL from config service
+        from app.core.config import settings
+        if not hasattr(settings, 'DATABASE_URL') or not settings.DATABASE_URL:
+            raise DatabaseConnectionError("DATABASE_URL not configured in settings from config service")
+        
+        _db_instance = ProductionTimescaleDB(database_url=settings.DATABASE_URL)
         await _db_instance.connect()
     return _db_instance
 
@@ -206,9 +216,9 @@ async def get_async_timescaledb_session():
 # Connection pool management functions
 async def create_timescaledb_pool(**kwargs):
     """Create TimescaleDB connection pool with custom parameters."""
-    database_url = kwargs.get('database_url') or os.getenv("DATABASE_URL")
+    database_url = kwargs.get('database_url')
     if not database_url:
-        raise DatabaseConnectionError("Database URL required for connection pool")
+        raise DatabaseConnectionError("Database URL must be provided explicitly - no environment variable fallbacks allowed")
         
     try:
         pool = await asyncpg.create_pool(database_url, **kwargs)
@@ -220,9 +230,5 @@ async def create_timescaledb_pool(**kwargs):
 
 
 def get_database_url():
-    """Get database URL from environment with validation."""
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        logger.error("DATABASE_URL environment variable not set")
-        raise DatabaseConnectionError("DATABASE_URL is required")
-    return database_url
+    """Get database URL from config service settings - no environment variable access."""
+    raise DatabaseConnectionError("Direct environment variable access not allowed - use config service settings instead")

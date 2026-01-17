@@ -39,25 +39,26 @@ class SignalWatermarkService:
     def _load_config(self):
         """Load watermark configuration"""
         try:
-            # Try to get from config service first
+            # Get configuration from settings only - no environment variable fallbacks
             try:
-                from common.config_service.client import ConfigServiceClient
+                from app.core.config import settings
+                if not hasattr(settings, 'environment'):
+                    raise RuntimeError("Environment not configured in settings from config service")
                 
-                environment = os.getenv("ENVIRONMENT", "production")
-                config_client = ConfigServiceClient(
-                    service_name="signal_service", 
-                    environment=environment
-                )
+                # Get watermark secret from settings (required for marketplace signals)
+                if not hasattr(settings, 'WATERMARK_SECRET'):
+                    raise RuntimeError("WATERMARK_SECRET not configured in config service")
+                self._watermark_secret = settings.WATERMARK_SECRET
                 
-                # Get watermark secret (required for marketplace signals)
-                self._watermark_secret = config_client.get_secret("WATERMARK_SECRET")
+                # Get enforcement flag from settings
+                if not hasattr(settings, 'WATERMARK_ENFORCEMENT_ENABLED'):
+                    raise RuntimeError("WATERMARK_ENFORCEMENT_ENABLED not configured in config service")
+                self._enforcement_enabled = settings.WATERMARK_ENFORCEMENT_ENABLED != "false"
                 
-                # Get enforcement flag
-                enforcement = config_client.get_secret("WATERMARK_ENFORCEMENT_ENABLED")
-                self._enforcement_enabled = enforcement != "false" if enforcement else True
-                
-                # Get enforcement policy (audit-only vs auto-enforce)
-                policy = config_client.get_secret("WATERMARK_ENFORCEMENT_POLICY")
+                # Get enforcement policy from settings
+                if not hasattr(settings, 'WATERMARK_ENFORCEMENT_POLICY'):
+                    raise RuntimeError("WATERMARK_ENFORCEMENT_POLICY not configured in config service")
+                policy = settings.WATERMARK_ENFORCEMENT_POLICY
                 self._enforcement_policy = policy if policy in ["audit-only", "auto-enforce"] else "auto-enforce"
                 
                 log_info(f"Watermark service configured from config service - policy: {self._enforcement_policy}")
@@ -65,9 +66,6 @@ class SignalWatermarkService:
             except ImportError:
                 # Config service integration required - no environment variable fallbacks
                 raise RuntimeError("Config service unavailable and watermark configuration required - cannot operate without config service")
-                
-                if not self._watermark_secret:
-                    logger.warning("WATERMARK_SECRET not configured - marketplace signals won't be watermarked")
                     
         except Exception as e:
             log_error(f"Failed to load watermark config: {e}")
@@ -190,20 +188,14 @@ class SignalWatermarkService:
             return signal_data
     
     async def _get_gateway_secret(self) -> Optional[str]:
-        """Get gateway secret from config service or environment"""
-        gateway_secret = os.getenv("GATEWAY_SECRET")
-        if not gateway_secret:
-            try:
-                from common.config_service.client import ConfigServiceClient
-                environment = os.getenv("ENVIRONMENT", "production")
-                config_client = ConfigServiceClient(
-                    service_name="signal_service",
-                    environment=environment
-                )
-                gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-            except Exception:
-                pass
-        return gateway_secret
+        """Get gateway secret from config service settings only"""
+        try:
+            from app.core.config import settings
+            if not hasattr(settings, 'gateway_secret') or not settings.gateway_secret:
+                raise RuntimeError("GATEWAY_SECRET not configured in settings from config service")
+            return settings.gateway_secret
+        except Exception as e:
+            raise RuntimeError(f"Failed to get gateway secret from config service: {e}")
             
     def verify_watermark(
         self,
@@ -432,22 +424,14 @@ class SignalWatermarkService:
             from app.core.config import settings
             marketplace_url = settings.MARKETPLACE_SERVICE_URL
             
-            # Get gateway secret for authentication
-            gateway_secret = os.getenv("GATEWAY_SECRET")
-            if not gateway_secret:
-                try:
-                    from common.config_service.client import ConfigServiceClient
-                    environment = os.getenv("ENVIRONMENT", "production")
-                    config_client = ConfigServiceClient(
-                        service_name="signal_service",
-                        environment=environment
-                    )
-                    gateway_secret = config_client.get_secret("GATEWAY_SECRET")
-                except Exception:
-                    pass
-            
-            if not gateway_secret:
-                return {"success": False, "error": "Gateway secret not available"}
+            # Get gateway secret from settings only
+            try:
+                from app.core.config import settings
+                if not hasattr(settings, 'gateway_secret') or not settings.gateway_secret:
+                    return {"success": False, "error": "Gateway secret not configured in config service"}
+                gateway_secret = settings.gateway_secret
+            except Exception as e:
+                return {"success": False, "error": f"Failed to get gateway secret from config service: {e}"}
             
             # Prepare leak detection request data 
             # Note: This function should only be called with signal_data that was already 

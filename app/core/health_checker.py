@@ -297,46 +297,18 @@ class HealthChecker:
             all_healthy = True
             degraded_count = 0
             
-            for service_name, health_url in external_services.items():
-                try:
-                    # In real implementation, make HTTP request to health endpoint
-                    # For now, simulate check
-                    await asyncio.sleep(0.01)  # Simulate network call
-                    
-                    # Mock different service states
-                    if service_name == 'instrument_service':
-                        service_statuses[service_name] = 'up'
-                    else:
-                        service_statuses[service_name] = 'degraded'
-                        degraded_count += 1
-                        
-                except Exception as e:
-                    service_statuses[service_name] = 'down'
-                    all_healthy = False
-            
-            # Determine overall external services status
-            if all_healthy and degraded_count == 0:
-                status = ComponentStatus.UP
-                message = "All external services healthy"
-            elif degraded_count <= 1:
-                status = ComponentStatus.DEGRADED
-                message = f"{degraded_count} external service(s) degraded"
-            else:
-                status = ComponentStatus.DOWN
-                message = "Multiple external services unavailable"
-            
-            return {
-                'status': status.value,
-                'services': service_statuses,
-                'message': message,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # Production requires real service health checks - no mock delays or simulated states
+            raise RuntimeError(
+                "External service health checks require HTTP client integration - "
+                "cannot provide synthetic service status. "
+                "Must make actual HTTP requests to service health endpoints."
+            )
             
         except Exception as e:
             return {
                 'status': ComponentStatus.DOWN.value,
                 'error': str(e),
-                'message': 'External services check failed',
+                'message': 'External service health check failed - requires HTTP client integration',
                 'timestamp': datetime.utcnow().isoformat()
             }
     

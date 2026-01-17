@@ -113,70 +113,14 @@ async def get_greeks_performance_metrics():
     Compares vectorized vs individual calculation performance.
     """
     try:
-        # This would typically fetch from a metrics store
-        # For now, we'll return sample performance data
-        
-        performance_data = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'period': '1h',  # Last 1 hour
-            
-            # Calculation type performance
-            'calculation_types': {
-                'vectorized': {
-                    'total_requests': 450,
-                    'successful_requests': 445,
-                    'failed_requests': 5,
-                    'avg_response_time_ms': 8.5,
-                    'p95_response_time_ms': 12.0,
-                    'p99_response_time_ms': 18.0,
-                    'options_per_second': 2500,
-                    'failure_rate': 0.011
-                },
-                'individual': {
-                    'total_requests': 1200,
-                    'successful_requests': 1185,
-                    'failed_requests': 15,
-                    'avg_response_time_ms': 45.0,
-                    'p95_response_time_ms': 78.0,
-                    'p99_response_time_ms': 120.0,
-                    'options_per_second': 26,
-                    'failure_rate': 0.0125
-                }
-            },
-            
-            # Greeks-specific metrics
-            'greeks_metrics': {
-                'delta_calculations': 1650,
-                'gamma_calculations': 1650,
-                'theta_calculations': 1420,
-                'vega_calculations': 1380,
-                'rho_calculations': 1200,
-                'model_configuration_errors': 2,
-                'parameter_validation_errors': 3,
-                'calculation_timeouts': 1
-            },
-            
-            # Performance comparison
-            'performance_comparison': {
-                'vectorized_speedup': 5.3,  # 5.3x faster than individual
-                'vectorized_efficiency': 0.95,  # 95% efficiency
-                'cost_per_calculation': {
-                    'vectorized': 0.00034,  # seconds CPU time
-                    'individual': 0.00180
-                }
-            },
-            
-            # Resource utilization
-            'resource_utilization': {
-                'cpu_usage_percent': 35.0,
-                'memory_usage_mb': 450.0,
-                'cache_hit_rate': 0.83,
-                'database_connections_active': 8,
-                'redis_connections_active': 12
-            }
-        }
-        
-        return performance_data
+        # Production requires real metrics service integration - no synthetic performance data
+        raise HTTPException(
+            status_code=503,
+            detail="Greeks performance metrics require metrics service integration - "
+                   "cannot provide synthetic performance data. "
+                   "Must integrate with actual metrics collection service for "
+                   "real calculation performance, response times, and error rates."
+        )
         
     except Exception as e:
         logger.error(f"Performance metrics collection failed: {e}")

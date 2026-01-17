@@ -265,43 +265,14 @@ async def get_historical_moneyness_greeks(
         Historical moneyness Greeks time series
     """
     try:
-        # Get historical moneyness data
-        data = await manager.get_aggregated_data(
-            f"{underlying}#{moneyness_level}",
-            "moneyness_greeks",
-            timeframe,
-            start_time,
-            end_time
-        )
-        
-        if not data:
-            # Production requires historical data service integration - no synthetic data
-            raise HTTPException(
-                status_code=503,
-                detail=f"Historical moneyness data unavailable - requires historical data service integration for {underlying}/{moneyness_level}"
-            )
-        else:
-            # Convert cached data to response format
-            time_series = []
-            for point in data:
-                time_series.append(TimeSeriesDataPoint(
-                    timestamp=datetime.fromisoformat(point['timestamp']),
-                    value=point.get("aggregated_greeks", {}).get("all", {}),
-                    metadata={
-                        "moneyness_level": moneyness_level,
-                        "strike_count": point.get("strikes", {}).get("count", 0)
-                    }
-                ))
-                
-        return HistoricalMoneynessResponse(
-            underlying=underlying,
-            moneyness_level=moneyness_level,
-            start_time=start_time,
-            end_time=end_time,
-            timeframe=timeframe,
-            expiry_date=expiry_date,
-            data_points=len(time_series),
-            time_series=time_series
+        # Production requires direct ticker_service integration - no local aggregation or caching
+        # Historical moneyness data must come from ticker_service only
+        raise HTTPException(
+            status_code=503,
+            detail=f"Historical moneyness data requires ticker_service integration - "
+                   f"endpoint not implemented for production deployment. "
+                   f"Cannot serve aggregated or cached data for {underlying}/{moneyness_level}. "
+                   f"Must route through ticker_service historical moneyness API."
         )
         
     except HTTPException:
