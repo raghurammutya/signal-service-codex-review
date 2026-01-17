@@ -16,6 +16,8 @@ import httpx
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
+from app.services.unified_entitlement_service import get_unified_entitlement_service
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,15 +69,12 @@ class EntitlementMiddleware:
             for premium_route in self.PREMIUM_ANALYSIS_ROUTES
         )
     
-    def _extract_user_id(self, request: Request) -> int:
-        """Extract user ID from request headers or JWT token."""
+    def _extract_user_id_str(self, request: Request) -> str:
+        """Extract user ID from request headers."""
         # Check X-User-ID header (from API Gateway)
         user_id_header = request.headers.get("X-User-ID")
         if user_id_header:
-            try:
-                return int(user_id_header)
-            except ValueError:
-                pass
+            return user_id_header
         
         # ARCHITECTURE COMPLIANCE: No Authorization header processing (Architecture Principle #7)
         # JWT validation ONLY happens at API Gateway - services only trust gateway headers
@@ -140,51 +139,56 @@ class EntitlementMiddleware:
             return False
     
     async def __call__(self, request: Request, call_next):
-        """Process request through entitlement middleware."""
+        """Process request through unified entitlement service."""
         path = request.url.path
         
-        # Skip entitlement check for non-protected routes
+        # Skip entitlement check for non-protected routes and public endpoints
         if not self._is_protected_route(path):
             return await call_next(request)
-        
-        # Skip entitlement check for health/admin endpoints
         if any(endpoint in path for endpoint in ["/health", "/admin", "/docs", "/openapi"]):
             return await call_next(request)
         
         try:
             # Extract user ID from request
-            user_id = self._extract_user_id(request)
+            user_id_str = self._extract_user_id_str(request)
             
-            # Check appropriate entitlement based on route
-            if self._requires_premium_analysis(path):
-                has_access = await self._check_premium_analysis_entitlement(user_id)
-                feature = "premium_analysis"
-            else:
-                has_access = await self._check_fo_entitlement(user_id)
-                feature = "fo_greeks_access"
+            # Use unified entitlement service for access check
+            entitlement_service = await get_unified_entitlement_service()
             
-            if not has_access:
+            # Get client ID for tracking
+            client_id = request.headers.get("X-Client-ID") or f"http_{request.client.host}"
+            
+            # Check HTTP access via unified service
+            result = await entitlement_service.check_http_access(
+                user_id=user_id_str,
+                request_path=path,
+                client_id=client_id
+            )
+            
+            if not result.is_allowed:
                 logger.warning(
-                    f"Access denied for user {user_id} to {path} - missing {feature} entitlement"
+                    f"Access denied for user {user_id_str} to {path} - {result.reason}"
                 )
                 return JSONResponse(
                     status_code=status.HTTP_403_FORBIDDEN,
                     content={
-                        "detail": f"Access denied. {feature} requires premium subscription.",
+                        "detail": result.reason,
                         "error_code": "entitlement_required",
-                        "feature": feature,
+                        "user_tier": result.user_tier,
                         "upgrade_url": "/api/v1/billing/upgrade"
                     }
                 )
             
             # Log successful access for audit
             logger.info(
-                f"F&O access granted for user {user_id} to {path} with {feature} entitlement"
+                f"Access granted for user {user_id_str} to {path} (tier: {result.user_tier})"
             )
             
-            # Add user_id to request state for downstream use
-            request.state.user_id = user_id
+            # Add entitlement info to request state for downstream use
+            request.state.user_id = user_id_str
             request.state.has_fo_access = True
+            request.state.user_tier = result.user_tier
+            request.state.access_limits = result.limits
             
             return await call_next(request)
             

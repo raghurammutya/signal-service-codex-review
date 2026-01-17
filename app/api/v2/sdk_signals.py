@@ -16,10 +16,9 @@ from pydantic import BaseModel, Field
 from app.utils.logging_utils import log_info, log_error, log_exception
 from app.services.signal_stream_contract import (
     SignalStreamContract, 
-    StreamKeyFormat,
-    SignalEntitlement,
-    SignalType
+    StreamKeyFormat
 )
+from app.services.unified_entitlement_service import get_unified_entitlement_service
 from app.api.v2.websocket import ConnectionManager
 from app.core.auth.gateway_trust import get_current_user_from_gateway
 
@@ -199,12 +198,18 @@ async def subscribe_to_signals(
                     )
                     stream_keys.append(key)
                     
-                    # Check entitlement
-                    entitlement = await signal_contract.check_entitlement(
-                        key, user_id, request.execution_token
+                    # Check entitlement via unified service
+                    entitlement_service = await get_unified_entitlement_service()
+                    client_id = f"sdk_subscription_{user_id}"
+                    
+                    entitlement_result = await entitlement_service.check_stream_access(
+                        user_id=user_id,
+                        stream_key=key,
+                        client_id=client_id,
+                        execution_token=request.execution_token
                     )
                     
-                    if entitlement.is_allowed:
+                    if entitlement_result.is_allowed:
                         allowed_streams.append(key)
                         # Store metadata for watermarking
                         if subscription_id:
@@ -218,7 +223,7 @@ async def subscribe_to_signals(
                     else:
                         denied_streams.append({
                             "stream_key": key,
-                            "reason": entitlement.reason or "No marketplace access"
+                            "reason": entitlement_result.reason or "No marketplace access"
                         })
                         
             elif signal_type == "personal" and request.personal_signal_id:
@@ -378,25 +383,27 @@ async def sdk_websocket_endpoint(
                         # Get token for this stream (specific token takes precedence)
                         stream_execution_token = stream_tokens.get(stream_key, execution_token)
                         
-                        # Validate entitlement
-                        entitlement = await signal_contract.check_entitlement(
-                            stream_key, 
-                            user_id,
+                        # Validate entitlement via unified service
+                        entitlement_service = await get_unified_entitlement_service()
+                        entitlement_result = await entitlement_service.check_stream_access(
+                            user_id=user_id,
+                            stream_key=stream_key,
+                            client_id=client_id,
                             execution_token=stream_execution_token
                         )
                         
-                        if not entitlement.is_allowed:
+                        if not entitlement_result.is_allowed:
                             await websocket.send_json({
                                 "type": "subscription_denied",
                                 "stream_key": stream_key,
-                                "reason": entitlement.reason or "Not authorized for this stream"
+                                "reason": entitlement_result.reason or "Not authorized for this stream"
                             })
                             continue
                         
                         # Cache entitlement for this session
                         client_allowed_streams.add(stream_key)
                         client_entitlements[stream_key] = {
-                            "signal_type": entitlement.signal_type,
+                            "signal_type": entitlement_result.signal_type if hasattr(entitlement_result, 'signal_type') else 'unknown',
                             "execution_token": stream_execution_token
                         }
                     
@@ -464,7 +471,7 @@ async def sdk_websocket_endpoint(
                             }
                         }
                     else:
-                        logger.warning(f"Unsupported stream key type: {parsed['type']}")
+                        log_error(f"Unsupported stream key type: {parsed['type']}")
                         continue
                     
                     # Forward to actual subscription handler
@@ -584,11 +591,13 @@ async def list_available_streams(
         
         # Fetch personal signals
         try:
-            # Import personal script service
-            from algo_engine.app.services.personal_script_service import PersonalScriptService
+            # Use algo_engine API client instead of direct import (CONSOLIDATED)
+            from app.clients.algo_engine_client import get_algo_engine_client
             
-            # List user's personal signal scripts
-            personal_scripts = await PersonalScriptService.list_scripts(
+            algo_client = await get_algo_engine_client()
+            
+            # List user's personal signal scripts via API
+            personal_scripts = await algo_client.list_personal_scripts(
                 user_id=user_id,
                 script_type="signal",
                 limit=100
