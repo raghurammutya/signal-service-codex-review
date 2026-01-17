@@ -114,7 +114,7 @@ class ProductionHistoricalDataManager:
         """
         Get historical data for indicator calculations via ticker_service API.
         
-        This is the main interface that replaces the placeholder implementation.
+        This is the main interface for production historical data retrieval.
         """
         request = HistoricalDataRequest(
             symbol=symbol,

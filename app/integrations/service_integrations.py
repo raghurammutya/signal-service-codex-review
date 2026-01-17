@@ -343,7 +343,7 @@ class SignalProcessingIntegration:
         results = {}
         alerts_to_send = []
         
-        # PRODUCTION: Use real signal computation instead of placeholder
+        # Real signal computation with integrated notifications
         try:
             from app.services.pandas_ta_executor import PandasTAExecutor
             from app.adapters.ticker_adapter import EnhancedTickerAdapter

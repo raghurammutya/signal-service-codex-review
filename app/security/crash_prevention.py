@@ -196,9 +196,9 @@ class CrashPrevention:
             # Process limit (if available)
             try:
                 resource.setrlimit(resource.RLIMIT_NPROC, (limits.max_processes, limits.max_processes))
-            except (AttributeError, OSError):
+            except (AttributeError, OSError) as e:
                 # RLIMIT_NPROC not available on all systems
-                pass
+                log_info(f"Process limit (RLIMIT_NPROC) not set: {e} (this is normal on some systems)")
             
             log_info(f"Resource limits set: {limits.max_memory_mb}MB memory, {limits.max_cpu_seconds}s CPU")
             

@@ -294,7 +294,7 @@ class TechnicalIndicatorCalculator:
         """Calculate RSI for price series"""
         
         if len(prices) < period + 1:
-            # PRODUCTION: Fail fast when insufficient data instead of returning placeholder
+            # Fail fast when insufficient data - no synthetic data allowed
             raise ValueError(f"Insufficient price data for RSI calculation: {len(prices)} prices, need at least {period + 1}")
         
         deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]

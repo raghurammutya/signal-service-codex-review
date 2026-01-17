@@ -311,16 +311,13 @@ class TickerChannelSubscriber:
     async def _process_realtime_tick(self, tick: TickData):
         """Process real-time tick for immediate signal generation"""
         try:
-            # Process tick through signal processor service
-            from app.services.signal_processor import SignalProcessor
+            # Process tick through signal processor service - use singleton with proper initialization
+            from app.services.signal_processor import get_signal_processor
             
-            processor = SignalProcessor()  # Correct constructor - takes no args
-            if processor:
-                # Submit tick for processing using correct method name
-                await processor.process_tick_async(tick.instrument_key, tick.to_dict())
-                logger.debug(f"Processed realtime tick for {tick.instrument_key}")
-            else:
-                logger.warning("Signal processor not available for realtime tick processing")
+            processor = await get_signal_processor()  # Get properly initialized singleton
+            # Submit tick for processing using correct method name
+            await processor.process_tick_async(tick.instrument_key, tick.to_dict())
+            logger.debug(f"Processed realtime tick for {tick.instrument_key}")
                 
         except Exception as e:
             logger.error(f"Error processing realtime tick: {e}")

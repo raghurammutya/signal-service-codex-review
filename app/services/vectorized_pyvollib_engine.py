@@ -803,10 +803,75 @@ class VectorizedPyvolibGreeksEngine:
             raise GreeksCalculationError(f"Fallback calculation failed: {e}")
 
     async def _legacy_bulk_calculation(self, bulk_data: List[Dict]) -> Dict[str, Any]:
-        """Run legacy calculation for performance comparison."""
-        # This would use the existing single-option loop approach
-        # Legacy calculation benchmark would be implemented here for comparison
-        raise NotImplementedError("Legacy calculation benchmark not implemented - use vectorized calculation instead")
+        """Run legacy calculation for performance comparison using single-option loop approach."""
+        import time
+        start_time = time.perf_counter()
+        
+        # Group by underlying price for processing
+        grouped_options = {}
+        for option in bulk_data:
+            underlying_price = option.get('underlying_price', 0.0)
+            if underlying_price not in grouped_options:
+                grouped_options[underlying_price] = []
+            grouped_options[underlying_price].append(option)
+        
+        results = {}
+        total_options = 0
+        
+        # Process each option individually (legacy approach)
+        for underlying_price, options in grouped_options.items():
+            option_results = []
+            for option_data in options:
+                try:
+                    # Calculate Greeks for single option using py_vollib
+                    greeks = self._calculate_single_option_greeks_legacy(option_data)
+                    option_results.append(greeks)
+                    total_options += 1
+                except Exception as e:
+                    log_error(f"Legacy calculation failed for option {option_data.get('strike', 'unknown')}: {e}")
+                    continue
+            
+            results[underlying_price] = option_results
+        
+        execution_time_ms = (time.perf_counter() - start_time) * 1000
+        
+        return {
+            'results': results,
+            'performance': {
+                'execution_time_ms': execution_time_ms,
+                'options_processed': total_options,
+                'options_per_second': total_options / (execution_time_ms / 1000) if execution_time_ms > 0 else 0
+            },
+            'method_used': 'legacy'
+        }
+    
+    def _calculate_single_option_greeks_legacy(self, option_data: Dict) -> Dict[str, float]:
+        """Calculate Greeks for single option using legacy py_vollib approach."""
+        from py_vollib.black_scholes import delta, gamma, theta, vega, rho
+        
+        # Extract required parameters
+        S = float(option_data.get('underlying_price', 0))
+        K = float(option_data.get('strike', 0))
+        T = float(option_data.get('time_to_expiry', 0))
+        r = float(option_data.get('risk_free_rate', 0))
+        sigma = float(option_data.get('volatility', 0))
+        q = float(option_data.get('dividend_yield', 0))
+        flag = str(option_data.get('option_type', 'c')).lower()
+        
+        # Validate parameters
+        if not all([S > 0, K > 0, T > 0, sigma > 0]):
+            raise ValueError("Invalid option parameters for Greeks calculation")
+        
+        # Calculate Greeks individually
+        return {
+            'delta': delta(flag, S, K, T, r, sigma, q),
+            'gamma': gamma(flag, S, K, T, r, sigma, q),
+            'theta': theta(flag, S, K, T, r, sigma, q),
+            'vega': vega(flag, S, K, T, r, sigma, q),
+            'rho': rho(flag, S, K, T, r, sigma, q),
+            'strike': K,
+            'option_type': flag
+        }
 
     def _update_avg_time(self, method: str, new_time_ms: float):
         """Update running average of execution times."""

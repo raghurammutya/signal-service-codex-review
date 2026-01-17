@@ -513,9 +513,9 @@ class ScalableSignalProcessor:
             volatility = option_data.get('volatility') 
             risk_free_rate = option_data.get('risk_free_rate')
             dividend_yield = option_data.get('dividend_yield') if option_data.get('dividend_yield') is not None else tick_data.get('dividend_yield')
-            option_type = option_data.get('option_type', 'call')
+            option_type = option_data.get('option_type')
             
-            if not all([spot_price, strike_price, time_to_expiry, volatility, risk_free_rate, dividend_yield is not None]):
+            if not all([spot_price is not None, strike_price is not None, time_to_expiry is not None, volatility is not None, risk_free_rate is not None, dividend_yield is not None, option_type is not None]):
                 raise ValueError("Missing required market data parameters for Greeks calculation. No synthetic data allowed.")
                 
             # Call Greeks calculator with validated parameters

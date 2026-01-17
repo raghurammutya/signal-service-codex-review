@@ -391,8 +391,9 @@ class SignalRedisManager:
             # Create consumer group if needed
             try:
                 await self.redis_client.xgroup_create(stream_key, consumer_group, id="0")
-            except:
-                pass  # Group already exists
+            except Exception as e:
+                # Expected when group already exists (BUSYGROUP error)
+                logger.debug(f"Consumer group '{consumer_group}' creation skipped: {e}")
             
             # Read messages
             messages = await self.redis_client.xreadgroup(

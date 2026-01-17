@@ -372,8 +372,9 @@ class SignalExecutor:
                     if not attr_name.startswith('_') and attr_name not in ['exec', 'eval', 'compile', 'open', 'input']:
                         setattr(safe_module, attr_name, getattr(module, attr_name))
                 safe_modules[module_name] = safe_module
-            except ImportError:
-                pass
+            except ImportError as e:
+                logger.warning(f"Allowed module '{module_name}' could not be imported: {e}")
+                # Continue execution - missing optional modules are non-fatal for sandbox
         
         # Create highly restricted builtins - remove dangerous functions
         safe_builtins = {}
