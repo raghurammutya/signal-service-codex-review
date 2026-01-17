@@ -7,11 +7,13 @@ import asyncio
 import time
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
+from enum import Enum
 import json
 
 from app.utils.logging_utils import log_info, log_warning, log_exception, log_debug
 from app.utils.redis import get_redis_client
 
+# Import production scaling components
 from .consistent_hash_manager import ConsistentHashManager
 from .pod_assignment_manager import PodAssignmentManager
 from .backpressure_monitor import BackpressureMonitor, BackpressureLevel
@@ -33,15 +35,20 @@ class ScalableSignalProcessor:
     """
     
     def __init__(self):
-        # Pod identity
-        self.pod_id = os.environ.get('POD_NAME', f'signal-pod-{os.getpid()}')
-        self.node_name = os.environ.get('NODE_NAME', 'unknown')
+        # Pod identity from environment (required for scaling)
+        self.pod_id = os.environ.get('POD_NAME')
+        self.node_name = os.environ.get('NODE_NAME')
+        
+        if not self.pod_id:
+            raise RuntimeError("POD_NAME environment variable required for scaling. No fallbacks allowed per architecture.")
+        if not self.node_name:
+            raise RuntimeError("NODE_NAME environment variable required for scaling. No fallbacks allowed per architecture.")
         
         # Core components
         self.redis_client = None
-        self.hash_manager = ConsistentHashManager()
-        self.assignment_manager = PodAssignmentManager()
-        self.backpressure_monitor = BackpressureMonitor()
+        self.hash_manager = None  # Will be initialized with Redis client
+        self.assignment_manager = None  # Will be initialized with Redis client
+        self.backpressure_monitor = None  # Will be initialized with Redis client
         self.load_shedder = AdaptiveLoadShedder()
         
         # Work distribution
@@ -67,9 +74,21 @@ class ScalableSignalProcessor:
             'requests_shed': 0
         }
         
-        # Configuration
-        self.pod_capacity = int(os.environ.get('POD_CAPACITY', '1000'))
-        self.heartbeat_interval = 30  # seconds
+        # Queue depth history for growth rate calculation
+        self.queue_depth_history = []  # List of (timestamp, queue_depth) tuples
+        self.max_history_size = 10  # Keep last 10 measurements for trend
+        
+        # Configuration from environment
+        pod_capacity_env = os.environ.get('POD_CAPACITY')
+        if not pod_capacity_env:
+            raise RuntimeError("POD_CAPACITY environment variable required for scaling. No fallbacks allowed per architecture.")
+        
+        try:
+            self.pod_capacity = int(pod_capacity_env)
+        except ValueError:
+            raise RuntimeError(f"Invalid POD_CAPACITY value: {pod_capacity_env}. Must be an integer.")
+        
+        self.heartbeat_interval = 30  # seconds - this is operational, not configuration
         
         log_info(f"Initializing ScalableSignalProcessor for pod {self.pod_id}")
     
@@ -79,7 +98,11 @@ class ScalableSignalProcessor:
             # Initialize Redis
             self.redis_client = await get_redis_client()
             
-            # Initialize scaling components
+            # Initialize scaling components with Redis client
+            self.hash_manager = ConsistentHashManager(redis_client=self.redis_client)
+            self.assignment_manager = PodAssignmentManager(redis_client=self.redis_client)
+            self.backpressure_monitor = BackpressureMonitor(redis_client=self.redis_client)
+            
             await self.hash_manager.initialize()
             await self.assignment_manager.initialize()
             await self.backpressure_monitor.initialize()
@@ -314,16 +337,20 @@ class ScalableSignalProcessor:
         try:
             import psutil
             return psutil.cpu_percent(interval=0.1) / 100.0
-        except:
-            return 0.5  # Default if unavailable
+        except ImportError:
+            raise RuntimeError("psutil package required for CPU monitoring. Install with: pip install psutil")
+        except Exception as e:
+            raise RuntimeError(f"Failed to get CPU usage: {e}. No default values allowed in production.")
     
     async def _get_memory_usage(self) -> float:
         """Get current memory usage (0-1)"""
         try:
             import psutil
             return psutil.virtual_memory().percent / 100.0
-        except:
-            return 0.5  # Default if unavailable
+        except ImportError:
+            raise RuntimeError("psutil package required for memory monitoring. Install with: pip install psutil")
+        except Exception as e:
+            raise RuntimeError(f"Failed to get memory usage: {e}. No default values allowed in production.")
     
     async def _heartbeat_loop(self):
         """Send regular heartbeats and metrics"""
@@ -366,10 +393,15 @@ class ScalableSignalProcessor:
             p50_latency = computation_times[int(len(computation_times) * 0.5)] * 1000
             p99_latency = computation_times[int(len(computation_times) * 0.99)] * 1000
         
+        # Calculate queue growth rate
+        current_time = time.time()
+        current_queue_depth = pool_metrics['total_tasks_queued']
+        queue_growth_rate = self._calculate_queue_growth_rate(current_time, current_queue_depth)
+        
         return {
-            'queue_depth': pool_metrics['total_tasks_queued'],
+            'queue_depth': current_queue_depth,
             'queue_capacity': self.worker_pool.num_workers * 1000,
-            'queue_growth_rate': 0,  # TODO: Calculate rate
+            'queue_growth_rate': queue_growth_rate,
             'p50_latency': p50_latency,
             'p99_latency': p99_latency,
             'computations_per_second': self.metrics['computations_completed'] / max(1, time.time() - self.start_time),
@@ -427,7 +459,8 @@ class ScalableSignalProcessor:
                 metrics = {
                     'pod_id': self.pod_id,
                     'node_name': self.node_name,
-                    'assigned_instruments': len(self.assigned_instruments),
+                    'assigned_instruments': list(self.assigned_instruments),  # Keep as list, not count
+                    'assigned_instruments_count': len(self.assigned_instruments),  # Add count separately  
                     'ticks_processed': self.metrics['ticks_processed'],
                     'computations_completed': self.metrics['computations_completed'],
                     'errors': self.metrics['errors'],
@@ -436,9 +469,17 @@ class ScalableSignalProcessor:
                     'load_shedder': self.load_shedder.get_shedding_stats()
                 }
                 
-                # Publish to Redis
+                # Publish to Redis using consistent key format
+                metrics_key = f"signal:pod:metrics:{self.pod_id}"
                 await self.redis_client.setex(
-                    f"signal:pod:metrics:{self.pod_id}",
+                    metrics_key,
+                    60,
+                    json.dumps(metrics)
+                )
+                
+                # Also publish for health manager compatibility
+                await self.redis_client.setex(
+                    f"signal:instance:metrics:{self.pod_id}",
                     60,
                     json.dumps(metrics)
                 )
@@ -586,3 +627,35 @@ class ScalableSignalProcessor:
         await self.assignment_manager.unregister_pod(self.pod_id)
         
         log_info(f"ScalableSignalProcessor shutdown complete")
+    
+    def _calculate_queue_growth_rate(self, current_time: float, current_queue_depth: int) -> float:
+        """Calculate queue depth growth rate (items per second)"""
+        try:
+            # Add current measurement to history
+            self.queue_depth_history.append((current_time, current_queue_depth))
+            
+            # Keep only recent history
+            if len(self.queue_depth_history) > self.max_history_size:
+                self.queue_depth_history.pop(0)
+            
+            # Need at least 2 points to calculate rate
+            if len(self.queue_depth_history) < 2:
+                return 0.0
+            
+            # Calculate linear regression slope (items per second)
+            # Simple approach: use first and last points
+            first_time, first_depth = self.queue_depth_history[0]
+            last_time, last_depth = self.queue_depth_history[-1]
+            
+            time_diff = last_time - first_time
+            if time_diff <= 0:
+                return 0.0
+            
+            depth_diff = last_depth - first_depth
+            growth_rate = depth_diff / time_diff
+            
+            return round(growth_rate, 2)
+            
+        except Exception as e:
+            log_exception(f"Failed to calculate queue growth rate: {e}")
+            return 0.0

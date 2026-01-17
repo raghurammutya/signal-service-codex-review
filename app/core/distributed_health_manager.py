@@ -12,6 +12,7 @@ from dataclasses import dataclass, asdict
 import logging
 
 import redis.asyncio as redis
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,15 @@ class DistributedHealthManager:
     
     def __init__(self, redis_client, instance_id: str = None):
         self.redis_client = redis_client
-        self.instance_id = instance_id or self._generate_instance_id()
+        # Use POD_NAME environment variable for consistency with ScalableSignalProcessor
+        import os
+        if instance_id:
+            self.instance_id = instance_id
+        else:
+            pod_name = os.environ.get('POD_NAME')
+            if not pod_name:
+                raise RuntimeError("POD_NAME environment variable required for distributed health monitoring. No fallbacks allowed per architecture.")
+            self.instance_id = pod_name
         self.container_name = self._get_container_name()
         self.host = self._get_host_ip()
         self.port = 8003  # Signal Service port
@@ -55,9 +64,12 @@ class DistributedHealthManager:
         return f"signal-service-{uuid.uuid4().hex[:8]}"
     
     def _get_container_name(self) -> str:
-        """Get container name from environment or hostname"""
+        """Get container name from environment"""
         import os
-        return os.environ.get('CONTAINER_NAME', socket.gethostname())
+        container_name = os.environ.get('CONTAINER_NAME')
+        if not container_name:
+            raise RuntimeError("CONTAINER_NAME environment variable required for distributed health monitoring. No fallbacks allowed per architecture.")
+        return container_name
     
     def _get_host_ip(self) -> str:
         """Get host IP address"""
@@ -178,27 +190,95 @@ class DistributedHealthManager:
     
     async def _get_request_rate(self) -> float:
         """Get current request rate (requests per minute)"""
-        # In real implementation, this would track actual request rates
-        # For now, return a mock value
-        return 450.0
+        # PRODUCTION: Get real request rate from metrics system
+        try:
+            from app.metrics.threshold_metrics import get_metrics_collector
+            metrics_collector = get_metrics_collector()
+            request_rate = await metrics_collector.get_request_rate()
+            return float(request_rate)
+        except Exception as e:
+            logger.error(f"Failed to get real request rate: {e}")
+            # Fail fast instead of returning mock data
+            raise ValueError("Unable to get real request rate from metrics system. No mock data allowed in production.")
     
     async def _get_queue_size(self) -> int:
-        """Get current processing queue size"""
-        # In real implementation, this would check actual queue
-        return 125
+        """Get current processing queue size from ScalableSignalProcessor"""
+        try:
+            # Get queue size from Redis metrics (try both key formats for compatibility)
+            queue_metrics_key = f"signal:pod:metrics:{self.instance_id}"
+            metrics_data = await self.redis_client.get(queue_metrics_key)
+            
+            # Fallback to instance metrics key if pod metrics not found
+            if not metrics_data:
+                queue_metrics_key = f"signal:instance:metrics:{self.instance_id}"
+                metrics_data = await self.redis_client.get(queue_metrics_key)
+            
+            if metrics_data:
+                import json
+                metrics = json.loads(metrics_data)
+                worker_pool_metrics = metrics.get('worker_pool', {})
+                return int(worker_pool_metrics.get('total_tasks_queued', 0))
+            else:
+                # If no metrics available yet, return 0 (empty queue)
+                return 0
+        except Exception as e:
+            logger.error(f"Failed to get queue size from Redis metrics: {e}")
+            # Fail fast instead of returning mock data
+            raise ValueError("Unable to get real queue size from Redis metrics. No mock data allowed in production.")
     
     async def _get_processing_rate(self) -> float:
-        """Get current signal processing rate"""
-        # In real implementation, this would track actual processing rate
-        return 85.5
+        """Get current signal processing rate from ScalableSignalProcessor"""
+        try:
+            # Get processing rate from Redis metrics (try both key formats for compatibility)
+            processing_metrics_key = f"signal:pod:metrics:{self.instance_id}"
+            metrics_data = await self.redis_client.get(processing_metrics_key)
+            
+            # Fallback to instance metrics key if pod metrics not found
+            if not metrics_data:
+                processing_metrics_key = f"signal:instance:metrics:{self.instance_id}"
+                metrics_data = await self.redis_client.get(processing_metrics_key)
+            
+            if metrics_data:
+                import json
+                metrics = json.loads(metrics_data)
+                computations_completed = metrics.get('computations_completed', 0)
+                ticks_processed = metrics.get('ticks_processed', 0)
+                # Calculate rate as computations per tick if available
+                if ticks_processed > 0:
+                    return float(computations_completed / ticks_processed)
+                else:
+                    return 0.0
+            else:
+                # If no metrics available yet, return 0
+                return 0.0
+        except Exception as e:
+            logger.error(f"Failed to get processing rate from Redis metrics: {e}")
+            # Fail fast instead of returning mock data
+            raise ValueError("Unable to get real processing rate from Redis metrics. No mock data allowed in production.")
     
     async def _get_assigned_instruments(self) -> List[str]:
         """Get list of instruments assigned to this instance"""
-        # In real implementation, this would get from consistent hash manager
-        return [
-            f"NSE@NIFTY@equity_options@2025-07-10@call@{21000 + i*50}"
-            for i in range(20)  # Mock 20 assigned instruments
-        ]
+        try:
+            # Get assigned instruments from Redis metrics (try both key formats for compatibility)
+            assignments_metrics_key = f"signal:pod:metrics:{self.instance_id}"
+            metrics_data = await self.redis_client.get(assignments_metrics_key)
+            
+            # Fallback to instance metrics key if pod metrics not found
+            if not metrics_data:
+                assignments_metrics_key = f"signal:instance:metrics:{self.instance_id}"
+                metrics_data = await self.redis_client.get(assignments_metrics_key)
+            
+            if metrics_data:
+                import json
+                metrics = json.loads(metrics_data)
+                return metrics.get('assigned_instruments', [])
+            else:
+                # If no metrics available yet, return empty list
+                return []
+        except Exception as e:
+            logger.error(f"Failed to get assigned instruments from Redis metrics: {e}")
+            # Fail fast instead of returning mock data
+            raise ValueError("Unable to get real assigned instruments from Redis metrics. No mock data allowed in production.")
     
     async def _update_aggregate_health(self) -> None:
         """Update aggregate health status across all instances"""

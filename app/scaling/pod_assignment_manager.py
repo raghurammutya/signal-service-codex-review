@@ -332,8 +332,9 @@ class PodAssignmentManager:
         pod_info.computation_rate = metrics.get('computation_rate', pod_info.computation_rate)
         pod_info.last_heartbeat = time.time()
         
-        # Update load in hash manager
-        await self.hash_manager.update_node_load(pod_id, pod_info.current_load)
+        # Update load in hash manager (normalize to 0-1 based on capacity)
+        normalized_load = pod_info.current_load / max(1, pod_info.capacity)
+        await self.hash_manager.update_node_load(pod_id, normalized_load)
         
         # Check if pod is overloaded
         if pod_info.cpu_usage > 0.9 or pod_info.memory_usage > 0.9:

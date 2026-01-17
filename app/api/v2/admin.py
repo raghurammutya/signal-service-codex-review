@@ -102,13 +102,44 @@ async def get_service_status(
             "connections": len(process.connections()),
         }
         
-        # Get service metrics
-        from app.main import app
-        signal_processor = getattr(app.state, 'signal_processor', None)
+        # Get real service metrics from Redis instead of instantiating processor
+        from app.utils.redis import get_redis_client
+        import json
         
         service_metrics = {}
-        if signal_processor:
-            service_metrics = signal_processor.get_metrics()
+        try:
+            redis_client = await get_redis_client()
+            pod_id = os.environ.get('POD_NAME')
+            if not pod_id:
+                raise RuntimeError("POD_NAME environment variable required for service metrics. No fallbacks allowed per architecture.")
+            
+            # Try to get metrics from Redis
+            metrics_key = f"signal:pod:metrics:{pod_id}"
+            metrics_data = await redis_client.get(metrics_key)
+            
+            if not metrics_data:
+                # Fallback to instance metrics key
+                metrics_key = f"signal:instance:metrics:{pod_id}"
+                metrics_data = await redis_client.get(metrics_key)
+            
+            if metrics_data:
+                parsed_metrics = json.loads(metrics_data)
+                service_metrics = {
+                    "pod_id": pod_id,
+                    "ticks_processed": parsed_metrics.get('ticks_processed', 0),
+                    "computations_completed": parsed_metrics.get('computations_completed', 0),
+                    "errors": parsed_metrics.get('errors', 0),
+                    "uptime_seconds": parsed_metrics.get('uptime_seconds', 0),
+                    "processing_rate": parsed_metrics.get('processing_rate', 0.0),
+                    "is_running": parsed_metrics.get('is_running', False),
+                    "last_updated": parsed_metrics.get('timestamp')
+                }
+            else:
+                service_metrics = {"status": "metrics_not_available", "pod_id": pod_id}
+                
+        except Exception as e:
+            log_warning(f"Unable to get service metrics from Redis: {e}")
+            service_metrics = {"status": "metrics_unavailable", "error": str(e)}
             
         return {
             "status": "operational",
@@ -341,16 +372,23 @@ async def trigger_scaling_action(
         Scaling action result
     """
     try:
-        # This would integrate with the Docker orchestrator
-        # For now, return a mock response
+        # PRODUCTION: Integrate with real scaling infrastructure
+        from app.scaling.scalable_signal_processor import ScalableSignalProcessor
         
         log_warning(f"Manual scaling triggered: {action} by {instances} instances")
         
+        # PRODUCTION: Real scaling implementation via Kubernetes API
+        result = await _execute_k8s_scaling_action(action, instances)
+        
+        if not result.get("success", False):
+            raise RuntimeError(f"Scaling action failed: {result.get('error', 'Unknown error')}")
+        
         return {
-            "status": "triggered",
+            "status": "executed",
             "action": action,
             "instances": instances,
-            "message": "Scaling action queued for execution",
+            "result": result,
+            "message": f"Scaling action {action} completed successfully",
             "timestamp": datetime.utcnow().isoformat()
         }
         
@@ -474,3 +512,102 @@ async def check_dependencies_health(
     except Exception as e:
         log_error(f"Error checking dependencies: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _execute_k8s_scaling_action(action: str, instances: int) -> Dict[str, Any]:
+    """
+    Execute real Kubernetes scaling action via kubectl or Kubernetes API.
+    
+    Args:
+        action: scaling action (scale_up, scale_down)
+        instances: number of instances to scale
+        
+    Returns:
+        Scaling execution result
+    """
+    try:
+        # Get deployment name from config_service
+        from common.config_service.client import ConfigServiceClient
+        from app.core.config import settings
+        
+        config_client = ConfigServiceClient(
+            service_name="signal_service",
+            environment=settings.environment
+        )
+        
+        deployment_name = config_client.get_config("K8S_DEPLOYMENT_NAME")
+        namespace = config_client.get_config("K8S_NAMESPACE")
+        
+        if not deployment_name:
+            raise ValueError("K8S_DEPLOYMENT_NAME not configured in config_service")
+        if not namespace:
+            raise ValueError("K8S_NAMESPACE not configured in config_service")
+        
+        # Execute kubectl command with timeout
+        import subprocess
+        import json as json_lib
+        
+        command_timeout = 30  # 30 second timeout for kubectl commands
+        
+        if action == "scale_up":
+            # Get current replica count first
+            get_cmd = ["kubectl", "get", "deployment", deployment_name, "-n", namespace, "-o", "json"]
+            get_result = subprocess.run(get_cmd, capture_output=True, text=True, check=True, timeout=command_timeout)
+            deployment_info = json_lib.loads(get_result.stdout)
+            
+            current_replicas = deployment_info["spec"]["replicas"]
+            target_replicas = current_replicas + instances
+            
+        elif action == "scale_down":
+            # Get current replica count first
+            get_cmd = ["kubectl", "get", "deployment", deployment_name, "-n", namespace, "-o", "json"]
+            get_result = subprocess.run(get_cmd, capture_output=True, text=True, check=True, timeout=command_timeout)
+            deployment_info = json_lib.loads(get_result.stdout)
+            
+            current_replicas = deployment_info["spec"]["replicas"]
+            target_replicas = max(1, current_replicas - instances)  # Minimum 1 replica
+            
+        else:
+            raise ValueError(f"Unsupported scaling action: {action}")
+        
+        # Execute scaling
+        scale_cmd = ["kubectl", "scale", "deployment", deployment_name, "-n", namespace, f"--replicas={target_replicas}"]
+        scale_result = subprocess.run(scale_cmd, capture_output=True, text=True, check=True, timeout=command_timeout)
+        
+        log_info(f"Kubernetes scaling executed: {action} from {current_replicas} to {target_replicas} replicas")
+        
+        return {
+            "success": True,
+            "action": action,
+            "previous_replicas": current_replicas,
+            "target_replicas": target_replicas,
+            "deployment_name": deployment_name,
+            "namespace": namespace,
+            "kubectl_output": scale_result.stdout.strip(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except subprocess.TimeoutExpired as e:
+        error_msg = f"kubectl command timed out after {command_timeout}s: {str(e)}"
+        log_error(error_msg)
+        return {
+            "success": False,
+            "error": error_msg,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except subprocess.CalledProcessError as e:
+        error_msg = f"kubectl command failed: {e.stderr.decode() if e.stderr else str(e)}"
+        log_error(error_msg)
+        return {
+            "success": False,
+            "error": error_msg,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        error_msg = f"Scaling execution failed: {e}"
+        log_error(error_msg)
+        return {
+            "success": False,
+            "error": error_msg,
+            "timestamp": datetime.utcnow().isoformat()
+        }
