@@ -508,18 +508,13 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> Optional[float]:
         """Get spot price at specific timestamp"""
-        # Query historical price data from database
+        # Production requires ticker_service integration - no direct database access
         try:
-            async with self.db_connection() as conn:
-                result = await conn.fetchval(
-                    """
-                    SELECT close_price FROM market_data 
-                    WHERE symbol = $1 AND timestamp <= $2 
-                    ORDER BY timestamp DESC LIMIT 1
-                    """,
-                    underlying, timestamp
-                )
-                return float(result) if result else None
+            raise RuntimeError(
+                f"Historical spot price lookup requires ticker_service integration - "
+                f"cannot query market_data table directly for {underlying} at {timestamp}. "
+                f"Must route through ticker_service historical price API."
+            )
         except Exception as e:
             log_error(f"Failed to get historical spot price for {underlying}: {e}")
             return None
@@ -531,25 +526,15 @@ class MoneynessHistoricalProcessor:
         end_time: datetime
     ) -> List[Dict[str, Any]]:
         """Get historical spot prices"""
-        # Query price history from database
+        # Production requires ticker_service integration - no direct database access
         try:
-            async with self.db_connection() as conn:
-                results = await conn.fetch(
-                    """
-                    SELECT timestamp, close_price FROM market_data 
-                    WHERE symbol = $1 AND timestamp BETWEEN $2 AND $3 
-                    ORDER BY timestamp ASC
-                    """,
-                    underlying, start_time, end_time
-                )
-                
-                prices = []
-                for row in results:
-                    prices.append({
-                        'timestamp': row['timestamp'],
-                        'price': float(row['close_price'])
-                    })
-                return prices
+            from app.errors import DataAccessError
+            raise DataAccessError(
+                f"Historical price range lookup requires ticker_service integration - "
+                f"cannot query market_data table directly for {underlying} "
+                f"from {start_time} to {end_time}. "
+                f"Must route through ticker_service historical price range API."
+            )
         except Exception as e:
             from app.errors import DataAccessError
             log_error(f"Failed to get historical prices for {underlying}: {e}")

@@ -6,16 +6,32 @@ from datetime import datetime
 from typing import Dict, Optional, List
 import logging
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 class SignalServiceIntegrations:
     """Handles integrations with Calendar, Alert, and Messaging services for Signal Service"""
     
     def __init__(self):
-        self.calendar_base_url = "http://stocksblitz-calendar-service:8011"
-        self.alert_base_url = "http://stocksblitz-alert-service:8010"
-        self.messaging_base_url = "http://stocksblitz-messaging-service:8012"
-        self.timeout = 3.0  # Very short timeout for signal processing
+        # Get service URLs from config service - no hardcoded URLs allowed
+        if not hasattr(settings, 'CALENDAR_SERVICE_URL'):
+            raise ValueError("CALENDAR_SERVICE_URL not configured in config service")
+        if not hasattr(settings, 'ALERT_SERVICE_URL'):
+            raise ValueError("ALERT_SERVICE_URL not configured in config service")
+        if not hasattr(settings, 'MESSAGING_SERVICE_URL'):
+            raise ValueError("MESSAGING_SERVICE_URL not configured in config service")
+            
+        self.calendar_base_url = settings.CALENDAR_SERVICE_URL
+        self.alert_base_url = settings.ALERT_SERVICE_URL
+        self.messaging_base_url = settings.MESSAGING_SERVICE_URL
+        
+        # Get timeout from config service
+        timeout_config = getattr(settings, 'SERVICE_INTEGRATION_TIMEOUT', None)
+        if timeout_config:
+            self.timeout = float(timeout_config)
+        else:
+            raise ValueError("SERVICE_INTEGRATION_TIMEOUT not configured in config service")
         
     async def _make_request(self, method: str, url: str, data: Optional[Dict] = None, params: Optional[Dict] = None) -> Optional[Dict]:
         """Make HTTP request with error handling"""

@@ -241,6 +241,19 @@ class SignalServiceConfig:
         self.USER_SERVICE_URL = _get_from_config_service("signal_service.user_service_url", required=True, is_secret=False)
         if not self.USER_SERVICE_URL:
             raise ValueError("user_service_url not found in config_service")
+        
+        # Additional service integration URLs
+        self.CALENDAR_SERVICE_URL = _get_from_config_service("signal_service.calendar_service_url", required=True, is_secret=False)
+        if not self.CALENDAR_SERVICE_URL:
+            raise ValueError("calendar_service_url not found in config_service")
+        
+        self.ALERT_SERVICE_URL = _get_from_config_service("signal_service.alert_service_url", required=True, is_secret=False)
+        if not self.ALERT_SERVICE_URL:
+            raise ValueError("alert_service_url not found in config_service")
+        
+        self.MESSAGING_SERVICE_URL = _get_from_config_service("signal_service.messaging_service_url", required=True, is_secret=False)
+        if not self.MESSAGING_SERVICE_URL:
+            raise ValueError("messaging_service_url not found in config_service")
 
         # Gateway authentication secrets
         self.gateway_secret = _get_from_config_service(
@@ -278,6 +291,12 @@ class SignalServiceConfig:
         if not max_cores:
             raise ValueError("max_cpu_cores not found in config_service")
         self.MAX_CPU_CORES = int(max_cores)
+        
+        # Service integration timeout - from config_service only
+        integration_timeout = _get_from_config_service("signal_service.service_integration_timeout", required=True, is_secret=False)
+        if not integration_timeout:
+            raise ValueError("service_integration_timeout not found in config_service")
+        self.SERVICE_INTEGRATION_TIMEOUT = float(integration_timeout)
 
         # Greeks calculation config - from config_service only
         greeks_rate = _get_from_config_service("signal_service.greeks_risk_free_rate", required=True, is_secret=False)
