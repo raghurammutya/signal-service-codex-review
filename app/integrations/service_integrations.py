@@ -383,7 +383,7 @@ class SignalProcessingIntegration:
             )
             
         except Exception as e:
-            raise ValueError(f"Failed to compute indicators for {symbol}: {e}. No placeholder values allowed in production.")
+            raise ValueError(f"Failed to compute indicators for {symbol}: {e}. No synthetic fallback data allowed.")
         
         for indicator in indicators:
             value = indicator_results.get(indicator)

@@ -252,7 +252,8 @@ class ConfigHandler:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                # Expected after explicit cancellation - task properly cancelled
+                log_info(f"Task cancelled successfully for {config_key}")
             
             del self.active_tasks[config_key]
             log_info(f"Cancelled tasks for {config_key}")

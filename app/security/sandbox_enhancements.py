@@ -416,7 +416,8 @@ class EnhancedSandbox:
                 try:
                     await monitor_task
                 except asyncio.CancelledError:
-                    pass
+                    # Expected after explicit cancellation - monitor task stopped
+                    logger.debug("Monitor task cancelled successfully")
                     
         except Exception as e:
             raise ExternalFunctionExecutionError(f"Monitored execution failed: {e}")
@@ -452,7 +453,8 @@ class EnhancedSandbox:
                     )
                     
         except asyncio.CancelledError:
-            pass
+            # Monitor task cancelled - execution stopped
+            logger.debug("Execution monitor cancelled")
     
     def _write_script_files(
         self,

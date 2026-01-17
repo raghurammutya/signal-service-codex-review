@@ -553,7 +553,7 @@ class BulkComputationEngine:
                             ), 4)
                     
                     if compute_technical_indicators:
-                        # PRODUCTION: Calculate real technical indicators instead of placeholder values
+                        # Calculate technical indicators using historical data
                         try:
                             # Get historical data for the option
                             historical_data = await ticker_adapter.get_historical_data(
@@ -579,7 +579,7 @@ class BulkComputationEngine:
                             updated_option.bollinger_lower = lower
                             
                         except Exception as e:
-                            # PRODUCTION: Fail fast instead of using placeholder values
+                            # Fail fast - no synthetic fallback data allowed
                             logger.error(f"Failed to calculate technical indicators for {option.instrument_key}: {e}")
                             raise ValueError(
                                 f"Unable to calculate technical indicators for {option.instrument_key}: {e}. "
