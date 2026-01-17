@@ -72,8 +72,8 @@ class HealthChecker:
                     try:
                         await self.redis_client.ping()
                         redis_ok = True
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Redis health check failed: {e}")
                 
                 # Mock basic DB check
                 if self.db_session:

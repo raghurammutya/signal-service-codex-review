@@ -500,15 +500,33 @@ class ScalableSignalProcessor:
             tick_data = params.get('tick_data', {})
             option_data = params.get('option_data', {})
             
-            # Call Greeks calculator with correct signature
+            # Validate all required parameters are present (no synthetic defaults)
+            required_fields = ['ltp', 'strike_price', 'time_to_expiry', 'volatility', 'risk_free_rate']
+            for field in required_fields:
+                if field not in tick_data and field not in option_data:
+                    raise ValueError(f"Required parameter {field} missing from tick/option data. No synthetic defaults allowed.")
+            
+            # Extract parameters with fail-fast behavior
+            spot_price = tick_data.get('ltp') or option_data.get('ltp')
+            strike_price = option_data.get('strike_price')
+            time_to_expiry = option_data.get('time_to_expiry')
+            volatility = option_data.get('volatility') 
+            risk_free_rate = option_data.get('risk_free_rate')
+            dividend_yield = option_data.get('dividend_yield', 0.0)  # Only dividend yield can default to 0
+            option_type = option_data.get('option_type', 'call')
+            
+            if not all([spot_price, strike_price, time_to_expiry, volatility, risk_free_rate]):
+                raise ValueError("Missing required market data parameters for Greeks calculation. No synthetic data allowed.")
+                
+            # Call Greeks calculator with validated parameters
             result = self.greeks_calculator.calculate_greeks(
-                spot_price=float(tick_data.get('ltp', 0)),
-                strike_price=float(option_data.get('strike_price', 0)),
-                time_to_expiry=float(option_data.get('time_to_expiry', 0)),
-                volatility=float(option_data.get('volatility', 0.20)),
-                risk_free_rate=float(option_data.get('risk_free_rate', 0.06)),
-                dividend_yield=float(option_data.get('dividend_yield', 0.0)),
-                option_type=option_data.get('option_type', 'call')
+                spot_price=float(spot_price),
+                strike_price=float(strike_price),
+                time_to_expiry=float(time_to_expiry),
+                volatility=float(volatility),
+                risk_free_rate=float(risk_free_rate),
+                dividend_yield=float(dividend_yield),
+                option_type=option_type
             )
             
             # Publish result

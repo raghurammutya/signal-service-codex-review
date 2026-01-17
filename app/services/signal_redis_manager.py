@@ -125,8 +125,10 @@ class RedisClusterManager:
                     if isinstance(items, list) and value in items:
                         items.remove(value)
                         await self.redis_client.set(key, json.dumps(items))
-                except:
-                    pass
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse JSON for key {key}: {e}")
+                except Exception as e:
+                    logger.error(f"Failed to process list operation for key {key}: {e}")
             return True
         except Exception as e:
             log_error(f"Failed to set remove {key}: {e}")

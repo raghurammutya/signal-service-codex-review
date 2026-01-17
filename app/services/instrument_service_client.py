@@ -149,8 +149,8 @@ class InstrumentServiceClient:
             if service_response and service_response.get("history"):
                 return service_response["history"]
             else:
-                logger.warning(f"No moneyness history found for {symbol}")
-                return []
+                logger.error(f"No moneyness history found for {symbol} - service returned empty result")
+                raise RuntimeError(f"No moneyness history available for {symbol}. Service returned empty result.")
         except Exception as e:
             logger.error(f"Failed to get moneyness history for {symbol}: {e}")
             raise RuntimeError(f"Moneyness history service unavailable for {symbol}. No fallbacks allowed per architecture.")
