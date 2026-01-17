@@ -108,7 +108,8 @@ class ProductionHistoricalDataManager:
         symbol: str,
         timeframe: str,
         periods_required: int,
-        indicator_name: str = None
+        indicator_name: str = None,
+        end_date: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get historical data for indicator calculations via ticker_service API.
@@ -119,7 +120,8 @@ class ProductionHistoricalDataManager:
             symbol=symbol,
             timeframe=timeframe,
             periods_required=periods_required,
-            indicator_name=indicator_name
+            indicator_name=indicator_name,
+            end_date=end_date
         )
         
         try:

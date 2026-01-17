@@ -10,11 +10,12 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 
-from app.utils.logging_utils import log_info, log_error, log_exception
+from app.utils.logging_utils import log_info, log_error, log_exception, log_warning
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.instrument_service_client import InstrumentServiceClient
 from app.repositories.signal_repository import SignalRepository
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
+from app.services.historical_data_manager import get_historical_data_manager
 # from app.models.signal_models import SignalGreeks, SignalIndicator
 # TODO: Add signal models when available
 
@@ -216,7 +217,8 @@ class MoneynessHistoricalProcessor:
                 greeks = await self._calculate_historical_greeks(
                     options,
                     spot_price,
-                    timestamp
+                    timestamp,
+                    underlying
                 )
                 
                 results.append({
@@ -508,10 +510,35 @@ class MoneynessHistoricalProcessor:
         underlying: str,
         timestamp: datetime
     ) -> Optional[float]:
-        """Get spot price at specific timestamp"""
-        # This would query historical price data
-        # For now, return mock data
-        return 21500.0 + np.random.normal(0, 100)
+        """Get spot price at specific timestamp via ticker_service (CONSOLIDATED)"""
+        try:
+            # Use historical data manager to fetch from ticker_service
+            historical_manager = await get_historical_data_manager()
+            if not historical_manager:
+                log_error("Historical data manager not available")
+                return None
+            
+            # Request single point at timestamp
+            result = await historical_manager.get_historical_data_for_indicator(
+                symbol=underlying,
+                timeframe="1minute",
+                periods_required=1,
+                indicator_name="spot_price",
+                end_date=timestamp.isoformat()
+            )
+            
+            if result.get("success") and result.get("data"):
+                data_point = result["data"][-1]  # Get most recent
+                return float(data_point.get("close", 0))
+            
+            # PRODUCTION: No mock fallback allowed - fail fast
+            log_error(f"No spot price data available for {underlying} at {timestamp}")
+            raise ValueError(f"Spot price data unavailable from ticker_service. No synthetic data allowed in production.")
+            
+        except Exception as e:
+            log_error(f"Error getting spot price from ticker_service: {e}")
+            # PRODUCTION: Fail fast instead of mock data
+            raise ValueError(f"Failed to retrieve spot price from ticker_service: {e}. No fallbacks allowed in production.")
         
     async def _get_historical_spot_prices(
         self,
@@ -519,20 +546,51 @@ class MoneynessHistoricalProcessor:
         start_time: datetime,
         end_time: datetime
     ) -> List[Dict[str, Any]]:
-        """Get historical spot prices"""
-        # This would query price history
-        # For now, return mock data
-        prices = []
-        current = start_time
-        
-        while current <= end_time:
-            prices.append({
-                'timestamp': current,
-                'price': 21500.0 + np.random.normal(0, 100)
-            })
-            current += timedelta(minutes=5)
+        """Get historical spot prices via ticker_service (CONSOLIDATED)"""
+        try:
+            # Use historical data manager to fetch from ticker_service
+            historical_manager = await get_historical_data_manager()
+            if not historical_manager:
+                log_error("Historical data manager not available")
+                return []
             
-        return prices
+            # Calculate required periods based on time range
+            time_diff = end_time - start_time
+            periods_needed = max(int(time_diff.total_seconds() / 300), 1)  # 5-minute intervals
+            
+            result = await historical_manager.get_historical_data_for_indicator(
+                symbol=underlying,
+                timeframe="5minute",
+                periods_required=periods_needed,
+                indicator_name="ohlcv",
+                end_date=end_time.isoformat()
+            )
+            
+            if result.get("success") and result.get("data"):
+                # Transform ticker_service data to expected format
+                prices = []
+                for data_point in result["data"]:
+                    if 'timestamp' in data_point and 'close' in data_point:
+                        prices.append({
+                            'timestamp': datetime.fromisoformat(data_point['timestamp']),
+                            'price': float(data_point['close'])
+                        })
+                
+                # Filter to time range
+                prices = [p for p in prices if start_time <= p['timestamp'] <= end_time]
+                
+                if prices:
+                    log_info(f"Retrieved {len(prices)} historical spot prices from ticker_service")
+                    return prices
+            
+            # PRODUCTION: No mock fallback allowed - fail fast
+            log_error(f"No historical price data available for {underlying} from {start_time} to {end_time}")
+            raise ValueError("Historical price data unavailable from ticker_service. No synthetic data allowed in production.")
+            
+        except Exception as e:
+            log_error(f"Error getting historical spot prices from ticker_service: {e}")
+            # PRODUCTION: Fail fast instead of mock data
+            raise ValueError(f"Failed to retrieve historical prices from ticker_service: {e}. No fallbacks allowed in production.")
         
     async def _get_historical_moneyness_options(
         self,
@@ -543,46 +601,96 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> List[Dict[str, Any]]:
         """Get options at moneyness level for historical timestamp"""
-        # This would query historical option data
-        # For now, return mock data based on moneyness
-        
-        if moneyness_level == "ATM":
-            strike = round(spot_price / 50) * 50
-        elif moneyness_level == "OTM":
-            strike = round(spot_price * 1.02 / 50) * 50
-        elif moneyness_level == "ITM":
-            strike = round(spot_price * 0.98 / 50) * 50
-        else:
-            strike = spot_price
+        # PRODUCTION: Historical option data must come from ticker_service - fail fast if unavailable
+        try:
+            from app.adapters import EnhancedTickerAdapter
+            ticker_adapter = EnhancedTickerAdapter()
+            try:
+                historical_options = await ticker_adapter.get_historical_options(
+                    underlying=underlying,
+                    expiry_date=expiry_date,
+                    timestamp=timestamp,
+                    moneyness_level=moneyness_level
+                )
+            finally:
+                await ticker_adapter.close()
             
-        return [
-            {
-                'strike_price': strike,
-                'option_type': 'call',
-                'expiry_date': expiry_date
-            },
-            {
-                'strike_price': strike,
-                'option_type': 'put',
-                'expiry_date': expiry_date
-            }
-        ]
+            if not historical_options:
+                raise ValueError(f"No historical options data for {underlying} {moneyness_level} at {timestamp}")
+            return historical_options
+        except Exception as e:
+            log_error(f"Failed to get historical options for {underlying} {moneyness_level}: {e}")
+            raise ValueError("Historical options data unavailable from ticker_service. No synthetic data allowed in production.")
         
     async def _calculate_historical_greeks(
         self,
         options: List[Dict[str, Any]],
         spot_price: float,
-        timestamp: datetime
+        timestamp: datetime,
+        underlying: str
     ) -> Dict[str, float]:
         """Calculate Greeks for historical options"""
-        # Aggregate Greeks calculation
-        # For now, return mock data
-        return {
-            'delta': 0.5 + np.random.normal(0, 0.1),
-            'gamma': 0.01 + np.random.normal(0, 0.002),
-            'theta': -50 + np.random.normal(0, 10),
-            'vega': 100 + np.random.normal(0, 20),
-            'rho': 50 + np.random.normal(0, 10),
-            'iv': 0.20 + np.random.normal(0, 0.02),
-            'count': len(options)
-        }
+        # PRODUCTION: Use actual Greeks calculator - fail fast if unavailable
+        try:
+            if not self.greeks_calculator:
+                raise ValueError("Greeks calculator not initialized")
+            
+            aggregated_greeks = {'delta': 0, 'gamma': 0, 'theta': 0, 'vega': 0, 'rho': 0, 'iv': 0}
+            valid_calculations = 0
+            
+            from app.adapters import EnhancedTickerAdapter
+            ticker_adapter = EnhancedTickerAdapter()
+            try:
+                for option in options:
+                    try:
+                        # Get real implied volatility from market data instead of hardcoded value
+                        try:
+                            iv_data = await ticker_adapter.get_option_iv(
+                                underlying=underlying,
+                                strike=option['strike_price'],
+                                expiry=option['expiry_date'],
+                                option_type=option['option_type'],
+                                timestamp=timestamp
+                            )
+                            volatility = iv_data if iv_data else None
+                            
+                            if volatility is None:
+                                log_warning(
+                                    f"No IV data for {underlying} {option['strike_price']} {option['option_type']} - skipping option"
+                                )
+                                continue
+                                
+                        except Exception as e:
+                            log_error(f"Failed to get IV for option {option}: {e}")
+                            continue
+                        
+                        greeks = await self.greeks_calculator.calculate_all_greeks(
+                            underlying_price=spot_price,
+                            strike=option['strike_price'],
+                            time_to_expiry=self._calculate_time_to_expiry(option['expiry_date'], timestamp),
+                            volatility=volatility,  # Use real market IV
+                            option_type=option['option_type']
+                        )
+                        if greeks:
+                            for key in aggregated_greeks:
+                                if key in greeks:
+                                    aggregated_greeks[key] += greeks[key]
+                            valid_calculations += 1
+                    except Exception as e:
+                        log_error(f"Failed to calculate Greeks for option {option}: {e}")
+            finally:
+                await ticker_adapter.close()
+            
+            if valid_calculations == 0:
+                raise ValueError("No valid Greeks calculations available")
+            
+            # Average the aggregated Greeks
+            for key in aggregated_greeks:
+                aggregated_greeks[key] = aggregated_greeks[key] / valid_calculations
+            
+            aggregated_greeks['count'] = len(options)
+            return aggregated_greeks
+            
+        except Exception as e:
+            log_error(f"Failed to calculate historical Greeks: {e}")
+            raise ValueError(f"Greeks calculation failed. No synthetic Greeks allowed in production.")

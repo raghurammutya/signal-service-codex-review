@@ -216,7 +216,7 @@ class SignalRedisManager:
         """Initialize Redis connection and cluster manager"""
         try:
             if not self.redis_client:
-                self.redis_client = await get_redis_client(settings.REDIS_URL)
+                self.redis_client = await get_redis_client()
             
             # Initialize cluster manager
             if not self.cluster_manager:
@@ -363,7 +363,13 @@ class SignalRedisManager:
             return None
     
     async def publish_computation_result(self, symbol: str, result: Dict[str, Any]) -> bool:
-        """Publish computation result to symbol-specific stream"""
+        """
+        Publish computation result to symbol-specific stream.
+        
+        Note: For user notifications, also use SignalDeliveryService.deliver_signal() 
+        to ensure proper entitlement validation and delivery through multiple channels.
+        This method only handles internal stream publishing for service coordination.
+        """
         try:
             stream_key = self.streams["computation_results"].format(symbol=symbol)
             return await self.cluster_manager.stream_add(

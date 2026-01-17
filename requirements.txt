@@ -25,6 +25,9 @@ pandas-ta>=0.4.67b0  # Technical analysis indicators (requires Python 3.12+, num
 scipy>=1.14.0        # numpy 2.x compatible
 scikit-learn>=1.5.0  # numpy 2.x compatible
 
+# System monitoring (REQUIRED for scaling)
+psutil>=5.9.0        # System resource monitoring for load balancing and scaling decisions
+
 # Options Greeks calculation (REQUIRED)
 py_vollib>=1.0.1              # Black-Scholes Greeks calculations
 py-vollib-vectorized==0.1.1   # Vectorized Greeks for numpy arrays and pandas (10-100x faster)

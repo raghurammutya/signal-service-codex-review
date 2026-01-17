@@ -441,13 +441,7 @@ def create_marketplace_client() -> MarketplaceClient:
             raise ValueError("INTERNAL_API_KEY not found in config_service")
             
     except Exception as e:
-        raise RuntimeError(f"Failed to get marketplace configuration from config_service: {e}. No environment fallbacks allowed per architecture.") 
-                environment=environment
-            )
-            internal_api_key = config_client.get_secret("INTERNAL_API_KEY")
-            logger.info("Retrieved INTERNAL_API_KEY from config service")
-        except Exception as e:
-            logger.warning(f"Could not retrieve INTERNAL_API_KEY from config service: {e}")
+        raise RuntimeError(f"Failed to get marketplace configuration from config_service: {e}. No environment fallbacks allowed per architecture.")
     
     if not internal_api_key:
         logger.warning("INTERNAL_API_KEY not set - marketplace integration may fail")

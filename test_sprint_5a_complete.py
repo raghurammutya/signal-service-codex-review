@@ -202,8 +202,8 @@ def calculate_signal(data, params):
                 mock_auth.return_value = {"user_id": "user_123"}
                 with patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions',
                           return_value=mock_marketplace_response):
-                    with patch('algo_engine.app.services.personal_script_service.PersonalScriptService.list_scripts',
-                              return_value=mock_personal_scripts):
+                    with patch('app.clients.algo_engine_client.AlgoEngineClient.list_personal_scripts',
+                              new_callable=AsyncMock, return_value=mock_personal_scripts):
                         
                         # Call the actual endpoint with proper headers
                         response = client.get(

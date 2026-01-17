@@ -39,7 +39,8 @@ class SignalExecutor:
     # Match marketplace storage service bucket naming convention exactly
     # Get environment and MinIO bucket from config_service (Architecture Principle #1: Config service exclusivity)
     from app.core.config import settings
-    ENVIRONMENT = settings.environment
+    # Get environment from settings
+    _ENVIRONMENT = settings.environment
     
     # CRITICAL: MinIO config from config_service (Architecture Principle #1: Config service exclusivity)
     try:
@@ -50,7 +51,7 @@ class SignalExecutor:
         
         client = ConfigServiceClient(
             service_name="signal_service",
-            environment=ENVIRONMENT,
+            environment=_ENVIRONMENT,
             timeout=5
         )
         
@@ -423,8 +424,8 @@ class SignalExecutor:
             Dict with execution results and any signals generated
         """
         # SECURITY: Disable script execution in production
-        # Use environment from config_service (already loaded in ENVIRONMENT variable)
-        environment = ENVIRONMENT
+        # Use environment from config_service (already loaded in _ENVIRONMENT variable)
+        environment = cls._ENVIRONMENT
         if environment in ['production', 'prod', 'staging']:
             raise RuntimeError(
                 f"Script execution is disabled in {environment} environment for security reasons. "

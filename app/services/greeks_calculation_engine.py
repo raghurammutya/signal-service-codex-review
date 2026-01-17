@@ -5,6 +5,9 @@ from typing import Dict, Optional, Union, List, Any
 from datetime import datetime, date
 import math
 
+from py_vollib.black_scholes.greeks.analytical import theta, vega, rho
+from py_vollib.black_scholes.implied_volatility import implied_volatility
+
 from app.utils.logging_utils import log_warning, log_exception, log_info
 from app.errors import GreeksCalculationError, UnsupportedModelError
 from app.core.greeks_model_config import get_greeks_model_config
@@ -58,7 +61,7 @@ class GreeksCalculationEngine:
     ) -> Optional[float]:
         """Calculate implied volatility"""
         try:
-            r = risk_free_rate or self.risk_free_rate
+            r = self._get_effective_risk_free_rate(risk_free_rate)
             flag = 'c' if option_type.upper() in ['CE', 'CALL'] else 'p'
             
             # Validate inputs
@@ -171,7 +174,7 @@ class GreeksCalculationEngine:
     ) -> Optional[float]:
         """Calculate Theta"""
         try:
-            r = risk_free_rate or self.risk_free_rate
+            r = self._get_effective_risk_free_rate(risk_free_rate)
             flag = 'c' if option_type.upper() in ['CE', 'CALL'] else 'p'
             
             if not self._validate_greeks_inputs(underlying_price, strike, time_to_expiry, volatility):
@@ -205,7 +208,7 @@ class GreeksCalculationEngine:
     ) -> Optional[float]:
         """Calculate Vega"""
         try:
-            r = risk_free_rate or self.risk_free_rate
+            r = self._get_effective_risk_free_rate(risk_free_rate)
             flag = 'c' if option_type.upper() in ['CE', 'CALL'] else 'p'
             
             if not self._validate_greeks_inputs(underlying_price, strike, time_to_expiry, volatility):
@@ -239,7 +242,7 @@ class GreeksCalculationEngine:
     ) -> Optional[float]:
         """Calculate Rho"""
         try:
-            r = risk_free_rate or self.risk_free_rate
+            r = self._get_effective_risk_free_rate(risk_free_rate)
             flag = 'c' if option_type.upper() in ['CE', 'CALL'] else 'p'
             
             if not self._validate_greeks_inputs(underlying_price, strike, time_to_expiry, volatility):
