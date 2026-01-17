@@ -1,0 +1,171 @@
+{
+  "environment": "development",
+  "timestamp": "2026-01-17T16:40:07.912585",
+  "summary": {
+    "total_checks": 22,
+    "passed_checks": 20,
+    "warnings": 0,
+    "critical_failures": 2,
+    "overall_status": "FAIL"
+  },
+  "results": [
+    {
+      "name": "env_var_environment",
+      "passed": true,
+      "message": "ENVIRONMENT is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_database_url_format",
+      "passed": false,
+      "message": "DATABASE_URL should be a valid URL, got: postgresql://dev:devpass@localhost:5432/devdb",
+      "critical": true,
+      "suggestions": [
+        "Ensure DATABASE_URL starts with http:// or https://"
+      ]
+    },
+    {
+      "name": "env_var_redis_url_format",
+      "passed": false,
+      "message": "REDIS_URL should be a valid URL, got: redis://localhost:6379",
+      "critical": true,
+      "suggestions": [
+        "Ensure REDIS_URL starts with http:// or https://"
+      ]
+    },
+    {
+      "name": "env_var_log_level",
+      "passed": true,
+      "message": "LOG_LEVEL is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_calendar_service_url",
+      "passed": true,
+      "message": "CALENDAR_SERVICE_URL is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_alert_service_url",
+      "passed": true,
+      "message": "ALERT_SERVICE_URL is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_messaging_service_url",
+      "passed": true,
+      "message": "MESSAGING_SERVICE_URL is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_marketplace_service_url",
+      "passed": true,
+      "message": "MARKETPLACE_SERVICE_URL is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_cors_allowed_origins",
+      "passed": true,
+      "message": "CORS_ALLOWED_ORIGINS is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_gateway_secret",
+      "passed": true,
+      "message": "GATEWAY_SECRET is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_internal_api_key",
+      "passed": true,
+      "message": "INTERNAL_API_KEY is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_jwt_secret_key",
+      "passed": true,
+      "message": "JWT_SECRET_KEY is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_minio_endpoint",
+      "passed": true,
+      "message": "MINIO_ENDPOINT is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_minio_access_key",
+      "passed": true,
+      "message": "MINIO_ACCESS_KEY is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_minio_secret_key",
+      "passed": true,
+      "message": "MINIO_SECRET_KEY is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_service_integration_timeout",
+      "passed": true,
+      "message": "SERVICE_INTEGRATION_TIMEOUT is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "cors_configuration",
+      "passed": true,
+      "message": "CORS configuration valid with 2 origins",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "security_gateway_secret_length",
+      "passed": true,
+      "message": "GATEWAY_SECRET meets minimum length requirement",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "security_jwt_secret_key_length",
+      "passed": true,
+      "message": "JWT_SECRET_KEY meets minimum length requirement",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "security_internal_api_key_length",
+      "passed": true,
+      "message": "INTERNAL_API_KEY meets minimum length requirement",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "database_configuration",
+      "passed": true,
+      "message": "Database configuration appears valid",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "service_timeout_configuration",
+      "passed": true,
+      "message": "Service timeout configured to 30.0s",
+      "critical": false,
+      "suggestions": []
+    }
+  ]
+}
