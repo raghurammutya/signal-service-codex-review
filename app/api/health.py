@@ -147,10 +147,11 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
         cluster_data = await dist_health.get_cluster_health_for_dashboard()
         
         # Format according to dashboard expectations
+        from app.core.config import settings
         dashboard_format = {
             "service_name": "Signal Service",
             "service_type": "signal_processing",
-            "port": 8003,
+            "port": settings.SERVICE_PORT,
             "status": cluster_data['status'],
             "timestamp": cluster_data['timestamp'],
             "health_endpoint": "/health/dashboard",

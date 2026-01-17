@@ -18,7 +18,12 @@ class BrokerSymbolConverter:
     """
     
     def __init__(self, instrument_service_url: str = None):
-        self.instrument_service_url = instrument_service_url or settings.INSTRUMENT_SERVICE_URL or "http://instrument-service:8008"
+        if instrument_service_url:
+            self.instrument_service_url = instrument_service_url
+        elif hasattr(settings, 'INSTRUMENT_SERVICE_URL') and settings.INSTRUMENT_SERVICE_URL:
+            self.instrument_service_url = settings.INSTRUMENT_SERVICE_URL
+        else:
+            raise ValueError("instrument_service_url must be provided via config service - no hardcoded fallbacks allowed")
         self.cache = {}  # Simple in-memory cache
         self.cache_ttl = 3600  # 1 hour cache
         self.session: Optional[aiohttp.ClientSession] = None

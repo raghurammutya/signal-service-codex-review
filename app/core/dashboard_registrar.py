@@ -20,7 +20,13 @@ class DashboardRegistrar:
                 raise RuntimeError("DASHBOARD_URL not configured in config_service - cannot register with dashboard")
             dashboard_url = settings.DASHBOARD_URL
         self.dashboard_url = dashboard_url
-        self.service_url = f"http://localhost:{getattr(settings, 'PORT', 8003)}"
+        
+        # Get service configuration from config service
+        from app.core.config import settings
+        if not hasattr(settings, 'SERVICE_HOST') or not hasattr(settings, 'SERVICE_PORT'):
+            raise RuntimeError("SERVICE_HOST and SERVICE_PORT not configured in config_service")
+        
+        self.service_url = f"http://{settings.SERVICE_HOST}:{settings.SERVICE_PORT}"
         self.registration_endpoint = f"{dashboard_url}/api/services/register"
         self.health_update_endpoint = f"{dashboard_url}/api/services/health"
         self.registration_interval = 30  # seconds
@@ -33,8 +39,8 @@ class DashboardRegistrar:
                 "service_name": "Signal Service",
                 "service_id": "signal_service",
                 "service_type": "signal_processing",
-                "host": "localhost",
-                "port": 8003,
+                "host": settings.SERVICE_HOST,
+                "port": int(settings.SERVICE_PORT),
                 "health_endpoint": f"{self.service_url}/health/dashboard",
                 "detailed_health_endpoint": f"{self.service_url}/health/detailed",
                 "cluster_health_endpoint": f"{self.service_url}/health/cluster",
@@ -110,7 +116,7 @@ class DashboardRegistrar:
                     return False
                     
         except httpx.ConnectError:
-            logger.warning("Could not connect to dashboard at localhost:8500 - dashboard may not be running")
+            logger.warning(f"Could not connect to dashboard at {self.dashboard_url} - dashboard may not be running")
             return False
         except Exception as e:
             logger.error(f"Dashboard registration failed: {e}")
@@ -208,7 +214,12 @@ class DashboardRegistrar:
 class DashboardIntegration:
     """Main integration class for dashboard connectivity"""
     
-    def __init__(self, dashboard_url: str = "http://localhost:8500"):
+    def __init__(self, dashboard_url: str = None):
+        if dashboard_url is None:
+            from app.core.config import settings
+            if not hasattr(settings, 'DASHBOARD_URL'):
+                raise RuntimeError("DASHBOARD_URL not configured in config_service")
+            dashboard_url = settings.DASHBOARD_URL
         self.registrar = DashboardRegistrar(dashboard_url)
         self.background_tasks = []
     
@@ -267,14 +278,14 @@ def format_instance_data_for_dashboard(instances: list) -> Dict[str, Any]:
                 "name": inst["container_name"],
                 "status": inst["status"],
                 "host": inst["host"],
-                "port": 8003,
+                "port": int(inst.get("port", 8003)),
                 "uptime": inst["uptime_seconds"],
                 "cpu_usage": inst["load_metrics"].get("cpu_percent", 0),
                 "memory_usage": inst["load_metrics"].get("memory_percent", 0),
                 "requests_per_minute": inst["load_metrics"].get("requests_per_minute", 0),
                 "queue_size": inst["load_metrics"].get("queue_size", 0),
                 "assigned_instruments": inst["assigned_instruments_count"],
-                "health_endpoint": f"http://{inst['host']}:8003/health/detailed"
+                "health_endpoint": f"http://{inst['host']}:{inst.get('port', 8003)}/health/detailed"
             }
             for inst in instances
         ],

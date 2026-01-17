@@ -10,9 +10,10 @@ import numpy as np
 from enum import Enum
 
 import logging
+import aiohttp
 
 from app.utils.redis import get_redis_client
-from common.storage.database import get_timescaledb_session
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,9 @@ class FlexibleTimeframeManager:
     
     def __init__(self):
         self.redis_client = None
-        self.db_connection = None
+        self.ticker_service_url = None
+        self.internal_api_key = None
+        self.session = None
         self._cache_ttl = {
             1: 60,        # 1 minute data: 1 minute TTL
             5: 300,       # 5 minute data: 5 minute TTL  
@@ -57,7 +60,19 @@ class FlexibleTimeframeManager:
     async def initialize(self):
         """Initialize connections"""
         self.redis_client = await get_redis_client()
-        self.db_connection = await get_timescaledb_session()
+        
+        # Get ticker service configuration from settings
+        if not hasattr(settings, 'TICKER_SERVICE_URL'):
+            raise ValueError("TICKER_SERVICE_URL not configured - cannot access historical data")
+        self.ticker_service_url = settings.TICKER_SERVICE_URL
+        
+        # Get internal API key for service-to-service communication
+        if not hasattr(settings, 'internal_api_key') or not settings.internal_api_key:
+            raise ValueError("internal_api_key not configured - cannot authenticate with ticker service")
+        self.internal_api_key = settings.internal_api_key
+        
+        # Initialize HTTP session
+        self.session = aiohttp.ClientSession()
         
     def parse_timeframe(self, timeframe: str) -> Tuple[TimeframeType, int]:
         """
@@ -239,37 +254,54 @@ class FlexibleTimeframeManager:
         start_time: datetime,
         end_time: datetime
     ) -> List[Dict[str, Any]]:
-        """Get 1-minute base data from database"""
+        """Get 1-minute base data from ticker_service"""
         try:
-            table_map = {
-                "greeks": "signal_greeks",
-                "indicators": "signal_indicators",
-                "moneyness_greeks": "signal_moneyness_greeks"
+            # Route all historical data requests through ticker_service
+            if not self.session:
+                raise RuntimeError("FlexibleTimeframeManager not initialized - call initialize() first")
+            
+            # Map signal types to ticker_service endpoints
+            endpoint_map = {
+                "greeks": "/api/v1/historical/greeks",
+                "indicators": "/api/v1/historical/indicators",
+                "moneyness_greeks": "/api/v1/historical/moneyness"
             }
             
-            table = table_map.get(signal_type)
-            if not table:
+            endpoint = endpoint_map.get(signal_type)
+            if not endpoint:
                 raise ValueError(f"Unknown signal type: {signal_type}")
-                
-            async with self.db_connection.acquire() as conn:
-                # Get 1-minute data
-                query = f"""
-                    SELECT *
-                    FROM {table}
-                    WHERE instrument_key = $1
-                      AND timestamp >= $2
-                      AND timestamp <= $3
-                    ORDER BY timestamp
-                """
-                
-                rows = await conn.fetch(query, instrument_key, start_time, end_time)
-                
-                return [dict(row) for row in rows]
+            
+            # Make request to ticker_service
+            headers = {
+                "X-Internal-API-Key": self.internal_api_key,
+                "Content-Type": "application/json"
+            }
+            
+            params = {
+                "instrument_key": instrument_key,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "timeframe": "1m"  # Get base 1-minute data for aggregation
+            }
+            
+            url = f"{self.ticker_service_url}{endpoint}"
+            async with self.session.get(url, headers=headers, params=params, timeout=30) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    # Extract data points from ticker_service response
+                    return data.get("data_points", [])
+                elif response.status == 404:
+                    # No data available for this timeframe
+                    return []
+                else:
+                    error_text = await response.text()
+                    logger.error(f"ticker_service request failed: {response.status} - {error_text}")
+                    raise RuntimeError(f"ticker_service historical data request failed: {response.status}")
                 
         except Exception as e:
-            logger.exception("Error getting base data: %s", e)
-            from app.errors import DatabaseQueryError
-            raise DatabaseQueryError(f"Failed to retrieve base data: {str(e)}") from e
+            logger.exception("Error getting base data from ticker_service: %s", e)
+            from app.errors import ServiceUnavailableError
+            raise ServiceUnavailableError(f"Failed to retrieve historical data from ticker_service: {str(e)}") from e
             
     def _aggregate_data(
         self,
@@ -404,23 +436,40 @@ class FlexibleTimeframeManager:
         except Exception as e:
             logger.error("Cache storage error: %s", e)
             
+    async def close(self):
+        """Close HTTP session"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+    
     async def cleanup_old_data(self, retention_days: int = 30):
         """
-        Clean up old custom timeframe data
+        Clean up old custom timeframe data - delegated to ticker_service
         
         Args:
             retention_days: Number of days to retain data
         """
         try:
-            cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+            # Request ticker_service to clean up old historical data
+            if not self.session:
+                logger.warning("FlexibleTimeframeManager not initialized - cannot cleanup old data")
+                return
             
-            async with self.db_connection.acquire() as conn:
-                deleted = await conn.execute("""
-                    DELETE FROM signal_custom_timeframes 
-                    WHERE created_at < $1
-                """, cutoff_date)
-                
-                logger.info("Cleaned up %s old custom timeframe records", deleted)
+            headers = {
+                "X-Internal-API-Key": self.internal_api_key,
+                "Content-Type": "application/json"
+            }
+            
+            params = {"retention_days": retention_days}
+            
+            url = f"{self.ticker_service_url}/api/v1/internal/cleanup/historical"
+            async with self.session.post(url, headers=headers, json=params, timeout=60) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    logger.info("ticker_service cleaned up old data: %s", result.get("message", "Success"))
+                else:
+                    error_text = await response.text()
+                    logger.error(f"ticker_service cleanup failed: {response.status} - {error_text}")
                 
         except Exception as e:
-            logger.exception("Error cleaning up old data: %s", e)
+            logger.exception("Error requesting data cleanup from ticker_service: %s", e)

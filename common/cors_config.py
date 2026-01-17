@@ -40,16 +40,9 @@ def get_allowed_origins(environment: str) -> List[str]:
             logger.info(f"{environment} CORS origins configured: {len(origins)} origins")
             return origins
         else:
-            # Default staging/dev origins
-            default_origins = [
-                "http://localhost:3000",
-                "http://localhost:3001", 
-                "http://localhost:8080",
-                "https://dev-dashboard.stocksblitz.com",
-                "https://staging-dashboard.stocksblitz.com"
-            ]
-            logger.warning(f"Using default {environment} CORS origins: {default_origins}")
-            return default_origins
+            # Production requires explicit configuration - no default origins allowed
+            logger.critical(f"CORS_ALLOWED_ORIGINS not configured for {environment} environment")
+            raise ValueError(f"CORS_ALLOWED_ORIGINS must be configured for {environment} environment")
     else:
         logger.error(f"Unknown environment: {environment}")
         raise ValueError(f"Unknown environment for CORS configuration: {environment}")

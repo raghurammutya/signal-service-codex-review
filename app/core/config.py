@@ -189,11 +189,23 @@ class SignalServiceConfig:
         self._load_from_config()
 
     def _load_from_config(self):
-        # PORT - from config_service only
-        self.PORT = _get_from_config_service("signal_service.port", required=True, is_secret=False)
-        if not self.PORT:
-            raise ValueError("port not found in config_service")
-        self.PORT = int(self.PORT)
+        # Service networking configuration - from config_service only
+        self.SERVICE_HOST = _get_from_config_service("signal_service.service_host", required=True, is_secret=False)
+        if not self.SERVICE_HOST:
+            raise ValueError("service_host not found in config_service")
+        
+        self.SERVICE_PORT = _get_from_config_service("signal_service.service_port", required=True, is_secret=False)
+        if not self.SERVICE_PORT:
+            raise ValueError("service_port not found in config_service")
+        self.SERVICE_PORT = int(self.SERVICE_PORT)
+        
+        # PORT - from config_service only (keeping for backwards compatibility)
+        self.PORT = self.SERVICE_PORT
+        
+        # Dashboard integration URL - from config_service only
+        self.DASHBOARD_URL = _get_from_config_service("signal_service.dashboard_url", required=True, is_secret=False)
+        if not self.DASHBOARD_URL:
+            raise ValueError("dashboard_url not found in config_service")
 
         # Required secrets from config_service (MANDATORY - fail-fast)
         self.DATABASE_URL = _get_from_config_service("DATABASE_URL", required=True, is_secret=True)
