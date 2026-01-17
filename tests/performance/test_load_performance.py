@@ -450,16 +450,24 @@ class TestScalingPerformance:
         from app.scaling.backpressure_monitor import BackpressureMonitor
         
         monitor = BackpressureMonitor()
+        monitor.recommendation_cooldown = 0
         
         # Test metric update performance
         updates = 10000
         
         start_time = time.time()
         for i in range(updates):
-            monitor.update_queue_size(1000 + i % 500)
-            monitor.update_processing_rate(100 + i % 50)
-            monitor.update_memory_usage(50 + i % 30)
-            monitor.get_backpressure_level()
+            monitor.update_metrics(
+                "pod-1",
+                {
+                    "queue_depth": 1000 + i % 500,
+                    "p99_latency": 1200.0,
+                    "cpu_usage": 0.5,
+                    "memory_usage": 0.6,
+                    "error_rate": 0.01
+                }
+            )
+            monitor.get_scaling_recommendation(current_pods=2)
         end_time = time.time()
         
         update_time = end_time - start_time

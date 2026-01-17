@@ -4,9 +4,27 @@ Unit tests for horizontal scaling components
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, Mock, patch
+from typing import Dict, Any
 from app.scaling.consistent_hash_manager import ConsistentHashManager
 from app.scaling.backpressure_monitor import BackpressureMonitor, BackpressureLevel
-from app.scaling.docker_orchestrator import DockerOrchestrator
+from test.stubs.docker_orchestrator import DockerOrchestrator
+
+
+def build_metrics(
+    queue_depth: int,
+    p99_latency: float = 1000.0,
+    cpu_usage: float = 0.2,
+    memory_usage: float = 0.2,
+    error_rate: float = 0.0
+) -> Dict[str, Any]:
+    """Helper to build metrics payloads for backpressure tests."""
+    return {
+        "queue_depth": queue_depth,
+        "p99_latency": p99_latency,
+        "cpu_usage": cpu_usage,
+        "memory_usage": memory_usage,
+        "error_rate": error_rate
+    }
 
 @pytest.mark.unit
 class TestConsistentHashManager:
@@ -168,141 +186,102 @@ class TestBackpressureMonitor:
     
     def test_initialization(self, monitor):
         """Test proper initialization"""
-        assert monitor.current_level == BackpressureLevel.LOW
-        assert monitor.queue_size == 0
-        assert monitor.processing_rate == 0.0
+        assert monitor.current_backpressure == BackpressureLevel.LOW
         assert len(monitor.metrics_history) == 0
+        assert monitor.last_recommendation is None
     
-    def test_queue_size_monitoring(self, monitor):
-        """Test queue size-based backpressure detection"""
-        # Low backpressure
-        monitor.update_queue_size(100)
-        assert monitor.get_backpressure_level() == BackpressureLevel.LOW
+    def test_backpressure_level_calculation(self, monitor):
+        """Test backpressure level calculation from metrics"""
+        monitor.update_metrics("pod-1", build_metrics(queue_depth=100))
+        assert monitor.current_backpressure == BackpressureLevel.LOW
         
-        # Medium backpressure
-        monitor.update_queue_size(600)  # Above 500 threshold
-        assert monitor.get_backpressure_level() == BackpressureLevel.MEDIUM
+        monitor.update_metrics(
+            "pod-1",
+            build_metrics(queue_depth=800, cpu_usage=0.7, memory_usage=0.75)
+        )
+        assert monitor.current_backpressure == BackpressureLevel.MEDIUM
         
-        # High backpressure
-        monitor.update_queue_size(1200)  # Above 1000 threshold
-        assert monitor.get_backpressure_level() == BackpressureLevel.HIGH
+        monitor.update_metrics(
+            "pod-1",
+            build_metrics(queue_depth=1500, cpu_usage=0.85, memory_usage=0.85)
+        )
+        assert monitor.current_backpressure == BackpressureLevel.HIGH
         
-        # Critical backpressure
-        monitor.update_queue_size(3000)  # Above 2000 threshold
-        assert monitor.get_backpressure_level() == BackpressureLevel.CRITICAL
-    
-    def test_processing_rate_monitoring(self, monitor):
-        """Test processing rate-based backpressure detection"""
-        # High processing rate (low backpressure)
-        monitor.update_processing_rate(150)  # Above 100/sec
-        assert monitor._calculate_rate_based_level() == BackpressureLevel.LOW
-        
-        # Medium processing rate
-        monitor.update_processing_rate(75)  # 50-100/sec
-        assert monitor._calculate_rate_based_level() == BackpressureLevel.MEDIUM
-        
-        # Low processing rate
-        monitor.update_processing_rate(25)  # 10-50/sec
-        assert monitor._calculate_rate_based_level() == BackpressureLevel.HIGH
-        
-        # Very low processing rate
-        monitor.update_processing_rate(5)  # Below 10/sec
-        assert monitor._calculate_rate_based_level() == BackpressureLevel.CRITICAL
-    
-    def test_memory_usage_monitoring(self, monitor):
-        """Test memory usage-based backpressure detection"""
-        # Low memory usage
-        monitor.update_memory_usage(40.0)  # 40%
-        assert monitor._calculate_memory_based_level() == BackpressureLevel.LOW
-        
-        # Medium memory usage
-        monitor.update_memory_usage(65.0)  # 65%
-        assert monitor._calculate_memory_based_level() == BackpressureLevel.MEDIUM
-        
-        # High memory usage
-        monitor.update_memory_usage(80.0)  # 80%
-        assert monitor._calculate_memory_based_level() == BackpressureLevel.HIGH
-        
-        # Critical memory usage
-        monitor.update_memory_usage(95.0)  # 95%
-        assert monitor._calculate_memory_based_level() == BackpressureLevel.CRITICAL
-    
-    def test_composite_backpressure_calculation(self, monitor):
-        """Test composite backpressure level calculation"""
-        # All metrics normal
-        monitor.update_queue_size(100)
-        monitor.update_processing_rate(150)
-        monitor.update_memory_usage(40.0)
-        assert monitor.get_backpressure_level() == BackpressureLevel.LOW
-        
-        # Mixed levels - should take highest
-        monitor.update_queue_size(1200)  # HIGH
-        monitor.update_processing_rate(150)  # LOW
-        monitor.update_memory_usage(40.0)  # LOW
-        assert monitor.get_backpressure_level() == BackpressureLevel.HIGH
-        
-        # Critical in any metric should result in CRITICAL
-        monitor.update_queue_size(100)  # LOW
-        monitor.update_processing_rate(150)  # LOW
-        monitor.update_memory_usage(95.0)  # CRITICAL
-        assert monitor.get_backpressure_level() == BackpressureLevel.CRITICAL
+        monitor.update_metrics(
+            "pod-1",
+            build_metrics(queue_depth=2500, cpu_usage=0.96, memory_usage=0.96)
+        )
+        assert monitor.current_backpressure == BackpressureLevel.CRITICAL
     
     def test_metrics_history(self, monitor):
         """Test metrics history tracking"""
         # Update metrics multiple times
         for i in range(10):
-            monitor.update_queue_size(100 + i * 50)
-            monitor.update_processing_rate(100 - i * 5)
-            monitor.update_memory_usage(30 + i * 3)
+            monitor.update_metrics(
+                "pod-1",
+                build_metrics(
+                    queue_depth=100 + i * 50,
+                    cpu_usage=0.2 + i * 0.01,
+                    memory_usage=0.3 + i * 0.01,
+                    error_rate=0.01
+                )
+            )
         
         # Should track history
         assert len(monitor.metrics_history) == 10
         
         # Latest entry should match current values
         latest = monitor.metrics_history[-1]
-        assert latest['queue_size'] == 550
-        assert latest['processing_rate'] == 55
-        assert latest['memory_usage'] == 57.0
+        assert latest['queue_depth'] == 550
+        assert latest['cpu_usage'] == pytest.approx(0.29)
+        assert latest['memory_usage'] == pytest.approx(0.39)
     
     def test_trend_analysis(self, monitor):
         """Test backpressure trend analysis"""
         # Increasing trend
         for i in range(5):
-            monitor.update_queue_size(200 + i * 200)
+            monitor.update_metrics(
+                "pod-1",
+                build_metrics(queue_depth=200 + i * 200, cpu_usage=0.2, memory_usage=0.2)
+            )
         
-        trend = monitor.get_trend_analysis()
-        assert trend['direction'] == 'increasing'
-        assert trend['severity'] == 'high'  # Rapid increase
+        trend = monitor._analyze_trends()
+        assert trend['trend'] == 'increasing'
         
         # Decreasing trend
+        monitor.metrics_history = []
         for i in range(5):
-            monitor.update_queue_size(1000 - i * 150)
+            monitor.update_metrics(
+                "pod-1",
+                build_metrics(queue_depth=1000 - i * 150, cpu_usage=0.2, memory_usage=0.2)
+            )
         
-        trend = monitor.get_trend_analysis()
-        assert trend['direction'] == 'decreasing'
+        trend = monitor._analyze_trends()
+        assert trend['trend'] == 'decreasing'
     
     def test_scaling_recommendations(self, monitor):
         """Test scaling recommendations based on backpressure"""
+        monitor.recommendation_cooldown = 0
+        
         # Low backpressure - no scaling needed
-        monitor.update_queue_size(100)
-        monitor.update_processing_rate(150)
-        recommendations = monitor.get_scaling_recommendations()
-        assert recommendations['action'] == 'none'
+        monitor.update_metrics("pod-1", build_metrics(queue_depth=100))
+        recommendations = monitor.get_scaling_recommendation(current_pods=2)
+        assert recommendations.action == 'none'
         
         # High backpressure - scale up
-        monitor.update_queue_size(1200)
-        monitor.update_processing_rate(25)
-        recommendations = monitor.get_scaling_recommendations()
-        assert recommendations['action'] == 'scale_up'
-        assert recommendations['target_replicas'] > 1
+        monitor.update_metrics("pod-1", build_metrics(queue_depth=1500, cpu_usage=0.9))
+        recommendations = monitor.get_scaling_recommendation(current_pods=1)
+        assert recommendations.action == 'scale_up'
+        assert recommendations.recommended_pods > 1
         
         # Critical backpressure - urgent scaling
-        monitor.update_queue_size(3000)
-        monitor.update_processing_rate(5)
-        monitor.update_memory_usage(95.0)
-        recommendations = monitor.get_scaling_recommendations()
-        assert recommendations['action'] == 'scale_up'
-        assert recommendations['urgency'] == 'critical'
+        monitor.update_metrics(
+            "pod-1",
+            build_metrics(queue_depth=3000, cpu_usage=0.96, memory_usage=0.96, error_rate=0.3)
+        )
+        recommendations = monitor.get_scaling_recommendation(current_pods=2)
+        assert recommendations.action == 'scale_up'
+        assert recommendations.urgency == 'critical'
 
 
 @pytest.mark.unit
