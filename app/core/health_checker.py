@@ -131,36 +131,18 @@ class HealthChecker:
     async def _check_api_responsiveness(self) -> Dict[str, Any]:
         """Check API endpoint responsiveness"""
         try:
-            start_time = time.time()
-            
-            # Simulate a lightweight API operation
-            # In real implementation, this would hit a test endpoint
-            await asyncio.sleep(0.001)  # Simulate 1ms operation
-            
-            response_time_ms = (time.time() - start_time) * 1000
-            
-            if response_time_ms <= self.thresholds['api_response_time_ms']['healthy']:
-                status = ComponentStatus.UP
-                message = f"API responsive in {response_time_ms:.2f}ms"
-            elif response_time_ms <= self.thresholds['api_response_time_ms']['unhealthy']:
-                status = ComponentStatus.DEGRADED
-                message = f"API slow response: {response_time_ms:.2f}ms"
-            else:
-                status = ComponentStatus.DOWN
-                message = f"API timeout: {response_time_ms:.2f}ms"
-            
-            return {
-                'status': status.value,
-                'response_time_ms': round(response_time_ms, 2),
-                'message': message,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # Production requires real API health endpoint integration - no synthetic delays
+            raise RuntimeError(
+                "API responsiveness check requires real HTTP client integration - "
+                "cannot provide synthetic response times with asyncio.sleep. "
+                "Must make actual HTTP requests to service health endpoints."
+            )
             
         except Exception as e:
             return {
                 'status': ComponentStatus.DOWN.value,
                 'error': str(e),
-                'message': 'API health check failed',
+                'message': 'API health check failed - requires HTTP client integration',
                 'timestamp': datetime.utcnow().isoformat()
             }
     
