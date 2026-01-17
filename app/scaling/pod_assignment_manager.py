@@ -14,6 +14,7 @@ import aioredis
 from app.utils.logging_utils import log_info, log_warning, log_exception
 from app.utils.redis import get_redis_client
 
+# Import production consistent hash manager
 from .consistent_hash_manager import ConsistentHashManager
 
 
@@ -50,9 +51,9 @@ class PodAssignmentManager:
     and fault tolerance
     """
     
-    def __init__(self):
-        self.redis_client = None
-        self.hash_manager = ConsistentHashManager()
+    def __init__(self, redis_client=None):
+        self.redis_client = redis_client
+        self.hash_manager = None  # Will be initialized with Redis client in initialize()
         self.pods: Dict[str, PodInfo] = {}
         self.instrument_assignments: Dict[str, str] = {}
         
@@ -75,7 +76,12 @@ class PodAssignmentManager:
         
     async def initialize(self):
         """Initialize the assignment manager"""
-        self.redis_client = await get_redis_client()
+        # Get Redis client if not provided
+        if not self.redis_client:
+            self.redis_client = await get_redis_client()
+        
+        # Always initialize hash manager with Redis client (don't check if it exists)
+        self.hash_manager = ConsistentHashManager(redis_client=self.redis_client)
         await self.hash_manager.initialize()
         
         # Load existing state
@@ -301,7 +307,7 @@ class PodAssignmentManager:
     
     async def reassign_instrument(self, instrument_key: str, exclude_pod: str = None) -> Optional[str]:
         """Reassign an instrument, excluding a specific pod"""
-        exclude_nodes = {exclude_pod} if exclude_pod else set()
+        exclude_nodes = [exclude_pod] if exclude_pod else []
         
         # Get new pod using hash ring
         new_pod = self.hash_manager.get_node(instrument_key, exclude_nodes)
@@ -573,4 +579,4 @@ class PodAssignmentManager:
     
     async def get_instrument_pod(self, instrument_key: str) -> Optional[str]:
         """Get the pod assigned to an instrument"""
-        return self.instrument_assignments.get(instrument_key)  -- TODO: Use EXPLAIN ANALYZE to check performance
+        return self.instrument_assignments.get(instrument_key)
