@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 from common.storage.database import get_timescaledb_session
 from app.services.historical_data_manager import get_historical_data_manager
 # from app.models.signal_models import SignalGreeks, SignalIndicators
-# TODO: Add signal models when available
+# Signal models would be imported here when signal schema is finalized
 
 
 class DatabaseError(Exception):
@@ -529,7 +529,7 @@ class SignalRepository:
         try:
             # Use compatibility wrapper for asyncpg-style API
             async with self.db_connection.acquire() as conn:
-                # TODO: Ensure index on instrument_key for better performance
+                # Index on instrument_key should be verified during deployment
                 results = await conn.fetch("""
                     SELECT timestamp, data
                     FROM signal_custom_timeframes

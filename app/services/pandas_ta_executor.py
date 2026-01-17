@@ -507,9 +507,8 @@ class PandasTAExecutor:
             # Second pass: Execute pandas_ta indicators if any
             if pandas_ta_indicators:
                 if not PANDAS_TA_AVAILABLE:
-                    # Use mock values
-                    for indicator in pandas_ta_indicators:
-                        results[indicator.output_key] = None
+                    # Fail fast when pandas_ta not available in production
+                    raise TechnicalIndicatorError("pandas_ta library not available - cannot calculate technical indicators")
                 else:
                     log_info(f"Executing {len(pandas_ta_indicators)} pandas_ta indicators")
 

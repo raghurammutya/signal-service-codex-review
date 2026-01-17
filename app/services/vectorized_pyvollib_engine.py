@@ -805,8 +805,8 @@ class VectorizedPyvolibGreeksEngine:
     async def _legacy_bulk_calculation(self, bulk_data: List[Dict]) -> Dict[str, Any]:
         """Run legacy calculation for performance comparison."""
         # This would use the existing single-option loop approach
-        # Implementation placeholder for benchmark comparison
-        return {'note': 'Legacy calculation not implemented for this demo'}
+        # Legacy calculation benchmark would be implemented here for comparison
+        raise NotImplementedError("Legacy calculation benchmark not implemented - use vectorized calculation instead")
 
     def _update_avg_time(self, method: str, new_time_ms: float):
         """Update running average of execution times."""

@@ -48,7 +48,7 @@ class InstrumentServiceClient:
     - HTTP client with connection pooling
     - Internal API key authentication
     - Response caching with TTL
-    - Graceful fallback to stub data when service unavailable
+    - Fail-fast behavior when service unavailable (no fallbacks per architecture)
     """
 
     def __init__(self):
@@ -116,9 +116,9 @@ class InstrumentServiceClient:
         if service_response:
             return service_response
             
-        # Service unavailable - return None to indicate failure
-        logger.warning(f"Instrument service unavailable for moneyness calculation: {option_key}")
-        return None
+        # Service unavailable - fail fast per architecture (no fallbacks)
+        logger.error(f"Instrument service unavailable for moneyness calculation: {option_key}")
+        raise RuntimeError(f"Instrument service unavailable for moneyness calculation: {option_key}. No fallbacks allowed per architecture.")
 
     async def get_strikes_by_moneyness(self, underlying_symbol, moneyness_level, expiry_date=None) -> List[Dict[str, Any]]:
         """Get option strikes by moneyness level from service or return fallback data"""
@@ -132,13 +132,28 @@ class InstrumentServiceClient:
         if service_response and service_response.get("strikes"):
             return service_response["strikes"]
             
-        # Service unavailable - return empty list to indicate failure
-        logger.warning(f"Instrument service unavailable for strikes by moneyness: {underlying_symbol}")
-        return []
+        # Service unavailable - fail fast per architecture (no fallbacks)
+        logger.error(f"Instrument service unavailable for strikes by moneyness: {underlying_symbol}")
+        raise RuntimeError(f"Instrument service unavailable - cannot get strikes for {underlying_symbol}. No fallbacks allowed per architecture.")
 
     async def get_moneyness_history(self, symbol: str, start_time: datetime, end_time: datetime, interval: str = "5m") -> List[Dict[str, Any]]:
-        """Return empty moneyness history (placeholder)."""
-        return []
+        """Get moneyness history from instrument service."""
+        try:
+            params = {
+                "symbol": symbol,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "interval": interval
+            }
+            service_response = await self._make_request("GET", f"/api/v1/moneyness/history", params=params)
+            if service_response and service_response.get("history"):
+                return service_response["history"]
+            else:
+                logger.warning(f"No moneyness history found for {symbol}")
+                return []
+        except Exception as e:
+            logger.error(f"Failed to get moneyness history for {symbol}: {e}")
+            raise RuntimeError(f"Moneyness history service unavailable for {symbol}. No fallbacks allowed per architecture.")
 
     async def enrich_instrument(self, instrument_data: Dict[str, Any]) -> Dict[str, Any]:
         """Echo back instrument data with a timestamp."""
@@ -166,9 +181,9 @@ class InstrumentServiceClient:
         if service_response and "atm_iv" in service_response:
             return service_response["atm_iv"]
         
-        # Service unavailable - return None to indicate failure
-        logger.warning(f"Instrument service unavailable for ATM IV: {underlying_symbol}")
-        return None
+        # Service unavailable - fail fast per architecture (no fallbacks)
+        logger.error(f"Instrument service unavailable for ATM IV: {underlying_symbol}")
+        raise RuntimeError(f"Instrument service unavailable for ATM IV: {underlying_symbol}. No fallbacks allowed per architecture.")
 
     async def get_otm_delta_strikes(self, underlying_symbol: str, delta_target: float, option_type: str, expiry_date: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get OTM strikes by delta target from instrument service."""
@@ -182,32 +197,34 @@ class InstrumentServiceClient:
         if service_response and service_response.get("strikes"):
             return service_response["strikes"]
         
-        # Service unavailable - return empty list to indicate failure
-        logger.warning(f"Instrument service unavailable for OTM delta strikes: {underlying_symbol}")
-        return []
+        # Service unavailable - fail fast per architecture (no fallbacks)
+        logger.error(f"Instrument service unavailable for OTM delta strikes: {underlying_symbol}")
+        raise RuntimeError(f"Instrument service unavailable for OTM delta strikes: {underlying_symbol}. No fallbacks allowed per architecture.")
 
     async def get_moneyness_configuration(self) -> Dict[str, Any]:
         """Return default moneyness configuration."""
         return self._get_default_moneyness_config()
 
     def _get_default_moneyness_config(self) -> Dict[str, Any]:
-        """Get default moneyness configuration."""
-        return {
-            "levels": {
-                "DITM": {"min_ratio": 0.0, "max_ratio": 0.85, "description": "Deep In The Money"},
-                "ITM": {"min_ratio": 0.85, "max_ratio": 0.95, "description": "In The Money"},
-                "SITM": {"min_ratio": 0.95, "max_ratio": 0.98, "description": "Slightly In The Money"},
-                "ATM": {"min_ratio": 0.98, "max_ratio": 1.02, "description": "At The Money"},
-                "SOTM": {"min_ratio": 1.02, "max_ratio": 1.05, "description": "Slightly Out of The Money"},
-                "OTM": {"min_ratio": 1.05, "max_ratio": 1.15, "description": "Out of The Money"},
-                "DOTM": {"min_ratio": 1.15, "max_ratio": float('inf'), "description": "Deep Out of The Money"},
-            },
-            "delta_levels": {
-                "OTM5delta": {"delta": 0.05, "description": "5 Delta OTM"},
-                "OTM10delta": {"delta": 0.10, "description": "10 Delta OTM"},
-                "OTM25delta": {"delta": 0.25, "description": "25 Delta OTM"},
-            },
-        }
+        """Get moneyness configuration from config_service."""
+        try:
+            from common.config_service.client import ConfigServiceClient
+            
+            config_client = ConfigServiceClient(
+                service_name="signal_service",
+                environment=settings.environment,
+                timeout=5
+            )
+            
+            moneyness_config = config_client.get_config("moneyness_levels")
+            if moneyness_config:
+                return moneyness_config
+            else:
+                raise ValueError("Moneyness configuration not found in config_service")
+                
+        except Exception as e:
+            logger.error(f"Failed to get moneyness config from config_service: {e}")
+            raise RuntimeError(f"Moneyness configuration unavailable from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
 
     async def get_active_expiries(self, underlying: str) -> List[str]:
         """

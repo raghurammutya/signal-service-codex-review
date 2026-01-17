@@ -66,42 +66,48 @@ class ProductionDatabase:
 
 
 class MockDatabase:
-    """Mock database for testing."""
+    """Mock database for testing ONLY - NO PRODUCTION USE."""
     
     def __init__(self):
-        pass
+        raise RuntimeError(
+            "MockDatabase is for testing only. "
+            "Production code must use ProductionDatabase with config_service configuration. "
+            "No mock fallbacks allowed per architecture compliance."
+        )
     
     async def connect(self):
-        """Mock connect."""
-        logger.warning("Using mock database - should not happen in production!")
-        pass
+        """Mock connect - DISABLED IN PRODUCTION."""
+        raise RuntimeError("Mock database connections are disabled in all environments.")
     
     async def disconnect(self):
-        """Mock disconnect."""
-        pass
+        """Mock disconnect - DISABLED IN PRODUCTION."""
+        raise RuntimeError("Mock database connections are disabled in all environments.")
 
 
 class MockSession:
-    """Mock database session for testing."""
+    """Mock database session for testing ONLY - NO PRODUCTION USE."""
     def __init__(self):
-        pass
+        raise RuntimeError(
+            "MockSession is for testing only. "
+            "Production code must use real database sessions via ProductionDatabase. "
+            "No mock fallbacks allowed per architecture compliance."
+        )
     
     async def execute(self, query, params=None):
-        """Mock execute."""
-        logger.debug(f"Mock execute: {query}")
-        return MockResult()
+        """Mock execute - DISABLED IN PRODUCTION."""
+        raise RuntimeError("Mock database sessions are disabled in all environments.")
         
     async def commit(self):
-        """Mock commit."""
-        pass
+        """Mock commit - DISABLED IN PRODUCTION."""
+        raise RuntimeError("Mock database sessions are disabled in all environments.")
         
     async def rollback(self):
-        """Mock rollback."""
-        pass
+        """Mock rollback - DISABLED IN PRODUCTION."""
+        raise RuntimeError("Mock database sessions are disabled in all environments.")
         
     async def close(self):
-        """Mock close."""
-        pass
+        """Mock close - DISABLED IN PRODUCTION."""
+        raise RuntimeError("Mock database sessions are disabled in all environments.")
 
     async def __aenter__(self):
         return self
@@ -159,8 +165,6 @@ async def get_database_connection():
             f"Database URL not configured in config_service for {environment} environment. "
             "Config service is mandatory - no fallbacks allowed."
         )
-        await mock_db.connect()
-        return None, None
     
     try:
         # Create production database connection

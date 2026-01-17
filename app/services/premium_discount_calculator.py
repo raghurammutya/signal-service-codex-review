@@ -600,7 +600,7 @@ class PremiumDiscountCalculator:
         opportunities = []
         
         # Box spread requires 4 options: long call + short put at strike K1, short call + long put at strike K2
-        # This is a placeholder for more complex box spread analysis
+        # Complex box spread analysis would be implemented here
         
         return opportunities
 

@@ -92,7 +92,7 @@ try:
     from app.api.v1.router import api_router
     app.include_router(api_router, prefix="/api/v1")
 except ImportError:
-    logger.warning("Could not import API router, skipping")
+    logger.warning("V1 API router not available - skipping")
 
 # Include v2 production signal routers (database-backed)
 try:
@@ -300,9 +300,10 @@ if environment not in ['production', 'prod', 'staging']:
                 signal_count = await redis_client.get("metrics:signals_processed")
                 processed_signals = int(signal_count) if signal_count else 0
                 
-            except Exception:
-                # Redis unavailable, use fallback values
-                pass
+            except Exception as e:
+                # Redis unavailable, log warning but continue with defaults
+                logger.warning(f"Redis metrics unavailable: {e}")
+                processed_signals = 0
             
             # Determine backpressure based on system load
             backpressure_level = "LOW"

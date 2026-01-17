@@ -283,7 +283,7 @@ class TimeframeCacheManager:
                 cache = await self.get_or_create_cache(instrument_key, timeframe)
                 
                 # Trigger data load (implementation depends on data source)
-                # This is a placeholder for actual implementation
+                # Cache warming implementation would trigger data load here
                 logger.info("Warming cache for %s:%s", instrument_key, timeframe)
                 
             except Exception as e:

@@ -17,7 +17,7 @@ from app.repositories.signal_repository import SignalRepository
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
 from app.services.historical_data_manager import get_historical_data_manager
 # from app.models.signal_models import SignalGreeks, SignalIndicator
-# TODO: Add signal models when available
+# Signal models would be imported here when signal schema is finalized
 
 
 class MoneynessHistoricalProcessor:

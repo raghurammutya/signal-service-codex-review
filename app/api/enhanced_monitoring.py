@@ -75,9 +75,9 @@ class EnhancedMonitoringService:
                         self._health_checker = checker
                         self._health_checker_initialized = True
                     # If None, don't cache - retry next time
-            except Exception:
+            except Exception as e:
                 # Don't cache exceptions - retry next time
-                pass
+                logger.warning(f"Failed to initialize component: {e}")
         return self._health_checker
     
     @property  
@@ -92,9 +92,9 @@ class EnhancedMonitoringService:
                         self._circuit_breaker_manager = manager
                         self._circuit_breaker_initialized = True
                     # If None, don't cache - retry next time
-            except Exception:
+            except Exception as e:
                 # Don't cache exceptions - retry next time
-                pass
+                logger.warning(f"Failed to initialize component: {e}")
         return self._circuit_breaker_manager
         
     @property
@@ -109,9 +109,9 @@ class EnhancedMonitoringService:
                         self._metrics_collector = collector
                         self._metrics_collector_initialized = True
                     # If None, don't cache - retry next time
-            except Exception:
+            except Exception as e:
                 # Don't cache exceptions - retry next time
-                pass
+                logger.warning(f"Failed to initialize component: {e}")
         return self._metrics_collector
         
     def get_available_components(self):
@@ -413,8 +413,8 @@ class EnhancedMonitoringService:
             # Simple heuristic: if we're processing multiple instruments, efficiency is higher
             batch_processing_factor = 0.75  # Assume 75% efficiency for batch operations
             return round(batch_processing_factor * 100, 1)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to calculate batch processing efficiency: {e}")
         return 75.0  # Default vectorization efficiency estimate
     
     async def _get_cache_hit_ratio(self, cache_type: str) -> float:
@@ -866,8 +866,8 @@ class EnhancedMonitoringService:
                         "recommendation": "optimize_query_performance_or_add_caching",
                         "metric_value": avg_response_time
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to get monitoring metrics: {e}")
             
             # If no bottlenecks detected, return system status
             if not bottlenecks:
@@ -1041,8 +1041,8 @@ class EnhancedMonitoringService:
                     stored_latency = await redis_client.get(latency_key)
                     if stored_latency:
                         network_latencies[f"{service}_avg_latency_ms"] = float(stored_latency)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to get monitoring metrics: {e}")
             
             return network_latencies
             

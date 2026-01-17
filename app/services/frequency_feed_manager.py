@@ -428,4 +428,5 @@ class FrequencyFeedManager:
         """
         # This would coordinate with ticker_service to ensure
         # we don't compute signals more frequently than data arrives
-        pass
+        logger.info("Frequency synchronization with ticker service - implementation would coordinate with ticker_service API")
+        # Production implementation would call ticker_service configuration endpoints

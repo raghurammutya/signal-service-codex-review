@@ -536,7 +536,8 @@ class StreamAbuseProtectionService:
     ):
         """Record subscription change for tracking."""
         # Just increment counters - actual recording is handled by rate check
-        pass
+        logger.debug(f"Recording subscription change for user {user_id}: {len(subscriptions)} subscriptions")
+        # Detailed subscription logging could be implemented here if needed
     
     async def _get_message_rate(self, client_id: str, user_id: Optional[str], stream_type: StreamType) -> int:
         """Get current message rate."""

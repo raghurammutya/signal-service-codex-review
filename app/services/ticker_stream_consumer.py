@@ -310,8 +310,21 @@ class TickerChannelSubscriber:
     
     async def _process_realtime_tick(self, tick: TickData):
         """Process real-time tick for immediate signal generation"""
-        # Implement real-time signal logic here
-        pass
+        try:
+            # Process tick through signal manager instead of scalable processor
+            from app.services.signal_manager import get_signal_manager
+            
+            signal_manager = await get_signal_manager()
+            if signal_manager:
+                # Submit tick for immediate processing
+                await signal_manager.process_tick(tick.instrument_key, tick.to_dict())
+                logger.debug(f"Processed realtime tick for {tick.instrument_key}")
+            else:
+                logger.warning("Signal manager not available for realtime tick processing")
+                
+        except Exception as e:
+            logger.error(f"Error processing realtime tick: {e}")
+            # Don't raise - continue processing other ticks
     
     async def update_subscriptions(self, new_symbols: Set[str]):
         """Update channel subscriptions"""

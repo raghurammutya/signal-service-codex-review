@@ -450,7 +450,8 @@ class ScalableSignalProcessor:
     async def _handle_removed_assignment(self, instrument_key: str):
         """Handle removed instrument assignment"""
         # Clean up any cached data
-        pass
+        logger.info(f"Removing assignment for instrument: {instrument_key}")
+        # Cache cleanup would be implemented here if needed
     
     async def _metrics_reporter(self):
         """Report metrics to monitoring system"""
@@ -495,10 +496,19 @@ class ScalableSignalProcessor:
     async def compute_greeks_for_instrument(self, instrument_key: str, params: Dict):
         """Compute Greeks for an instrument"""
         try:
-            # Implementation would call actual Greeks calculator
-            result = await self.greeks_calculator.calculate_greeks(
-                instrument_key,
-                params.get('tick_data', {})
+            # Extract numeric parameters for Greeks calculation
+            tick_data = params.get('tick_data', {})
+            option_data = params.get('option_data', {})
+            
+            # Call Greeks calculator with correct signature
+            result = self.greeks_calculator.calculate_greeks(
+                spot_price=float(tick_data.get('ltp', 0)),
+                strike_price=float(option_data.get('strike_price', 0)),
+                time_to_expiry=float(option_data.get('time_to_expiry', 0)),
+                volatility=float(option_data.get('volatility', 0.20)),
+                risk_free_rate=float(option_data.get('risk_free_rate', 0.06)),
+                dividend_yield=float(option_data.get('dividend_yield', 0.0)),
+                option_type=option_data.get('option_type', 'call')
             )
             
             # Publish result
@@ -518,10 +528,38 @@ class ScalableSignalProcessor:
         """Compute technical indicators"""
         try:
             # Implementation would call indicator calculator
-            result = await self.pandas_ta_executor.calculate_indicators(
-                instrument_key,
-                params.get('indicators', [])
+            # Create proper context and config for indicator execution
+            from app.schemas.config_schema import SignalConfigData, TickProcessingContext, TechnicalIndicatorConfig
+            
+            # Build signal config from parameters
+            indicators = params.get('indicators', [])
+            if not indicators:
+                return {}
+            
+            # Create minimal config for indicator execution
+            config = SignalConfigData(
+                instrument_key=instrument_key,
+                interval="5minute",
+                frequency="every_tick",
+                technical_indicators=[
+                    TechnicalIndicatorConfig(
+                        name=ind.get('name', 'sma'),
+                        parameters=ind.get('parameters', {}),
+                        output_key=ind.get('output_key', f"{ind.get('name', 'sma')}_result")
+                    ) for ind in indicators
+                ]
             )
+            
+            # Create context with tick data
+            context = TickProcessingContext(
+                tick_data=params.get('tick_data', {}),
+                instrument_key=instrument_key,
+                timestamp=datetime.utcnow(),
+                configurations=[config]
+            )
+            
+            # Use pandas_ta_executor with correct API
+            result = await self.pandas_ta_executor.execute_indicators(config, context)
             
             await self._publish_computation_result(
                 instrument_key,
