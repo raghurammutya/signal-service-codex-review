@@ -80,7 +80,7 @@ class FlexibleTimeframeManager:
                 if 1 <= minutes <= 1440:  # Between 1 minute and 1 day
                     return TimeframeType.CUSTOM, minutes
             except ValueError:
-                pass
+                logger.debug(f"Invalid timeframe format: {timeframe}")
                 
         # Handle "custom_X" format
         if timeframe.startswith("custom_"):
@@ -89,7 +89,7 @@ class FlexibleTimeframeManager:
                 if 1 <= minutes <= 1440:
                     return TimeframeType.CUSTOM, minutes
             except ValueError:
-                pass
+                logger.debug(f"Invalid timeframe format: {timeframe}")
                 
         raise ValueError(f"Invalid timeframe: {timeframe}")
         

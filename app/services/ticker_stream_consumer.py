@@ -314,10 +314,10 @@ class TickerChannelSubscriber:
             # Process tick through signal processor service
             from app.services.signal_processor import SignalProcessor
             
-            processor = SignalProcessor(redis_client=None)  # Will get from dependency injection
+            processor = SignalProcessor()  # Correct constructor - takes no args
             if processor:
-                # Submit tick for immediate processing  
-                await processor.process_tick_data(tick.instrument_key, tick.to_dict())
+                # Submit tick for processing using correct method name
+                await processor.process_tick_async(tick.instrument_key, tick.to_dict())
                 logger.debug(f"Processed realtime tick for {tick.instrument_key}")
             else:
                 logger.warning("Signal processor not available for realtime tick processing")

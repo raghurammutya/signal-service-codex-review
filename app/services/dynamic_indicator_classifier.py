@@ -501,7 +501,7 @@ class CustomIndicatorAnalyzer:
     """
     
     def __init__(self):
-        pass
+        self.analyzer_cache = {}
     
     async def analyze_custom_script(self, script_code: str, metadata: dict) -> IndicatorProfile:
         """

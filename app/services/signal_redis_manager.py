@@ -411,8 +411,10 @@ class SignalRedisManager:
                             "id": msg_id.decode('utf-8'),
                             "data": json.loads(data[b"request"].decode('utf-8'))
                         })
-                    except:
-                        pass
+                    except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as e:
+                        logger.warning(f"Failed to parse stream message {msg_id}: {e}")
+                    except Exception as e:
+                        logger.error(f"Unexpected error processing stream message {msg_id}: {e}")
             
             return results
             

@@ -412,8 +412,8 @@ class ProductionHistoricalDataManager:
                 try:
                     await self.redis_client.ping()
                     cache_healthy = True
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Cache health check failed: {e}")
             
             status = "healthy" if ticker_healthy and cache_healthy else "degraded"
             

@@ -501,21 +501,21 @@ class ScalableSignalProcessor:
             option_data = params.get('option_data', {})
             
             # Validate all required parameters are present (no synthetic defaults)
-            required_fields = ['ltp', 'strike_price', 'time_to_expiry', 'volatility', 'risk_free_rate']
+            required_fields = ['ltp', 'strike_price', 'time_to_expiry', 'volatility', 'risk_free_rate', 'dividend_yield']
             for field in required_fields:
                 if field not in tick_data and field not in option_data:
                     raise ValueError(f"Required parameter {field} missing from tick/option data. No synthetic defaults allowed.")
             
-            # Extract parameters with fail-fast behavior
-            spot_price = tick_data.get('ltp') or option_data.get('ltp')
+            # Extract parameters with strict validation (no or logic that could accept None)
+            spot_price = tick_data.get('ltp') if tick_data.get('ltp') is not None else option_data.get('ltp')
             strike_price = option_data.get('strike_price')
             time_to_expiry = option_data.get('time_to_expiry')
             volatility = option_data.get('volatility') 
             risk_free_rate = option_data.get('risk_free_rate')
-            dividend_yield = option_data.get('dividend_yield', 0.0)  # Only dividend yield can default to 0
+            dividend_yield = option_data.get('dividend_yield') if option_data.get('dividend_yield') is not None else tick_data.get('dividend_yield')
             option_type = option_data.get('option_type', 'call')
             
-            if not all([spot_price, strike_price, time_to_expiry, volatility, risk_free_rate]):
+            if not all([spot_price, strike_price, time_to_expiry, volatility, risk_free_rate, dividend_yield is not None]):
                 raise ValueError("Missing required market data parameters for Greeks calculation. No synthetic data allowed.")
                 
             # Call Greeks calculator with validated parameters
