@@ -11,8 +11,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 from app.utils.logging_utils import log_info, log_error, log_exception
-from app.services.pandas_ta_executor import PandasTAExecutor
-from app.services.greeks_calculator import GreeksCalculator
 from app.services.moneyness_calculator_local import LocalMoneynessCalculator
 from app.services.custom_indicators import CustomIndicators
 from app.errors import CalculationError

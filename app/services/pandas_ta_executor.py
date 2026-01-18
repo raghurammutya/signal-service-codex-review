@@ -19,7 +19,7 @@ from app.errors import TechnicalIndicatorError
 from app.schemas.config_schema import SignalConfigData, TickProcessingContext, TechnicalIndicatorConfig
 from app.adapters import EnhancedTickerAdapter
 from app.services.indicator_registry import IndicatorRegistry
-from app.services.historical_data_manager import get_historical_data_manager
+from app.services.unified_historical_data_service import get_production_historical_data_manager as get_historical_data_manager
 
 
 class PandasTAExecutor:
@@ -571,7 +571,7 @@ class PandasTAExecutor:
             raise TechnicalIndicatorError(f"pandas_ta strategy execution failed: {e}") from e
     
     # Note: mock_indicator_results function removed - production code must fail fast
-    # when pandas_ta library is not available rather than returning mock data
+    # when pandas_ta library is not available
     
     async def cache_results(
         self, 

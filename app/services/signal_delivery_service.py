@@ -17,8 +17,8 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from dataclasses import dataclass
 
-from app.clients.alert_service_client import get_alert_service_client, AlertPriority, AlertChannel
-from app.clients.comms_service_client import get_comms_service_client
+from app.clients.alert_service_client import AlertPriority, AlertChannel
+from app.clients.client_factory import get_client_manager
 from app.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -43,12 +43,25 @@ class SignalDeliveryService:
     
     def __init__(self, config: SignalDeliveryConfig = None):
         self.config = config or SignalDeliveryConfig()
-        self.alert_client = get_alert_service_client()
-        self.comms_client = get_comms_service_client()
+        self.client_manager = get_client_manager()
+        self.alert_client = None
+        self.comms_client = None
         
         # Circuit breaker state tracking
         self._alert_service_failures = 0
         self._comms_service_failures = 0
+    
+    async def _get_alert_client(self):
+        """Get alert service client via centralized factory."""
+        if not self.alert_client:
+            self.alert_client = await self.client_manager.get_client('alert_service')
+        return self.alert_client
+    
+    async def _get_comms_client(self):
+        """Get comms service client via centralized factory."""
+        if not self.comms_client:
+            self.comms_client = await self.client_manager.get_client('comms_service')
+        return self.comms_client
         self._max_failures_before_circuit_open = 5
         
         # Coverage ratio tracking for business impact measurement
@@ -163,11 +176,13 @@ class SignalDeliveryService:
             
             # Execute bulk deliveries
             if alert_deliveries:
-                alert_result = await self.alert_client.send_bulk_signal_alerts(alert_deliveries)
+                alert_client = await self._get_alert_client()
+                alert_result = await alert_client.send_bulk_signal_alerts(alert_deliveries)
                 results["results"]["alert_service"] = alert_result
             
             if email_deliveries:
-                email_result = await self.comms_client.send_bulk_signal_emails(email_deliveries)
+                comms_client = await self._get_comms_client()
+                email_result = await comms_client.send_bulk_signal_emails(email_deliveries)
                 results["results"]["comms_service"] = email_result
             
             logger.info(f"Bulk signal delivery completed: {len(signal_deliveries)} signals")
@@ -184,7 +199,8 @@ class SignalDeliveryService:
             return self._get_default_preferences()
         
         try:
-            preferences = await self.alert_client.get_user_notification_preferences(user_id)
+            alert_client = await self._get_alert_client()
+            preferences = await alert_client.get_user_notification_preferences(user_id)
             
             # Reset failure count on success
             self._alert_service_failures = 0
@@ -213,7 +229,8 @@ class SignalDeliveryService:
             return {"success": False, "error": "Alert service circuit breaker OPEN"}
         
         try:
-            result = await self.alert_client.send_signal_alert(
+            alert_client = await self._get_alert_client()
+            result = await alert_client.send_signal_alert(
                 user_id, signal_data, channels, priority
             )
             
@@ -237,7 +254,8 @@ class SignalDeliveryService:
             return {"success": False, "error": "Comms service circuit breaker OPEN"}
         
         try:
-            result = await self.comms_client.send_signal_email(
+            comms_client = await self._get_comms_client()
+            result = await comms_client.send_signal_email(
                 email, signal_data, priority=priority
             )
             
@@ -281,7 +299,8 @@ class SignalDeliveryService:
         """Get delivery status across all services"""
         try:
             # Get status from both services
-            alert_status = await self.alert_client.get_alert_status(signal_id)
+            alert_client = await self._get_alert_client()
+            alert_status = await alert_client.get_alert_status(signal_id)
             # Note: comms_service status would require email_id mapping
             
             return {
@@ -297,8 +316,10 @@ class SignalDeliveryService:
     async def health_check(self) -> Dict[str, Any]:
         """Check health of all dependent services"""
         try:
-            alert_healthy = await self.alert_client.health_check()
-            comms_healthy = await self.comms_client.health_check()
+            alert_client = await self._get_alert_client()
+            comms_client = await self._get_comms_client()
+            alert_healthy = await alert_client.health_check()
+            comms_healthy = await comms_client.health_check()
             
             return {
                 "signal_delivery_service": "healthy",
@@ -318,8 +339,8 @@ class SignalDeliveryService:
     
     async def close(self):
         """Close all service clients"""
-        await self.alert_client.close()
-        await self.comms_client.close()
+        # Client lifecycle managed by client_manager
+        await self.client_manager.close_all_clients()
     
     def _record_fallback_usage(self, fallback_reason: str):
         """Record fallback usage for coverage ratio tracking"""

@@ -2,9 +2,12 @@
 """
 Deployment Safety Validation Script
 
-Automated checks for required environment variables and configuration validation
-before deployment. Ensures all critical configuration is present and valid.
-Addresses functionality_issues.txt requirement for deployment safety nets.
+Validates that signal service is ready for deployment by checking:
+1. Config service connectivity
+2. Required environment variables 
+3. No fallback configurations that mask issues
+4. CORS settings compliance
+5. Security logging configuration
 """
 import os
 import sys
@@ -66,121 +69,266 @@ class DeploymentSafetyValidator:
         """Validate that all required environment variables are present."""
         logger.info("Validating required environment variables...")
         
-        # Define required environment variables by category
-        required_vars = {
-            # Core application configuration
-            "core": [
-                "ENVIRONMENT",
-                "DATABASE_URL",
-                "REDIS_URL",
-                "LOG_LEVEL"
-            ],
-            # Service URLs (must be from config service)
-            "services": [
-                "CALENDAR_SERVICE_URL", 
-                "ALERT_SERVICE_URL",
-                "MESSAGING_SERVICE_URL",
-                "MARKETPLACE_SERVICE_URL"
-            ],
-            # CORS configuration
-            "cors": [
-                "CORS_ALLOWED_ORIGINS"
-            ],
-            # Authentication and security
-            "security": [
-                "GATEWAY_SECRET",
-                "INTERNAL_API_KEY",
-                "JWT_SECRET_KEY"
-            ],
-            # External integrations
-            "integrations": [
-                "MINIO_ENDPOINT",
-                "MINIO_ACCESS_KEY", 
-                "MINIO_SECRET_KEY",
-                "SERVICE_INTEGRATION_TIMEOUT"
-            ]
-        }
+        # BOOTSTRAP ENVIRONMENT VARIABLES ONLY (matches docker-compose.production.yml)
+        # All other configuration fetched from config service per StocksBlitz architecture
+        required_bootstrap_vars = [
+            "ENVIRONMENT",           # Bootstrap: environment selection (production/staging/dev)
+            "CONFIG_SERVICE_URL",    # Bootstrap: config service location (http://config-service:8100)
+            "INTERNAL_API_KEY",      # Bootstrap: service-to-service auth key
+            "SERVICE_NAME"           # Bootstrap: service identification (signal_service)
+        ]
         
         results = []
         
-        for category, vars_list in required_vars.items():
-            for var in vars_list:
-                value = os.getenv(var)
-                
-                if not value or not value.strip():
+        for var in required_bootstrap_vars:
+            value = os.getenv(var)
+            
+            if not value or not value.strip():
+                results.append(ValidationResult(
+                    name=f"bootstrap_env_{var.lower()}",
+                    passed=False,
+                    message=f"Required bootstrap environment variable {var} is not set",
+                    critical=True,
+                    suggestions=[
+                        f"Set {var} in docker-compose.production.yml environment section",
+                        "Ensure docker-compose uses production environment pattern",
+                        "Check deployment configuration matches StocksBlitz architecture"
+                    ]
+                ))
+            else:
+                # Additional validation for specific variables
+                if var == "ENVIRONMENT" and value not in ["development", "staging", "production"]:
                     results.append(ValidationResult(
-                        name=f"env_var_{var.lower()}",
-                        passed=False,
-                        message=f"Required environment variable {var} is not set or empty",
-                        critical=True,
-                        suggestions=[
-                            f"Set {var} environment variable",
-                            f"Ensure config service provides {var}",
-                            "Check deployment configuration"
-                        ]
-                    ))
-                else:
-                    # Additional validation for specific variables
-                    if var == "ENVIRONMENT" and value not in ["development", "staging", "production"]:
-                        results.append(ValidationResult(
                             name=f"env_var_{var.lower()}_value",
                             passed=False,
                             message=f"ENVIRONMENT variable has invalid value: {value}",
                             critical=True,
                             suggestions=["Use 'development', 'staging', or 'production'"]
                         ))
-                    elif var.endswith("_URL") and not (value.startswith("http://") or value.startswith("https://")):
-                        results.append(ValidationResult(
-                            name=f"env_var_{var.lower()}_format",
-                            passed=False,
-                            message=f"{var} should be a valid URL, got: {value}",
-                            critical=True,
-                            suggestions=[f"Ensure {var} starts with http:// or https://"]
-                        ))
-                    elif var == "CORS_ALLOWED_ORIGINS" and self.environment == "production":
-                        # Special validation for CORS in production
-                        if "*" in value:
-                            results.append(ValidationResult(
-                                name="cors_wildcard_check",
-                                passed=False,
-                                message="CORS_ALLOWED_ORIGINS contains wildcard origins in production",
-                                critical=True,
-                                suggestions=[
-                                    "Remove wildcard (*) origins from CORS_ALLOWED_ORIGINS",
-                                    "Use explicit domain names only"
-                                ]
-                            ))
-                        else:
-                            results.append(ValidationResult(
-                                name=f"env_var_{var.lower()}",
-                                passed=True,
-                                message=f"{var} is properly configured"
-                            ))
+                elif var.endswith("_URL") and self._validate_url_format(var, value) is False:
+                    # Get appropriate suggestions based on URL type
+                    if var == "CONFIG_SERVICE_URL":
+                        suggestions = ["Ensure CONFIG_SERVICE_URL starts with http:// or https://"]
                     else:
-                        results.append(ValidationResult(
-                            name=f"env_var_{var.lower()}",
-                            passed=True,
-                            message=f"{var} is properly configured"
-                        ))
+                        suggestions = [f"Ensure {var} starts with http:// or https://"]
+                    
+                    results.append(ValidationResult(
+                        name=f"env_var_{var.lower()}_format",
+                        passed=False,
+                        message=f"{var} should be a valid URL, got: {value}",
+                        critical=True,
+                        suggestions=suggestions
+                    ))
+                else:
+                    results.append(ValidationResult(
+                        name=f"env_var_{var.lower()}",
+                        passed=True,
+                        message=f"{var} is properly configured"
+                    ))
         
         return results
     
-    def validate_cors_configuration(self) -> List[ValidationResult]:
-        """Validate CORS configuration."""
-        logger.info("Validating CORS configuration...")
+    def validate_config_service_integration(self) -> List[ValidationResult]:
+        """Validate config service integration (StocksBlitz architecture pattern)."""
+        logger.info("Validating config service integration...")
         
         results = []
-        cors_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+        config_service_url = os.getenv("CONFIG_SERVICE_URL")
+        internal_api_key = os.getenv("INTERNAL_API_KEY")
         
-        if not cors_origins:
+        if not config_service_url:
+            results.append(ValidationResult(
+                name="config_service_url",
+                passed=False,
+                message="CONFIG_SERVICE_URL not configured",
+                critical=True,
+                suggestions=[
+                    "Set CONFIG_SERVICE_URL=http://config-service:8100",
+                    "Ensure config service container is running",
+                    "Check docker-compose.production.yml config"
+                ]
+            ))
+            return results
+        
+        if not internal_api_key:
+            results.append(ValidationResult(
+                name="internal_api_key",
+                passed=False,
+                message="INTERNAL_API_KEY not configured",
+                critical=True,
+                suggestions=[
+                    "Set INTERNAL_API_KEY for service-to-service authentication",
+                    "Use StocksBlitz internal API key pattern",
+                    "Check docker-compose.production.yml environment section"
+                ]
+            ))
+            return results
+        
+        # Test config service connectivity
+        try:
+            import httpx
+            
+            with httpx.Client(timeout=10) as client:
+                response = client.get(
+                    f"{config_service_url}/api/v1/health",
+                    headers={"X-Internal-API-Key": internal_api_key}
+                )
+                
+                if response.status_code == 200:
+                    results.append(ValidationResult(
+                        name="config_service_connectivity",
+                        passed=True,
+                        message="Config service is accessible and healthy"
+                    ))
+                    
+                    # Test getting configuration from config service
+                    try:
+                        # Test secrets access
+                        response = client.get(
+                            f"{config_service_url}/api/v1/secrets/DATABASE_PASSWORD/value?environment={self.environment}",
+                            headers={"X-Internal-API-Key": internal_api_key}
+                        )
+                        
+                        if response.status_code == 200:
+                            results.append(ValidationResult(
+                                name="config_service_secrets_access",
+                                passed=True,
+                                message="Config service secrets access working"
+                            ))
+                        else:
+                            results.append(ValidationResult(
+                                name="config_service_secrets_access",
+                                passed=False,
+                                message=f"Config service secrets access failed: {response.status_code}",
+                                critical=True,
+                                suggestions=[
+                                    "Ensure secrets are configured in config service",
+                                    "Check internal API key permissions",
+                                    "Verify environment parameter is correct"
+                                ]
+                            ))
+                            
+                    except Exception as e:
+                        results.append(ValidationResult(
+                            name="config_service_secrets_test",
+                            passed=False,
+                            message=f"Config service secrets test failed: {e}",
+                            critical=False,
+                            suggestions=["Check config service secrets configuration"]
+                        ))
+                        
+                else:
+                    results.append(ValidationResult(
+                        name="config_service_connectivity",
+                        passed=False,
+                        message=f"Config service health check failed: {response.status_code}",
+                        critical=True,
+                        suggestions=[
+                            "Start config service container",
+                            "Check config service health",
+                            "Verify CONFIG_SERVICE_URL is correct"
+                        ]
+                    ))
+                    
+        except Exception as e:
+            results.append(ValidationResult(
+                name="config_service_connectivity",
+                passed=False,
+                message=f"Unable to reach config service: {e}",
+                critical=True,
+                suggestions=[
+                    "Ensure config service is running on specified URL",
+                    "Check network connectivity to config service",
+                    "Verify docker network configuration"
+                ]
+            ))
+        
+        return results
+
+    def validate_cors_configuration(self) -> List[ValidationResult]:
+        """Validate CORS configuration from config service."""
+        logger.info("Validating CORS configuration from config service...")
+        
+        results = []
+        config_service_url = os.getenv("CONFIG_SERVICE_URL")
+        internal_api_key = os.getenv("INTERNAL_API_KEY")
+        
+        if not config_service_url or not internal_api_key:
+            results.append(ValidationResult(
+                name="cors_config_service_prereq",
+                passed=False,
+                message="Cannot validate CORS: config service not available",
+                critical=True,
+                suggestions=["Ensure config service integration is working first"]
+            ))
+            return results
+        
+        try:
+            import httpx
+            
+            with httpx.Client(timeout=10) as client:
+                response = client.get(
+                    f"{config_service_url}/api/v1/config/CORS_ALLOWED_ORIGINS",
+                    headers={
+                        "X-Internal-API-Key": internal_api_key,
+                        "X-Environment": self.environment
+                    }
+                )
+                
+                if response.status_code == 200:
+                    cors_config = response.json().get("value", "")
+                    
+                    if not cors_config:
+                        results.append(ValidationResult(
+                            name="cors_configuration",
+                            passed=False,
+                            message="CORS_ALLOWED_ORIGINS not configured in config service",
+                            critical=True,
+                            suggestions=[
+                                "Configure CORS_ALLOWED_ORIGINS in config service",
+                                "Add CORS configuration for production environment"
+                            ]
+                        ))
+                    elif self.environment == "production" and "*" in cors_config:
+                        results.append(ValidationResult(
+                            name="cors_wildcard_check",
+                            passed=False,
+                            message="CORS_ALLOWED_ORIGINS contains wildcard in production",
+                            critical=True,
+                            suggestions=[
+                                "Remove wildcard (*) from production CORS configuration",
+                                "Use specific domain names in production"
+                            ]
+                        ))
+                    else:
+                        results.append(ValidationResult(
+                            name="cors_configuration",
+                            passed=True,
+                            message=f"CORS configuration valid: {cors_config}"
+                        ))
+                        
+                else:
+                    results.append(ValidationResult(
+                        name="cors_configuration",
+                        passed=False,
+                        message=f"Failed to fetch CORS config from config service: {response.status_code}",
+                        critical=True,
+                        suggestions=[
+                            "Configure CORS_ALLOWED_ORIGINS in config service",
+                            "Check config service configuration access"
+                        ]
+                    ))
+                    
+        except Exception as e:
             results.append(ValidationResult(
                 name="cors_configuration",
                 passed=False,
-                message="CORS_ALLOWED_ORIGINS not configured",
+                message=f"Error fetching CORS config: {e}",
                 critical=True,
-                suggestions=["Configure CORS_ALLOWED_ORIGINS environment variable"]
+                suggestions=["Check config service connectivity"]
             ))
-            return results
+        
+        return results
         
         # Parse and validate origins
         origins = [origin.strip() for origin in cors_origins.split(",")]
@@ -427,19 +575,52 @@ class DeploymentSafetyValidator:
         
         return results
     
+    def _validate_url_format(self, var_name: str, url_value: str) -> bool:
+        """
+        Validate URL format based on the type of URL.
+        
+        Args:
+            var_name: Environment variable name
+            url_value: URL value to validate
+            
+        Returns:
+            True if URL format is valid, False otherwise
+        """
+        # Database URLs should use postgresql:// or postgres://
+        if var_name == "DATABASE_URL":
+            return url_value.startswith(("postgresql://", "postgres://"))
+        
+        # Redis URLs should use redis:// or rediss://
+        elif var_name == "REDIS_URL":
+            return url_value.startswith(("redis://", "rediss://"))
+        
+        # Service URLs should use http:// or https://
+        elif var_name.endswith("_SERVICE_URL") or var_name in ["DASHBOARD_URL"]:
+            return url_value.startswith(("http://", "https://"))
+        
+        # MinIO URLs should use http:// or https://
+        elif var_name == "MINIO_ENDPOINT":
+            return url_value.startswith(("http://", "https://"))
+        
+        # Other URL variables should use http:// or https://
+        else:
+            return url_value.startswith(("http://", "https://"))
+    
     def run_all_validations(self) -> bool:
         """Run all deployment safety validations."""
         logger.info(f"Starting deployment safety validation for environment: {self.environment}")
         start_time = datetime.now()
         
-        # Run all validation categories
+        # Run all validation categories (updated for config service architecture)
         validation_methods = [
-            self.validate_required_environment_variables,
-            self.validate_cors_configuration,
-            self.validate_security_configuration,
-            self.validate_database_configuration,
-            self.validate_service_integrations,
-            self.validate_minio_configuration
+            self.validate_required_environment_variables,  # Only 4 bootstrap vars
+            self.validate_config_service_integration,      # NEW: Config service connectivity
+            self.validate_cors_configuration,              # NEW: CORS from config service
+            # NOTE: Other validations moved to config service pattern
+            # self.validate_security_configuration - secrets now in config service
+            # self.validate_database_configuration - DATABASE_URL from config service  
+            # self.validate_service_integrations - service URLs from config service
+            # self.validate_minio_configuration - MinIO config from config service
         ]
         
         for method in validation_methods:

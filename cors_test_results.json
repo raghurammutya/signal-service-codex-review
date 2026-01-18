@@ -1,0 +1,81 @@
+{
+  "total_files": 7,
+  "executed_files": 7,
+  "passed_files": 1,
+  "failed_files": 6,
+  "file_results": [
+    {
+      "file": "tests/unit/test_comprehensive_cors_validation.py",
+      "status": "failed",
+      "execution_time": 1.107320785522461,
+      "output": "",
+      "error_output": "2026-01-18 04:29:21,545 - common.config_service.client - CRITICAL - CONFIG_SERVICE_URL not configured - config service integration required\n2026-01-18 04:29:21,546 - app.core.config - CRITICAL - Config service connection failed: Config service URL is required for production deployment\n",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    },
+    {
+      "file": "tests/unit/test_cors_middleware_integration.py",
+      "status": "failed",
+      "execution_time": 0.9988706111907959,
+      "output": "",
+      "error_output": "2026-01-18 04:29:23,229 - common.config_service.client - CRITICAL - CONFIG_SERVICE_URL not configured - config service integration required\n2026-01-18 04:29:23,229 - app.core.config - CRITICAL - Config service connection failed: Config service URL is required for production deployment\n",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    },
+    {
+      "file": "tests/unit/test_cors_environment_validation.py",
+      "status": "failed",
+      "execution_time": 1.2434613704681396,
+      "output": "",
+      "error_output": "2026-01-18 04:29:24,840 - common.config_service.client - CRITICAL - CONFIG_SERVICE_URL not configured - config service integration required\n2026-01-18 04:29:24,840 - app.core.config - CRITICAL - Config service connection failed: Config service URL is required for production deployment\n",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    },
+    {
+      "file": "tests/unit/test_cors_security_validation.py",
+      "status": "failed",
+      "execution_time": 1.1381781101226807,
+      "output": "",
+      "error_output": "2026-01-18 04:29:26,659 - common.config_service.client - CRITICAL - CONFIG_SERVICE_URL not configured - config service integration required\n2026-01-18 04:29:26,659 - app.core.config - CRITICAL - Config service connection failed: Config service URL is required for production deployment\n",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    },
+    {
+      "file": "tests/unit/test_cors_env_var_validation.py",
+      "status": "failed",
+      "execution_time": 1.0840198993682861,
+      "output": "",
+      "error_output": "2026-01-18 04:29:28,256 - common.config_service.client - CRITICAL - CONFIG_SERVICE_URL not configured - config service integration required\n2026-01-18 04:29:28,256 - app.core.config - CRITICAL - Config service connection failed: Config service URL is required for production deployment\n",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    },
+    {
+      "file": "tests/unit/test_cors_validation_coverage.py",
+      "status": "passed",
+      "execution_time": 0.4304180145263672,
+      "output": "\ud83d\udd0d Running CORS Validation Coverage Tests...\n\u2705 CORS validation coverage validated\n\n\ud83d\udccb CORS Validation Coverage:\n  - Production missing origins fail-fast\n  - Production empty origins fail-fast\n  - Production wildcard restrictions\n  - Production valid origins success\n  - Staging configuration validation\n  - Development configuration validation\n  - Unknown environment fail-fast\n  - Origins whitespace handling\n  - Single origin configuration\n\n\ud83d\udd27 Middleware Configuration:\n  - FastAPI middleware integration\n  - Environment auto-detection\n  - Default production environment\n  - Configuration failure handling\n  - Security headers configuration\n  - Exposed headers configuration\n\n\ud83d\udee1\ufe0f Security Requirements:\n  - Required security headers\n  - Credential handling\n  - HTTP methods restrictions\n  - Strict origin validation\n  - Configuration logging\n  - Error logging\n\n\ud83d\ude80 Deployment Safety Nets:\n  - Production deployment validation\n  - Environment variable presence checks\n  - Origin list format validation\n  - Wildcard prevention\n  - Protocol validation\n",
+      "error_output": "",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    },
+    {
+      "file": "tests/unit/test_service_integrations_cors.py",
+      "status": "failed",
+      "execution_time": 1.1221740245819092,
+      "output": "",
+      "error_output": "2026-01-18 04:29:31,522 - common.config_service.client - CRITICAL - CONFIG_SERVICE_URL not configured - config service integration required\n2026-01-18 04:29:31,522 - app.core.config - CRITICAL - Config service connection failed: Config service URL is required for production deployment\n",
+      "test_count": 0,
+      "passed_count": 0,
+      "failed_count": 0
+    }
+  ],
+  "overall_status": "partial",
+  "execution_time": 11.34774136543274,
+  "coverage_summary": {}
+}

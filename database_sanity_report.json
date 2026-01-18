@@ -1,0 +1,232 @@
+{
+  "timestamp": "2026-01-18T08:00:57.700840",
+  "tests": {
+    "database_models_structure": {
+      "status": "tested",
+      "model_files_found": 1,
+      "schema_files_found": 3,
+      "model_structures": [
+        {
+          "file": "app/repositories/signal_repository.py",
+          "patterns": [
+            "signal_greeks",
+            "signal_indicators",
+            "timescale"
+          ],
+          "size": 20529
+        }
+      ]
+    },
+    "timescale_integration_structure": {
+      "status": "tested",
+      "timescale_files": 17,
+      "migration_files": 0,
+      "integration_files": [
+        {
+          "file": "app/errors.py",
+          "patterns": [
+            "timescale",
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/dependencies.py",
+          "patterns": [
+            "timescale"
+          ]
+        },
+        {
+          "file": "app/services/moneyness_historical_processor.py",
+          "patterns": [
+            "time_series"
+          ]
+        },
+        {
+          "file": "app/services/signal_processor.py",
+          "patterns": [
+            "timescale",
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/services/historical_data_manager_update.py",
+          "patterns": [
+            "timescale",
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/services/universal_calculator.py",
+          "patterns": [
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/services/historical_data_writer.py",
+          "patterns": [
+            "timescale"
+          ]
+        },
+        {
+          "file": "app/services/moneyness_greeks_calculator.py",
+          "patterns": [
+            "timescale"
+          ]
+        },
+        {
+          "file": "app/services/greeks_calculator.py",
+          "patterns": [
+            "timescale"
+          ]
+        },
+        {
+          "file": "app/core/enhanced_health_checker.py",
+          "patterns": [
+            "timescale",
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/core/health_checker.py",
+          "patterns": [
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/core/config_update.py",
+          "patterns": [
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/repositories/signal_repository.py",
+          "patterns": [
+            "timescale",
+            "TimescaleDB",
+            "time_bucket",
+            "signal_greeks",
+            "signal_indicators"
+          ]
+        },
+        {
+          "file": "app/api/v2/admin.py",
+          "patterns": [
+            "timescale",
+            "TimescaleDB",
+            "signal_greeks",
+            "signal_indicators"
+          ]
+        },
+        {
+          "file": "app/api/v2/historical.py",
+          "patterns": [
+            "time_series"
+          ]
+        },
+        {
+          "file": "app/schemas/config_schema.py",
+          "patterns": [
+            "TimescaleDB"
+          ]
+        },
+        {
+          "file": "app/schemas/signal_schemas.py",
+          "patterns": [
+            "time_series"
+          ]
+        }
+      ]
+    },
+    "database_client_structure": {
+      "status": "tested",
+      "dedicated_clients": 0,
+      "db_imports": 2,
+      "import_files": [
+        {
+          "file": "app/main.py",
+          "imports": [
+            "database",
+            "pool"
+          ]
+        },
+        {
+          "file": "app/core/config.py",
+          "imports": [
+            "database"
+          ]
+        }
+      ]
+    },
+    "table_usage_documentation": {
+      "status": "tested",
+      "used_tables": 5,
+      "unused_tables": 1,
+      "table_usage": [
+        {
+          "table": "signal_greeks",
+          "references": 2,
+          "files": [
+            "app/repositories/signal_repository.py",
+            "app/api/v2/admin.py"
+          ]
+        },
+        {
+          "table": "signal_indicators",
+          "references": 2,
+          "files": [
+            "app/repositories/signal_repository.py",
+            "app/api/v2/admin.py"
+          ]
+        },
+        {
+          "table": "custom_timeframes",
+          "references": 3,
+          "files": [
+            "app/services/flexible_timeframe_manager.py",
+            "app/repositories/signal_repository.py",
+            "app/api/v2/historical.py"
+          ]
+        },
+        {
+          "table": "user_preferences",
+          "references": 2,
+          "files": [
+            "app/services/signal_delivery_service.py",
+            "app/services/enhanced_signal_delivery_service.py"
+          ]
+        },
+        {
+          "table": "alert_configs",
+          "references": 1,
+          "files": [
+            "app/services/indicator_aggregation_manager.py"
+          ]
+        }
+      ],
+      "unused_table_names": [
+        "watermark_data"
+      ]
+    },
+    "database_configuration": {
+      "status": "tested",
+      "config_files_found": 1,
+      "database_configurations": [
+        {
+          "file": "app/core/config.py",
+          "configs": [
+            "DATABASE_URL",
+            "max_connections"
+          ]
+        }
+      ]
+    }
+  },
+  "database_structure": {},
+  "timescale_integration": {},
+  "duration_seconds": 0.016541719436645508,
+  "summary": {
+    "total_tests": 5,
+    "successfully_tested": 5,
+    "success_rate": 100.0
+  }
+}

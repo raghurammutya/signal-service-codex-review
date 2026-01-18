@@ -1,0 +1,77 @@
+{
+  "bundle_metadata": {
+    "creation_timestamp": "2026-01-18T07:55:47.109971",
+    "bundle_name": "production_readiness_bundle_20260118_075547",
+    "total_artifacts": 29
+  },
+  "validation_summary": {
+    "hardening_validation": {
+      "status": "PASSED",
+      "score": "N/A",
+      "file": "validation_hardening_output.log"
+    },
+    "deployment_safety": {
+      "status": "UNKNOWN",
+      "score": "N/A",
+      "file": "validation.json"
+    },
+    "smoke_tests": {
+      "status": "PASSED",
+      "score": "N/A",
+      "file": "simple_smoke_output.log"
+    },
+    "load_backpressure": {
+      "status": "PASSED",
+      "score": "60.0",
+      "file": "load_backpressure_output.log"
+    },
+    "security_validation": {
+      "status": "PASSED",
+      "score": "83.3",
+      "file": "security_validation_output.log"
+    },
+    "database_sanity": {
+      "status": "PASSED",
+      "score": "80.0",
+      "file": "database_sanity_output.log"
+    },
+    "coverage_check": {
+      "status": "PASSED",
+      "score": "95",
+      "file": "coverage_spot_check_output.log"
+    },
+    "redundancy_scan": {
+      "status": "NEEDS_ATTENTION",
+      "score": "N/A",
+      "file": "redundancy_scan_output.log"
+    }
+  },
+  "production_readiness_status": {
+    "overall_status": "READY",
+    "readiness_percentage": "75.0%",
+    "passed_validations": 6,
+    "total_validations": 8,
+    "critical_issues": []
+  },
+  "bootstrap_requirements": {
+    "environment_variables": [
+      "ENVIRONMENT=production",
+      "CONFIG_SERVICE_URL=http://config-service:8100",
+      "INTERNAL_API_KEY=<secure_internal_key>",
+      "SERVICE_NAME=signal-service"
+    ],
+    "config_service_keys": [
+      "database_pool_config",
+      "budget_guards_config",
+      "circuit_breaker_config",
+      "metrics_export_config"
+    ]
+  },
+  "how_to_start_in_production": {
+    "step_1": "Set required environment variables",
+    "step_2": "Ensure config service is accessible",
+    "step_3": "Verify database connectivity (TimescaleDB)",
+    "step_4": "Run production hardening validation: python3 scripts/validate_production_hardening.py",
+    "step_5": "Start service: uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  }
+}

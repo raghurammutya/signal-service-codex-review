@@ -12,6 +12,7 @@ import hmac
 import os
 
 from app.utils.logging_utils import log_info, log_error
+from app.errors import WatermarkError
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,8 @@ class SignalWatermarkService:
                     
         except Exception as e:
             log_error(f"Failed to load watermark config: {e}")
-            # Service can continue but marketplace signals won't be watermarked
+            # FAIL SECURE: Cannot operate without proper watermark configuration
+            raise RuntimeError(f"Watermark service configuration failed - cannot operate without proper config: {e}")
             
     def is_enabled(self) -> bool:
         """Check if watermarking is enabled and configured"""
@@ -275,8 +277,8 @@ class SignalWatermarkService:
             
         except Exception as e:
             log_error(f"Failed to verify watermark: {e}")
-            # Fail open for availability
-            return True
+            # FAIL SECURE: Verification failures should block signal delivery
+            raise WatermarkError(f"Watermark verification failed - failing secure to preserve business trust: {e}")
     
     async def detect_leak_and_enforce(
         self,
@@ -381,22 +383,26 @@ class SignalWatermarkService:
                         enforcement_result["marketplace_confirmed"] = True
                         
                     else:
-                        # Marketplace detection failed
+                        # Marketplace detection failed - FAIL SECURE
                         log_error(
                             f"MARKETPLACE DETECTION FAILED for user {receiving_user_id}: "
-                            f"{detection_result.get('error', 'Unknown error')}"
+                            f"{detection_result.get('error', 'Unknown error')} - FAILING SECURE"
                         )
-                        enforcement_result["leak_detected"] = False  # Fail safe - assume no leak on error
-                        enforcement_result["action"] = "detection_failed"
+                        enforcement_result["leak_detected"] = True  # FAIL SECURE - assume leak on error
+                        enforcement_result["action"] = "detection_failed_blocking"
                         enforcement_result["error"] = detection_result.get("error")
                         enforcement_result["marketplace_confirmed"] = False
+                        enforcement_result["should_block"] = True  # Block delivery on detection failure
+                        enforcement_result["severity"] = "critical"
                         
                 except Exception as e:
-                    log_error(f"Error calling marketplace detection: {e}")
-                    enforcement_result["leak_detected"] = False  # Fail safe
-                    enforcement_result["action"] = "detection_error"
+                    log_error(f"Error calling marketplace detection: {e} - FAILING SECURE")
+                    enforcement_result["leak_detected"] = True  # FAIL SECURE
+                    enforcement_result["action"] = "detection_error_blocking"
                     enforcement_result["error"] = str(e)
                     enforcement_result["marketplace_confirmed"] = False
+                    enforcement_result["should_block"] = True  # Block delivery on error
+                    enforcement_result["severity"] = "critical"
             
             return enforcement_result
             

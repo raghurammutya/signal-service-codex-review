@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-01-18T07:47:40.415171",
+  "tests": {
+    "metrics_budget_guards": {
+      "status": "fallback_mode",
+      "message": "Config service unavailable"
+    },
+    "client_factory_circuit_breakers": {
+      "status": "tested",
+      "circuit_breaker_configs": {
+        "ticker_service": {
+          "max_failures": 3,
+          "timeout_seconds": 60,
+          "max_retries": 2
+        },
+        "user_service": {
+          "max_failures": 5,
+          "timeout_seconds": 45,
+          "max_retries": 3
+        },
+        "alert_service": {
+          "max_failures": 2,
+          "timeout_seconds": 30,
+          "max_retries": 2
+        },
+        "comms_service": {
+          "max_failures": 2,
+          "timeout_seconds": 30,
+          "max_retries": 2
+        }
+      },
+      "load_simulation": "circuit_breaker_thresholds_validated"
+    },
+    "backpressure_state_management": {
+      "status": "tested",
+      "states_tested": [
+        "light",
+        "moderate",
+        "heavy"
+      ],
+      "backpressure_transitions": "validated"
+    },
+    "config_driven_pool_behavior": {
+      "status": "error",
+      "error": "`regex` is removed. use `pattern` instead\n\nFor further information visit https://errors.pydantic.dev/2.9/u/removed-kwargs"
+    },
+    "load_scenarios": {
+      "status": "completed",
+      "scenarios": [
+        {
+          "scenario": "Normal Load",
+          "simulated_load": {
+            "name": "Normal Load",
+            "concurrent_ops": 25,
+            "memory_usage": 256
+          },
+          "would_trigger_backpressure": false,
+          "expected_behavior": "normal"
+        },
+        {
+          "scenario": "High Load",
+          "simulated_load": {
+            "name": "High Load",
+            "concurrent_ops": 75,
+            "memory_usage": 400
+          },
+          "would_trigger_backpressure": false,
+          "expected_behavior": "normal"
+        },
+        {
+          "scenario": "Peak Load",
+          "simulated_load": {
+            "name": "Peak Load",
+            "concurrent_ops": 120,
+            "memory_usage": 600
+          },
+          "would_trigger_backpressure": false,
+          "expected_behavior": "normal"
+        },
+        {
+          "scenario": "Overload",
+          "simulated_load": {
+            "name": "Overload",
+            "concurrent_ops": 200,
+            "memory_usage": 800
+          },
+          "would_trigger_backpressure": false,
+          "expected_behavior": "normal"
+        }
+      ]
+    }
+  },
+  "backpressure_evidence": [],
+  "budget_guard_triggers": [],
+  "circuit_breaker_evidence": [],
+  "duration_seconds": 0.4084634780883789,
+  "summary": {
+    "total_tests": 5,
+    "successfully_tested": 3,
+    "structure_validated": 0,
+    "success_rate": 60.0
+  }
+}

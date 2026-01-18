@@ -1,13 +1,10 @@
 """External function executor with security sandboxing"""
 import asyncio
-import importlib.util
 import sys
-import tempfile
 import os
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import resource
-import signal
 
 try:
     from RestrictedPython import compile_restricted
@@ -484,9 +481,12 @@ class ExternalFunctionExecutor:
         """Get user role and permissions from user service"""
         # Production implementation must query user service - no mock data
         try:
-            # Query user service for actual permissions
-            from app.clients.user_service_client import UserServiceClient
-            user_client = UserServiceClient()
+            # Query user service for actual permissions via centralized factory
+            from app.clients.client_factory import get_client_manager
+            import asyncio
+            
+            client_manager = get_client_manager()
+            user_client = asyncio.run(client_manager.get_client('user_service'))
             user_data = user_client.get_user_permissions_sync(user_id)
             
             if not user_data:

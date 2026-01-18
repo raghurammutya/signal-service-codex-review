@@ -160,56 +160,7 @@ async def get_timescaledb_session() -> AsyncContextManager[ProductionSession]:
         await db.pool.release(connection)
 
 
-# Synchronous context manager for backwards compatibility
-class SyncDatabaseSession:
-    """Synchronous wrapper for database session."""
-    
-    def __init__(self):
-        self.async_session = None
-        
-    def __enter__(self):
-        # Synchronous database operations not supported in production - fail fast
-        logger.error("Synchronous database session usage not supported - must use async get_timescaledb_session")
-        raise DatabaseConnectionError("Synchronous database operations are deprecated and not supported - use async get_timescaledb_session instead")
-        
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-        
-    def execute(self, query: str, *args):
-        """Execute query - requires async context."""
-        logger.error("Synchronous execute called - use async get_timescaledb_session instead")
-        raise DatabaseConnectionError("Synchronous database operations not supported - use async session")
-        
-    def fetch(self, query: str, *args):
-        """Fetch query - requires async context."""
-        logger.error("Synchronous fetch called - use async get_timescaledb_session instead")
-        raise DatabaseConnectionError("Synchronous database operations not supported - use async session")
-        
-    def commit(self):
-        """Commit transaction - requires async context."""
-        logger.error("Synchronous commit called - use async session")
-        pass
-        
-    def rollback(self):
-        """Rollback transaction - requires async context."""
-        logger.error("Synchronous rollback called - use async session")
-        pass
-        
-    def close(self):
-        """Close session - requires async context."""
-        pass
-
-
-def get_timescaledb_session():
-    """Get synchronous database session (deprecated) - fails fast in production."""
-    logger.error("Synchronous database session requested - not supported, use async get_timescaledb_session")
-    raise DatabaseConnectionError("Synchronous database sessions are deprecated and not supported - use async get_timescaledb_session instead")
-
-
-# Async version for new code
-async def get_async_timescaledb_session():
-    """Get async TimescaleDB session - preferred method."""
-    return get_timescaledb_session()
+# Legacy synchronous database helpers removed - use async get_timescaledb_session() instead
 
 
 # Connection pool management functions

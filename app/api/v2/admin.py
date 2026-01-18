@@ -410,7 +410,9 @@ async def check_dependencies_health(
             
         # Check Instrument Service
         try:
-            client = InstrumentServiceClient()
+            from app.clients.client_factory import get_client_manager
+            manager = get_client_manager()
+            client = await manager.get_client('instrument_service')
             await client.get_instrument("NSE@RELIANCE@equities")
             health_checks["instrument_service"] = {"status": "healthy"}
         except Exception as e:

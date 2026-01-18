@@ -38,7 +38,9 @@ async def get_moneyness_calculator() -> MoneynessAwareGreeksCalculator:
     """Get moneyness calculator instance"""
     global moneyness_calculator, instrument_client
     if not moneyness_calculator:
-        instrument_client = InstrumentServiceClient()
+        from app.clients.client_factory import get_client_manager
+        manager = get_client_manager()
+        instrument_client = await manager.get_client('instrument_service')
         moneyness_calculator = MoneynessAwareGreeksCalculator(instrument_client)
     return moneyness_calculator
 

@@ -13,6 +13,9 @@ import aiohttp
 import logging
 
 from app.core.config import settings
+from app.clients.shared_metadata import (
+    MetadataBuilder, SignalDataTransformer, ServiceClientBase, build_service_response
+)
 from app.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +36,7 @@ class AlertChannel(Enum):
     SMS = "sms"
     SLACK = "slack"
 
-class AlertServiceClient:
+class AlertServiceClient(ServiceClientBase):
     """
     Client for delegating alert operations to dedicated alert_service.
     
@@ -42,11 +45,11 @@ class AlertServiceClient:
     """
     
     def __init__(self, alert_service_url: str = None):
-        self.alert_service_url = alert_service_url or self._get_alert_service_url()
-        self.internal_api_key = self._get_internal_api_key()
-        self.session: Optional[aiohttp.ClientSession] = None
+        super().__init__("ALERT", 8085)
+        if alert_service_url:
+            self._service_url = alert_service_url
         
-        logger.info(f"AlertServiceClient initialized with URL: {self.alert_service_url}")
+        logger.info(f"AlertServiceClient initialized with URL: {self._get_service_url()}")
     
     def _get_alert_service_url(self) -> str:
         """Get alert service URL from config service"""
@@ -72,6 +75,21 @@ class AlertServiceClient:
                 headers={'X-Internal-API-Key': self.internal_api_key}
             )
     
+    async def close_session(self):
+        """Close HTTP session to prevent resource leaks"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+    
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.ensure_session()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with automatic session cleanup"""
+        await self.close_session()
+    
     async def send_signal_alert(
         self,
         user_id: str,
@@ -87,29 +105,22 @@ class AlertServiceClient:
         await self.ensure_session()
         
         try:
-            # Transform signal alert data to alert_service format
+            # Transform signal alert data to alert_service format using shared utilities
             alert_request = {
                 "alert_type": "signal",
                 "user_id": user_id,
                 "priority": priority,
-                "channels": channels or ["ui", "telegram"],
-                "condition_config": {
-                    "signal_type": alert_data.get("signal_type"),
-                    "symbol": alert_data.get("symbol"),
-                    "instrument_key": alert_data.get("instrument_key"),
-                    "message": alert_data.get("message"),
-                    "value": alert_data.get("value"),
-                    "timestamp": alert_data.get("timestamp", datetime.utcnow().isoformat())
-                },
-                "metadata": {
-                    "source": "signal_service",
-                    "signal_id": alert_data.get("signal_id"),
-                    "strategy_id": alert_data.get("strategy_id")
-                }
+                "channels": channels if channels is not None else self._get_required_channels(),
+                "condition_config": SignalDataTransformer.extract_condition_config(alert_data),
+                "metadata": MetadataBuilder.build_signal_metadata(
+                    alert_data, 
+                    metadata_type="signal_alert",
+                    extra_fields={"priority": priority}
+                )
             }
             
             async with self.session.post(
-                f"{self.alert_service_url}/api/v1/alerts",
+                f"{self._get_service_url()}/api/v1/alerts",
                 json=alert_request
             ) as response:
                 if response.status == 200 or response.status == 201:
@@ -137,22 +148,17 @@ class AlertServiceClient:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    logger.warning(f"Failed to get preferences for user {user_id}: {response.status}")
-                    return self._get_default_preferences()
+                    logger.error(f"Failed to get preferences for user {user_id}: {response.status}")
+                    raise RuntimeError(f"Alert service unavailable - cannot get user preferences: HTTP {response.status}")
                     
         except Exception as e:
             logger.error(f"Error getting notification preferences: {e}")
-            return self._get_default_preferences()
+            raise RuntimeError(f"Alert service connection failed - cannot get user preferences: {e}") from e
     
-    def _get_default_preferences(self) -> Dict[str, Any]:
-        """Default notification preferences fallback"""
-        return {
-            "channels": ["ui", "telegram"],
-            "priority_filter": "medium",
-            "signal_types": ["buy", "sell", "alert"],
-            "quiet_hours": None,
-            "rate_limit": {"max_per_hour": 10}
-        }
+    def _get_required_channels(self) -> List[str]:
+        """Get required channels - no fallback defaults"""
+        # FAIL FAST: Require explicit channel configuration
+        raise RuntimeError("Alert channels not specified - cannot send alert without explicit channel configuration")
     
     async def update_user_notification_preferences(
         self,
@@ -260,12 +266,20 @@ class AlertServiceClient:
             await self.session.close()
             self.session = None
 
-# Singleton instance for application use
+# Singleton instance for application use - migrated to centralized factory
 _alert_client = None
 
 def get_alert_service_client() -> AlertServiceClient:
-    """Get singleton alert service client instance"""
-    global _alert_client
-    if _alert_client is None:
-        _alert_client = AlertServiceClient()
-    return _alert_client
+    """Get alert service client instance via centralized factory"""
+    import asyncio
+    from app.clients.client_factory import get_client_manager
+    
+    # For backward compatibility, maintain sync interface
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    client_manager = get_client_manager()
+    return loop.run_until_complete(client_manager.get_client('alert_service'))

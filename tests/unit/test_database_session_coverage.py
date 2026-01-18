@@ -17,8 +17,6 @@ from common.storage.database import (
     ProductionSession,
     get_database,
     get_timescaledb_session as get_async_session,
-    SyncDatabaseSession,
-    get_timescaledb_session as get_sync_session,
     create_timescaledb_pool,
     get_database_url
 )
@@ -388,65 +386,7 @@ class TestTimescaleDBSessionManager:
             mock_pool.release.assert_called_once_with(mock_connection)
 
 
-class TestSynchronousLegacyWrapper:
-    """Test synchronous database session wrapper (deprecated)."""
-    
-    def test_sync_session_creation_warning(self):
-        """Test that synchronous session creation generates warning."""
-        with patch('common.storage.database.logger') as mock_logger:
-            session = get_sync_session()
-            
-            mock_logger.warning.assert_called_with(
-                "Synchronous database session requested - should use async version"
-            )
-            assert isinstance(session, SyncDatabaseSession)
-    
-    def test_sync_session_context_manager_warning(self):
-        """Test that synchronous context manager generates warning."""
-        with patch('common.storage.database.logger') as mock_logger:
-            with get_sync_session():
-                pass
-            
-            mock_logger.warning.assert_called_with(
-                "Synchronous database session usage - should migrate to async"
-            )
-    
-    def test_sync_session_execute_fails_fast(self):
-        """Test that synchronous execute fails fast."""
-        session = SyncDatabaseSession()
-        
-        with pytest.raises(DatabaseConnectionError, match="Synchronous database operations not supported"):
-            session.execute("SELECT 1")
-    
-    def test_sync_session_fetch_fails_fast(self):
-        """Test that synchronous fetch fails fast."""
-        session = SyncDatabaseSession()
-        
-        with pytest.raises(DatabaseConnectionError, match="Synchronous database operations not supported"):
-            session.fetch("SELECT * FROM users")
-    
-    def test_sync_session_commit_logs_error(self):
-        """Test that synchronous commit logs error."""
-        session = SyncDatabaseSession()
-        
-        with patch('common.storage.database.logger') as mock_logger:
-            session.commit()
-            mock_logger.error.assert_called_with("Synchronous commit called - use async session")
-    
-    def test_sync_session_rollback_logs_error(self):
-        """Test that synchronous rollback logs error."""
-        session = SyncDatabaseSession()
-        
-        with patch('common.storage.database.logger') as mock_logger:
-            session.rollback()
-            mock_logger.error.assert_called_with("Synchronous rollback called - use async session")
-    
-    def test_sync_session_close_no_error(self):
-        """Test that synchronous close doesn't raise error."""
-        session = SyncDatabaseSession()
-        # Should not raise an error
-        session.close()
-
+# Legacy synchronous database wrapper tests removed
 
 class TestConnectionPoolManagement:
     """Test connection pool management functions."""

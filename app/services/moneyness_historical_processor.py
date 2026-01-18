@@ -35,7 +35,11 @@ class MoneynessHistoricalProcessor:
         self.moneyness_calculator = moneyness_calculator
         self.repository = repository
         self.historical_client = get_historical_data_client()  # Unified historical data client
-        self.instrument_client = instrument_client or InstrumentServiceClient()
+        if instrument_client:
+            self.instrument_client = instrument_client
+        else:
+            # Will be initialized in async initialize() method
+            self.instrument_client = None
         # Use FlexibleTimeframeManager to eliminate duplication
         self.timeframe_manager = timeframe_manager or FlexibleTimeframeManager()
         self._processing_cache = {}
@@ -45,6 +49,13 @@ class MoneynessHistoricalProcessor:
         """Initialize the processor and timeframe manager"""
         if self.timeframe_manager and not hasattr(self.timeframe_manager, 'session'):
             await self.timeframe_manager.initialize()
+            
+        # Initialize instrument client if not provided
+        if not self.instrument_client:
+            from app.clients.client_factory import get_client_manager
+            manager = get_client_manager()
+            self.instrument_client = await manager.get_client('instrument_service')
+            
         log_info("MoneynessHistoricalProcessor initialized with unified timeframe manager")
         
     async def get_moneyness_greeks_like_strike(

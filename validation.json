@@ -1,0 +1,61 @@
+{
+  "environment": "production",
+  "timestamp": "2026-01-18T07:40:15.973964",
+  "summary": {
+    "total_checks": 6,
+    "passed_checks": 4,
+    "warnings": 0,
+    "critical_failures": 2,
+    "overall_status": "FAIL"
+  },
+  "results": [
+    {
+      "name": "env_var_environment",
+      "passed": true,
+      "message": "ENVIRONMENT is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_config_service_url",
+      "passed": true,
+      "message": "CONFIG_SERVICE_URL is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_internal_api_key",
+      "passed": true,
+      "message": "INTERNAL_API_KEY is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "env_var_service_name",
+      "passed": true,
+      "message": "SERVICE_NAME is properly configured",
+      "critical": false,
+      "suggestions": []
+    },
+    {
+      "name": "config_service_connectivity",
+      "passed": false,
+      "message": "Unable to reach config service: [Errno -3] Temporary failure in name resolution",
+      "critical": true,
+      "suggestions": [
+        "Ensure config service is running on specified URL",
+        "Check network connectivity to config service",
+        "Verify docker network configuration"
+      ]
+    },
+    {
+      "name": "cors_configuration",
+      "passed": false,
+      "message": "Error fetching CORS config: [Errno -3] Temporary failure in name resolution",
+      "critical": true,
+      "suggestions": [
+        "Check config service connectivity"
+      ]
+    }
+  ]
+}

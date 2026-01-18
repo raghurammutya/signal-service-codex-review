@@ -107,8 +107,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             
         except Exception as e:
             log_error(f"Rate limiting error: {e}")
-            # On error, allow request to proceed
-            return await call_next(request)
+            # On error, deny request to prevent bypassing security
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": "Rate limiting service unavailable",
+                    "message": "Request denied due to rate limiting service failure",
+                    "retry_after": 60
+                }
+            )
             
     async def _check_rate_limit(self, key: str, limit: int) -> Tuple[bool, int]:
         """
@@ -139,8 +146,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             
         except Exception as e:
             log_error(f"Redis rate limit check error: {e}")
-            # On error, allow request
-            return True, limit
+            # On error, deny request to prevent bypassing rate limits
+            raise RuntimeError(f"Rate limiting check failed - Redis unavailable: {e}")
             
     def _get_user_id(self, request: Request) -> Optional[str]:
         """Extract user ID from request - gateway headers only"""

@@ -71,8 +71,9 @@ class ConnectionManager:
         self.signal_processor = SignalProcessor()
         await self.signal_processor.initialize(None)  # app_state not needed for websocket
 
-        from app.services.instrument_service_client import InstrumentServiceClient
-        instrument_client = InstrumentServiceClient()
+        from app.clients.client_factory import get_client_manager
+        manager = get_client_manager()
+        instrument_client = await manager.get_client('instrument_service')
         self.moneyness_calculator = MoneynessAwareGreeksCalculator(instrument_client)
 
         # Start background tasks

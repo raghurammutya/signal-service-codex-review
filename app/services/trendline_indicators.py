@@ -30,7 +30,7 @@ try:
     logger.info("trendln library loaded successfully")
 except ImportError:
     TRENDLN_AVAILABLE = False
-    logger.warning("trendln not available - Trendline indicators will return mock data")
+    logger.warning("trendln not available - Trendline indicators will raise ComputationError")
 
 
 @register_indicator(

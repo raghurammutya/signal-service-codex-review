@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 from app.services.historical_data_writer import HistoricalDataWriter
 from app.services.timeframe_cache_manager import TimeframeCacheManager, TimeframeCache
-from app.services.historical_data_manager import HistoricalDataManager
+from app.services.unified_historical_data_service import ProductionHistoricalDataManager as HistoricalDataManager
 
 
 class TestHistoricalDataWriter:

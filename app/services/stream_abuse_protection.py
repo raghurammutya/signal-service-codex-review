@@ -61,41 +61,8 @@ class AbuseEvent:
 class StreamAbuseProtectionService:
     """Service for protecting public signal streams from abuse."""
     
-    # Fallback limits if marketplace service is unavailable
-    FALLBACK_LIMITS = {
-        StreamType.PUBLIC: ConnectionLimits(
-            max_concurrent_connections=50,      # Max 50 connections per user
-            max_subscriptions_per_connection=10, # Max 10 symbols per connection
-            max_subscription_requests=30,        # 30 subscription changes per minute
-            max_messages_sent=1000,              # 1000 messages per minute  
-            rapid_subscription_threshold=5,      # Max 5 subscriptions in 10 seconds
-            burst_message_threshold=50           # Max 50 messages in 5 seconds
-        ),
-        StreamType.COMMON: ConnectionLimits(
-            max_concurrent_connections=100,
-            max_subscriptions_per_connection=25,
-            max_subscription_requests=60,
-            max_messages_sent=2000,
-            rapid_subscription_threshold=10,
-            burst_message_threshold=100
-        ),
-        StreamType.PREMIUM: ConnectionLimits(
-            max_concurrent_connections=500,
-            max_subscriptions_per_connection=100,
-            max_subscription_requests=200,
-            max_messages_sent=10000,
-            rapid_subscription_threshold=25,
-            burst_message_threshold=250
-        ),
-        StreamType.MARKETPLACE: ConnectionLimits(
-            max_concurrent_connections=200,
-            max_subscriptions_per_connection=50,
-            max_subscription_requests=120,
-            max_messages_sent=5000,
-            rapid_subscription_threshold=15,
-            burst_message_threshold=150
-        )
-    }
+    # NO FALLBACK LIMITS - All limits must come from marketplace service
+    # This ensures proper entitlement verification and prevents misconfiguration masking
     
     def __init__(self):
         self.redis_client = None
@@ -189,7 +156,7 @@ class StreamAbuseProtectionService:
     
     async def _get_tier_limits(self, tier: str, stream_type: StreamType) -> Optional[ConnectionLimits]:
         """
-        Get connection limits for a specific tier.
+        Get connection limits for a specific tier from marketplace service.
         
         Args:
             tier: Subscription tier (free, standard, premium, enterprise)
@@ -197,27 +164,41 @@ class StreamAbuseProtectionService:
             
         Returns:
             ConnectionLimits or None if not found
+            
+        Raises:
+            RuntimeError: If marketplace service is unavailable or limits cannot be retrieved
         """
-        # Define tier multipliers relative to base (free) limits
-        tier_multipliers = {
-            "free": 1.0,
-            "standard": 2.0,
-            "premium": 5.0,
-            "enterprise": 10.0
-        }
+        if not self.marketplace_client:
+            raise RuntimeError(
+                f"Marketplace client not available - cannot get tier limits for {tier}/{stream_type.value}. "
+                f"Stream access requires active marketplace service integration."
+            )
         
-        multiplier = tier_multipliers.get(tier, 1.0)
-        base_limits = self.FALLBACK_LIMITS[stream_type]
-        
-        # Apply multiplier to all limits
-        return ConnectionLimits(
-            max_concurrent_connections=int(base_limits.max_concurrent_connections * multiplier),
-            max_subscriptions_per_connection=int(base_limits.max_subscriptions_per_connection * multiplier),
-            max_subscription_requests=int(base_limits.max_subscription_requests * multiplier),
-            max_messages_sent=int(base_limits.max_messages_sent * multiplier),
-            rapid_subscription_threshold=int(base_limits.rapid_subscription_threshold * multiplier),
-            burst_message_threshold=int(base_limits.burst_message_threshold * multiplier)
-        )
+        try:
+            # Get tier limits directly from marketplace service - NO FALLBACKS
+            limits_data = await self.marketplace_client.get_tier_limits(tier, stream_type.value)
+            
+            if not limits_data:
+                raise RuntimeError(
+                    f"No tier limits available from marketplace for {tier}/{stream_type.value}. "
+                    f"Stream access denied - requires valid subscription tier configuration."
+                )
+            
+            # Parse marketplace response into ConnectionLimits
+            return ConnectionLimits(
+                max_concurrent_connections=limits_data.get('max_concurrent_connections'),
+                max_subscriptions_per_connection=limits_data.get('max_subscriptions_per_connection'),
+                max_subscription_requests=limits_data.get('max_subscription_requests'),
+                max_messages_sent=limits_data.get('max_messages_sent'),
+                rapid_subscription_threshold=limits_data.get('rapid_subscription_threshold'),
+                burst_message_threshold=limits_data.get('burst_message_threshold')
+            )
+            
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to retrieve tier limits from marketplace for {tier}/{stream_type.value}: {e}. "
+                f"Stream access denied - marketplace service integration required."
+            )
     
     async def check_connection_allowed(
         self,

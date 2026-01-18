@@ -120,24 +120,22 @@ class TestHistoricalDataClientUnification:
         # Verify ticker client was called
         mock_ticker_client.get_historical_moneyness_data.assert_called_once()
     
-    async def test_historical_spot_price_lookup(self, historical_client, mock_ticker_client):
-        """Test historical spot price lookup."""
+    async def test_historical_spot_price_lookup_fails_fast(self, historical_client, mock_ticker_client):
+        """Test historical spot price lookup fails fast as intended."""
         historical_client.ticker_client = mock_ticker_client
         
         timestamp = datetime(2023, 1, 1, 10, 0)
         
-        result = await historical_client.get_historical_spot_price(
-            underlying="AAPL",
-            timestamp=timestamp,
-            window_minutes=5
-        )
+        # Historical spot price lookup should fail fast with clear error message
+        with pytest.raises(DataAccessError, match="Historical spot price lookup.*not implemented"):
+            await historical_client.get_historical_spot_price(
+                underlying="AAPL",
+                timestamp=timestamp,
+                window_minutes=5
+            )
         
-        assert result == 150.0
-        
-        # Verify market data was requested
-        mock_ticker_client.get_current_market_data.assert_called_once_with(
-            instrument_key="AAPL"
-        )
+        # Verify no ticker service calls were made (fail-fast behavior)
+        mock_ticker_client.get_current_market_data.assert_not_called()
     
     async def test_historical_price_range_calculation(self, historical_client, mock_ticker_client):
         """Test historical price range calculation."""
@@ -325,8 +323,9 @@ class TestHistoricalDataCoverage:
         moneyness_result = await client.get_historical_moneyness_data("AAPL", 0.95, start_time, end_time)
         assert moneyness_result is not None
         
-        spot_result = await client.get_historical_spot_price("AAPL", datetime.now())
-        assert spot_result == 100
+        # Historical spot price should fail fast
+        with pytest.raises(DataAccessError, match="Historical spot price lookup.*not implemented"):
+            await client.get_historical_spot_price("AAPL", datetime.now())
         
         range_result = await client.get_historical_price_range("AAPL", start_time, end_time)
         assert range_result['min_price'] == 99

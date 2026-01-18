@@ -190,23 +190,111 @@ class DistributedHealthManager:
     
     async def _get_request_rate(self) -> float:
         """Get current request rate (requests per minute)"""
-        # Production implementation requires metrics collection service integration
-        raise RuntimeError("Request rate monitoring requires metrics service integration - cannot provide synthetic metrics")
+        try:
+            # Get request rate from metrics service if available
+            if hasattr(self, '_metrics_client') and self._metrics_client:
+                return await self._metrics_client.get_request_rate()
+            
+            # Fallback: estimate from Redis stats if available
+            redis_info = await self.redis_client.info('stats')
+            total_commands = redis_info.get('total_commands_processed', 0)
+            
+            # Store current count and calculate rate
+            current_time = datetime.utcnow().timestamp()
+            if hasattr(self, '_last_command_count') and hasattr(self, '_last_check_time'):
+                time_diff = current_time - self._last_check_time
+                command_diff = total_commands - self._last_command_count
+                rate = (command_diff / time_diff) * 60 if time_diff > 0 else 0.0
+            else:
+                rate = 0.0
+            
+            self._last_command_count = total_commands
+            self._last_check_time = current_time
+            
+            return rate
+        except Exception as e:
+            logger.warning(f"Failed to get request rate: {e}")
+            return 0.0
     
     async def _get_queue_size(self) -> int:
         """Get current processing queue size"""
-        # Production implementation requires queue monitoring service integration
-        raise RuntimeError("Queue size monitoring requires queue service integration - cannot provide synthetic metrics")
+        try:
+            # Get queue size from metrics service if available
+            if hasattr(self, '_metrics_client') and self._metrics_client:
+                return await self._metrics_client.get_queue_size()
+            
+            # Fallback: estimate from Redis queue lengths
+            queue_keys = [
+                'signal_service:processing_queue',
+                'signal_service:priority_queue',
+                'signal_service:retry_queue'
+            ]
+            
+            total_size = 0
+            for key in queue_keys:
+                try:
+                    size = await self.redis_client.llen(key)
+                    total_size += size
+                except Exception:
+                    continue
+            
+            return total_size
+        except Exception as e:
+            logger.warning(f"Failed to get queue size: {e}")
+            return 0
     
     async def _get_processing_rate(self) -> float:
         """Get current signal processing rate"""
-        # Production implementation requires metrics collection service integration  
-        raise RuntimeError("Processing rate monitoring requires metrics service integration - cannot provide synthetic rate")
+        try:
+            # Get processing rate from metrics service if available
+            if hasattr(self, '_metrics_client') and self._metrics_client:
+                return await self._metrics_client.get_processing_rate()
+            
+            # Fallback: calculate from processed signals count
+            processed_key = f"signal_service:processed_count:{self.instance_id}"
+            current_count = await self.redis_client.get(processed_key) or 0
+            current_count = int(current_count)
+            
+            current_time = datetime.utcnow().timestamp()
+            if hasattr(self, '_last_processed_count') and hasattr(self, '_last_processing_check'):
+                time_diff = current_time - self._last_processing_check
+                count_diff = current_count - self._last_processed_count
+                rate = (count_diff / time_diff) * 60 if time_diff > 0 else 0.0
+            else:
+                rate = 0.0
+            
+            self._last_processed_count = current_count
+            self._last_processing_check = current_time
+            
+            return rate
+        except Exception as e:
+            logger.warning(f"Failed to get processing rate: {e}")
+            return 0.0
     
     async def _get_assigned_instruments(self) -> List[str]:
         """Get list of instruments assigned to this instance"""
-        # Production implementation requires consistent hash manager integration
-        raise RuntimeError("Instrument assignment requires consistent hash manager integration - cannot provide synthetic assignments")
+        try:
+            # Get assigned instruments from Redis assignment registry
+            assignment_key = f"signal_service:assignments:{self.instance_id}"
+            assignments = await self.redis_client.smembers(assignment_key)
+            
+            if assignments:
+                return [assignment.decode() if isinstance(assignment, bytes) else assignment for assignment in assignments]
+            
+            # Fallback: get from global assignment if no specific assignments
+            global_assignments = await self.redis_client.hget(
+                "signal_service:global_assignments", 
+                self.instance_id
+            )
+            
+            if global_assignments:
+                import json
+                return json.loads(global_assignments)
+            
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to get assigned instruments: {e}")
+            return []
     
     async def _update_aggregate_health(self) -> None:
         """Update aggregate health status across all instances"""

@@ -2,16 +2,24 @@
 Real Metrics Service Implementation
 
 Provides actual metrics collection and reporting for health checks and monitoring.
-Replaces mock data with real measurements for production readiness.
+Provides real measurements for production readiness.
 """
 import asyncio
 import time
 import logging
+import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
 import psutil
 import threading
+
+# Import logging utilities
+from app.utils.logging_utils import log_info, log_warning
+
+def log_error(message, *args, **kwargs):
+    """Log error messages."""
+    logging.error(message, *args, **kwargs)
 
 from app.utils.redis import get_redis_client
 from app.core.config import settings
@@ -40,14 +48,93 @@ class MetricsCollector:
         self.circuit_breaker_metrics = {}
         self.cache_hit_rates = {}
         
+        # Config-driven budget guards and backpressure
+        self.budget_guards = None  # Will be loaded from config service
+        self.backpressure_state = {
+            'active': False,
+            'level': 'none',  # none, light, moderate, heavy
+            'start_time': None,
+            'current_restrictions': {}
+        }
+        self.concurrent_operations = 0
+        self._budget_manager = None
+        
     async def initialize(self):
-        """Initialize metrics collector with Redis connection."""
+        """Initialize metrics collector with Redis connection and config-driven budget."""
         self.redis_client = await get_redis_client()
         
+        # Initialize config-driven budget manager
+        from app.config.budget_config import get_budget_manager
+        self._budget_manager = get_budget_manager()
+        
+        # Load initial budget configuration
+        await self._refresh_budget_config()
+    
+    async def _refresh_budget_config(self):
+        """Refresh budget configuration from config service."""
+        try:
+            if self._budget_manager:
+                budget_config = await self._budget_manager.get_metrics_budget()
+                
+                # Convert config to dictionary format expected by existing code
+                self.budget_guards = {
+                    'max_concurrent_operations': budget_config.max_concurrent_operations,
+                    'max_memory_mb': budget_config.max_memory_mb,
+                    'max_cpu_percent': budget_config.max_cpu_percent,
+                    'max_request_rate_per_minute': budget_config.max_request_rate_per_minute,
+                    'max_processing_time_ms': budget_config.max_processing_time_ms,
+                    # Add backpressure thresholds
+                    'light_pressure_threshold': budget_config.light_pressure_threshold,
+                    'moderate_pressure_threshold': budget_config.moderate_pressure_threshold,
+                    'heavy_pressure_threshold': budget_config.heavy_pressure_threshold
+                }
+                
+                log_info(f"Budget configuration refreshed: {self.budget_guards}")
+            else:
+                # Fallback to default values
+                self.budget_guards = {
+                    'max_concurrent_operations': 50,
+                    'max_memory_mb': 512,
+                    'max_cpu_percent': 85,
+                    'max_request_rate_per_minute': 300,
+                    'max_processing_time_ms': 5000,
+                    'light_pressure_threshold': 0.7,
+                    'moderate_pressure_threshold': 0.85,
+                    'heavy_pressure_threshold': 0.95
+                }
+                log_info("Using default budget configuration")
+                
+        except Exception as e:
+            log_error(f"Failed to refresh budget config: {e}")
+            # Use safe defaults if config fetch fails
+            self.budget_guards = {
+                'max_concurrent_operations': 50,
+                'max_memory_mb': 512,
+                'max_cpu_percent': 85,
+                'max_request_rate_per_minute': 300,
+                'max_processing_time_ms': 5000,
+                'light_pressure_threshold': 0.7,
+                'moderate_pressure_threshold': 0.85,
+                'heavy_pressure_threshold': 0.95
+            }
+    
+    async def refresh_budget_config(self):
+        """Public method to refresh budget configuration."""
+        await self._refresh_budget_config()
+        
     def record_request(self, endpoint: str, duration_ms: float, status_code: int):
-        """Record API request metrics."""
+        """Record API request metrics with budget guard validation."""
+        # Apply budget throttling - drop non-essential metrics under pressure
+        if self.backpressure_state['active'] and self.backpressure_state['level'] == 'heavy':
+            # Only record essential endpoints during heavy backpressure
+            if not any(essential in endpoint for essential in ['/health', '/metrics']):
+                return
+        
         with self._lock:
             timestamp = time.time()
+            
+            # Check backpressure thresholds
+            self._evaluate_backpressure()
             
             # Record request timing
             self.request_times.append({
@@ -61,6 +148,11 @@ class MetricsCollector:
             self.request_counts[endpoint] += 1
             if status_code >= 400:
                 self.error_counts[endpoint] += 1
+            
+            # Budget guard: Check if processing time exceeds limit
+            if duration_ms > self.budget_guards['max_processing_time_ms']:
+                logger.warning(f"Request {endpoint} exceeded processing time budget: {duration_ms}ms")
+                self._trigger_backpressure('processing_time_exceeded')
     
     def record_processing_time(self, operation: str, duration_ms: float, success: bool):
         """Record signal processing metrics."""
@@ -399,6 +491,11 @@ class MetricsCollector:
         """Export current metrics to Redis for monitoring systems."""
         if not self.redis_client:
             return
+            
+        # Apply budget throttling - drop metrics export under pressure
+        if not self.should_allow_operation('metrics_export', 'normal'):
+            self.record_processing_time('metrics_export_dropped', 0, False)
+            return
         
         try:
             metrics_data = {
@@ -423,6 +520,212 @@ class MetricsCollector:
             
         except Exception as e:
             logger.error(f"Failed to export metrics to Redis: {e}")
+            # Implement circuit breaker for Redis export reliability
+            self.record_circuit_breaker_event('redis_export', 'call_failure', {'error': str(e)})
+            
+            # Retry logic for critical metrics export
+            retry_count = 0
+            max_retries = 3
+            while retry_count < max_retries:
+                try:
+                    await asyncio.sleep(2 ** retry_count)  # Exponential backoff
+                    
+                    # Simplified metrics for retry
+                    fallback_metrics = {
+                        'error_rate': self.get_error_rate(),
+                        'request_rate': self.get_request_rate(),
+                        'health_score': self.get_health_score()['overall'],
+                        'last_updated': datetime.utcnow().isoformat(),
+                        'export_status': 'fallback_retry'
+                    }
+                    
+                    await self.redis_client.setex(
+                        'signal_service:metrics:fallback',
+                        ttl_seconds // 2,  # Shorter TTL for fallback
+                        json.dumps(fallback_metrics)
+                    )
+                    
+                    self.record_circuit_breaker_event('redis_export', 'call_success', {'retry_count': retry_count})
+                    logger.info(f"Metrics export succeeded on retry {retry_count + 1}")
+                    break
+                    
+                except Exception as retry_e:
+                    retry_count += 1
+                    logger.warning(f"Metrics export retry {retry_count} failed: {retry_e}")
+                    
+            if retry_count >= max_retries:
+                self.record_circuit_breaker_event('redis_export', 'open', {'consecutive_failures': retry_count})
+    
+    def _evaluate_backpressure(self):
+        """Evaluate current system state and adjust backpressure if needed."""
+        try:
+            # Check current metrics against budget guards
+            current_request_rate = self.get_request_rate()
+            system_metrics = self.get_system_metrics()
+            
+            pressure_indicators = []
+            
+            # Request rate pressure
+            if current_request_rate > self.budget_guards['max_request_rate_per_minute']:
+                pressure_indicators.append('high_request_rate')
+            
+            # Memory pressure
+            if 'process' in system_metrics:
+                memory_mb = system_metrics['process']['memory_mb']
+                cpu_percent = system_metrics['process']['cpu_percent']
+                
+                if memory_mb > self.budget_guards['max_memory_mb']:
+                    pressure_indicators.append('high_memory')
+                
+                if cpu_percent > self.budget_guards['max_cpu_percent']:
+                    pressure_indicators.append('high_cpu')
+            
+            # Concurrent operations pressure
+            if self.concurrent_operations > self.budget_guards['max_concurrent_operations']:
+                pressure_indicators.append('high_concurrency')
+            
+            # Determine backpressure level
+            if len(pressure_indicators) >= 3:
+                new_level = 'heavy'
+            elif len(pressure_indicators) >= 2:
+                new_level = 'moderate'
+            elif len(pressure_indicators) >= 1:
+                new_level = 'light'
+            else:
+                new_level = 'none'
+            
+            # Update backpressure state
+            current_level = self.backpressure_state['level']
+            if new_level != current_level:
+                logger.info(f"Backpressure level changed: {current_level} -> {new_level}")
+                self.backpressure_state['level'] = new_level
+                self.backpressure_state['active'] = new_level != 'none'
+                
+                if new_level != 'none' and not self.backpressure_state['start_time']:
+                    self.backpressure_state['start_time'] = time.time()
+                elif new_level == 'none':
+                    self.backpressure_state['start_time'] = None
+                
+                self._apply_backpressure_restrictions(new_level, pressure_indicators)
+            
+        except Exception as e:
+            logger.error(f"Error evaluating backpressure: {e}")
+    
+    def _trigger_backpressure(self, reason: str):
+        """Manually trigger backpressure due to specific condition."""
+        logger.warning(f"Backpressure triggered due to: {reason}")
+        self.backpressure_state['active'] = True
+        self.backpressure_state['level'] = 'moderate'
+        self.backpressure_state['start_time'] = time.time()
+        self._apply_backpressure_restrictions('moderate', [reason])
+    
+    def _apply_backpressure_restrictions(self, level: str, indicators: List[str]):
+        """Apply appropriate restrictions based on backpressure level."""
+        restrictions = {}
+        
+        if level == 'light':
+            # Light restrictions: reduce cache sizes, increase timeouts
+            restrictions = {
+                'reduce_cache_sizes': True,
+                'increased_timeouts': True,
+                'priority_requests_only': False,
+                'reject_non_essential': False
+            }
+        elif level == 'moderate':
+            # Moderate restrictions: priority requests only, reduce concurrency
+            restrictions = {
+                'reduce_cache_sizes': True,
+                'increased_timeouts': True,
+                'priority_requests_only': True,
+                'reject_non_essential': True,
+                'max_concurrent_operations': min(25, self.budget_guards['max_concurrent_operations'] // 2)
+            }
+        elif level == 'heavy':
+            # Heavy restrictions: minimal operations only
+            restrictions = {
+                'reduce_cache_sizes': True,
+                'increased_timeouts': True,
+                'priority_requests_only': True,
+                'reject_non_essential': True,
+                'max_concurrent_operations': min(10, self.budget_guards['max_concurrent_operations'] // 4),
+                'emergency_mode': True
+            }
+        
+        self.backpressure_state['current_restrictions'] = restrictions
+        logger.info(f"Applied {level} backpressure restrictions: {restrictions}")
+    
+    def should_allow_operation(self, operation_type: str = 'default', priority: str = 'normal') -> bool:
+        """Check if an operation should be allowed based on current backpressure state."""
+        if not self.backpressure_state['active']:
+            return True
+        
+        restrictions = self.backpressure_state['current_restrictions']
+        
+        # Always allow health checks and essential operations
+        if operation_type in ['health_check', 'essential']:
+            return True
+        
+        # Check priority restrictions
+        if restrictions.get('priority_requests_only') and priority != 'high':
+            return False
+        
+        # Check non-essential rejection
+        if restrictions.get('reject_non_essential') and operation_type in ['analytics', 'reporting', 'batch']:
+            return False
+        
+        # Check concurrent operation limits
+        max_concurrent = restrictions.get('max_concurrent_operations')
+        if max_concurrent and self.concurrent_operations >= max_concurrent:
+            return False
+        
+        # Emergency mode - only critical operations
+        if restrictions.get('emergency_mode') and operation_type not in ['critical', 'essential']:
+            return False
+        
+        return True
+    
+    async def acquire_operation_permit(self, operation_type: str = 'default', priority: str = 'normal') -> bool:
+        """Acquire a permit to perform an operation (with backpressure check)."""
+        if not self.should_allow_operation(operation_type, priority):
+            return False
+        
+        with self._lock:
+            self.concurrent_operations += 1
+        
+        return True
+    
+    async def release_operation_permit(self):
+        """Release an operation permit."""
+        with self._lock:
+            self.concurrent_operations = max(0, self.concurrent_operations - 1)
+    
+    def get_backpressure_status(self) -> Dict[str, Any]:
+        """Get current backpressure status and metrics."""
+        return {
+            'active': self.backpressure_state['active'],
+            'level': self.backpressure_state['level'],
+            'start_time': self.backpressure_state['start_time'],
+            'duration_seconds': time.time() - self.backpressure_state['start_time'] if self.backpressure_state['start_time'] else 0,
+            'restrictions': self.backpressure_state['current_restrictions'],
+            'concurrent_operations': self.concurrent_operations,
+            'budget_guards': self.budget_guards,
+            'current_metrics': {
+                'request_rate': self.get_request_rate(),
+                'error_rate': self.get_error_rate(),
+                'avg_response_time': self.get_average_response_time()
+            }
+        }
+    
+    def update_budget_guards(self, new_guards: Dict[str, Any]):
+        """Update budget guard thresholds (for dynamic adjustment)."""
+        for key, value in new_guards.items():
+            if key in self.budget_guards:
+                old_value = self.budget_guards[key]
+                self.budget_guards[key] = value
+                logger.info(f"Updated budget guard {key}: {old_value} -> {value}")
+        
+        # Re-evaluate backpressure with new thresholds
+        self._evaluate_backpressure()
 
 
 # Global metrics collector instance
@@ -456,6 +759,44 @@ class MetricsMiddleware:
             await self.app(scope, receive, send)
             return
         
+        endpoint = scope.get("path", "unknown")
+        
+        # Check backpressure before processing request
+        operation_type = self._classify_operation_type(endpoint)
+        priority = self._determine_request_priority(scope)
+        
+        # Acquire operation permit with backpressure check
+        permit_acquired = await self.metrics_collector.acquire_operation_permit(operation_type, priority)
+        
+        if not permit_acquired:
+            # Return 503 Service Unavailable due to backpressure
+            backpressure_status = self.metrics_collector.get_backpressure_status()
+            
+            response = {
+                "type": "http.response.start",
+                "status": 503,
+                "headers": [
+                    [b"content-type", b"application/json"],
+                    [b"retry-after", b"30"],  # Suggest retry in 30 seconds
+                ],
+            }
+            await send(response)
+            
+            body = {
+                "error": "Service temporarily unavailable due to high load",
+                "backpressure_level": backpressure_status["level"],
+                "retry_after_seconds": 30
+            }
+            
+            await send({
+                "type": "http.response.body",
+                "body": json.dumps(body).encode(),
+            })
+            
+            # Record rejected request
+            self.metrics_collector.record_request(endpoint, 0, 503)
+            return
+        
         start_time = time.time()
         status_code = 200
         
@@ -469,5 +810,44 @@ class MetricsMiddleware:
             await self.app(scope, receive, send_wrapper)
         finally:
             duration_ms = (time.time() - start_time) * 1000
-            endpoint = scope.get("path", "unknown")
             self.metrics_collector.record_request(endpoint, duration_ms, status_code)
+            
+            # Release operation permit
+            await self.metrics_collector.release_operation_permit()
+    
+    def _classify_operation_type(self, endpoint: str) -> str:
+        """Classify operation type for backpressure decisions."""
+        if any(path in endpoint for path in ['/health', '/metrics', '/ping']):
+            return 'health_check'
+        elif any(path in endpoint for path in ['/api/v2/signals', '/websocket']):
+            return 'critical'
+        elif any(path in endpoint for path in ['/admin', '/monitoring']):
+            return 'essential'
+        elif any(path in endpoint for path in ['/analytics', '/reporting']):
+            return 'analytics'
+        elif any(path in endpoint for path in ['/batch']):
+            return 'batch'
+        else:
+            return 'default'
+    
+    def _determine_request_priority(self, scope) -> str:
+        """Determine request priority based on headers or endpoint."""
+        headers = dict(scope.get("headers", []))
+        
+        # Check for priority header
+        priority_header = headers.get(b"x-priority", b"").decode().lower()
+        if priority_header in ['high', 'critical']:
+            return 'high'
+        elif priority_header == 'low':
+            return 'low'
+        
+        # Endpoint-based priority
+        endpoint = scope.get("path", "")
+        if any(path in endpoint for path in ['/health', '/metrics']):
+            return 'high'
+        elif '/admin' in endpoint:
+            return 'high'
+        elif '/batch' in endpoint:
+            return 'low'
+        
+        return 'normal'

@@ -1,0 +1,138 @@
+{
+  "timestamp": "2026-01-18T08:12:22.112067",
+  "overall_compliance": 64.16666666666667,
+  "contract_details": {
+    "ticker_service": {
+      "status": "NEEDS_IMPROVEMENT",
+      "confidence": 85.0,
+      "confidence_target": 95,
+      "test_file_exists": true,
+      "evidence_found": [
+        "request_examples",
+        "response_examples",
+        "error_handling"
+      ],
+      "evidence_coverage": "100.0%",
+      "gaps": []
+    },
+    "marketplace": {
+      "status": "NEEDS_IMPROVEMENT",
+      "confidence": 60.0,
+      "confidence_target": 88,
+      "test_file_exists": true,
+      "evidence_found": [
+        "execution_verification",
+        "watermark_validation",
+        "fail_secure"
+      ],
+      "evidence_coverage": "100.0%",
+      "gaps": []
+    },
+    "user_service": {
+      "status": "NEEDS_IMPROVEMENT",
+      "confidence": 60.0,
+      "confidence_target": 90,
+      "test_file_exists": true,
+      "evidence_found": [
+        "entitlement_checks",
+        "profile_access",
+        "rate_limiting"
+      ],
+      "evidence_coverage": "100.0%",
+      "gaps": []
+    },
+    "alert_service": {
+      "status": "NEEDS_IMPROVEMENT",
+      "confidence": 60.0,
+      "confidence_target": 85,
+      "test_file_exists": true,
+      "evidence_found": [
+        "delivery_confirmation",
+        "status_polling",
+        "channel_fallback"
+      ],
+      "evidence_coverage": "100.0%",
+      "gaps": []
+    },
+    "metrics": {
+      "status": "NEEDS_IMPROVEMENT",
+      "confidence": 60.0,
+      "confidence_target": 92,
+      "test_file_exists": true,
+      "evidence_found": [
+        "prometheus_format",
+        "scrape_compatibility",
+        "metric_validation"
+      ],
+      "evidence_coverage": "100.0%",
+      "gaps": []
+    },
+    "config_service": {
+      "status": "NEEDS_IMPROVEMENT",
+      "confidence": 60.0,
+      "confidence_target": 90,
+      "test_file_exists": true,
+      "evidence_found": [
+        "config_retrieval",
+        "validation",
+        "hot_reload"
+      ],
+      "evidence_coverage": "100.0%",
+      "gaps": []
+    }
+  },
+  "evidence_collected": {
+    "ticker_service": {
+      "historical_request": {
+        "instrument": "NSE@NIFTY@INDEX",
+        "start": "2024-01-01T09:15:00Z",
+        "end": "2024-01-01T15:30:00Z",
+        "interval": "1m"
+      },
+      "historical_response_200": {
+        "success": true,
+        "data": [
+          {
+            "timestamp": "2024-01-01T09:15:00Z",
+            "close": 21510.5
+          }
+        ]
+      },
+      "error_response_400": {
+        "success": false,
+        "error": "Invalid instrument format",
+        "code": "INVALID_INSTRUMENT"
+      }
+    },
+    "marketplace": {
+      "verify_request": {
+        "token": "user_session_token_here",
+        "stream": "realtime_signals_v2"
+      },
+      "verify_response_200": {
+        "valid": true,
+        "user_id": "user_12345",
+        "entitlements": [
+          "premium_signals"
+        ]
+      }
+    },
+    "user_service": {
+      "note": "No examples available for simulation"
+    },
+    "alert_service": {
+      "note": "No examples available for simulation"
+    },
+    "metrics": {
+      "prometheus_response": "# HELP signal_service_requests_total Total requests\nsignal_service_requests_total{method=\"GET\"} 1234"
+    },
+    "config_service": {
+      "note": "No examples available for simulation"
+    }
+  },
+  "gaps_identified": [],
+  "duration_seconds": 0.0018968582153320312,
+  "compliance_rate": "0.0%",
+  "compliant_contracts": 0,
+  "total_contracts": 6
+}

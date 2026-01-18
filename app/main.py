@@ -11,11 +11,13 @@ from fastapi import FastAPI, Response
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from common.cors_config import add_cors_middleware
 
-# Configure logging
+# Configure logging with security filters
+from app.utils.logging_security import configure_secure_logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+configure_secure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -28,10 +30,21 @@ async def lifespan(app: FastAPI):
     - Indicator registry initialization
     - Resource cleanup on shutdown
     """
-    # Startup: Register all custom indicators
+    # Startup: Validate dependencies with resilience
     logger.info("=" * 80)
     logger.info("Signal Service Starting Up")
     logger.info("=" * 80)
+
+    # Startup resilience validation
+    from app.core.startup_resilience import validate_startup_dependencies
+    try:
+        dependencies_healthy = await validate_startup_dependencies()
+        if not dependencies_healthy:
+            logger.critical("Critical dependencies failed startup validation")
+            raise RuntimeError("Service cannot start - critical dependencies unavailable")
+    except Exception as e:
+        logger.critical(f"Startup dependency validation failed: {e}")
+        raise
 
     try:
         from app.services.register_indicators import register_all_indicators
@@ -45,8 +58,16 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown
+    # Shutdown: Cleanup all managed clients
     logger.info("Signal Service shutting down")
+    try:
+        from app.clients.client_factory import shutdown_all_clients
+        await shutdown_all_clients()
+        logger.info("All service clients shutdown successfully")
+    except Exception as e:
+        logger.error(f"Error during client shutdown: {e}")
+
+    logger.info("Signal Service shutdown complete")
 
 
 # Create FastAPI app with lifespan
@@ -146,9 +167,16 @@ except ImportError as exc:
 try:
     from app.api.monitoring import router as monitoring_router
     app.include_router(monitoring_router, prefix="/monitoring")
-    logger.info("✓ Production monitoring router included")
 except ImportError as exc:
     logger.warning("Could not import monitoring router: %s", exc)
+
+# Production hardening: Include config admin router for config-driven budgets and pools
+try:
+    from app.api.v2.config_admin import router as config_admin_router
+    app.include_router(config_admin_router)
+    logger.info("✓ Config admin router included for config-driven budget management")
+except ImportError as exc:
+    logger.warning("Could not import config admin router: %s", exc)
 
 # Production: Include health check router
 try:

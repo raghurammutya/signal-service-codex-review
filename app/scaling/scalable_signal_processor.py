@@ -114,8 +114,7 @@ class ScalableSignalProcessor:
         await self.config_handler.initialize()
         
         # Greeks calculators
-        from app.utils.db import get_timescaledb_session
-        self.greeks_calculator = GreeksCalculator(get_timescaledb_session())
+        self.greeks_calculator = GreeksCalculator()
         self.realtime_greeks_calculator = RealTimeGreeksCalculator(self.redis_client)
         
         # Technical indicators

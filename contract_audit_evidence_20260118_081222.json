@@ -1,0 +1,49 @@
+{
+  "ticker_service": {
+    "historical_request": {
+      "instrument": "NSE@NIFTY@INDEX",
+      "start": "2024-01-01T09:15:00Z",
+      "end": "2024-01-01T15:30:00Z",
+      "interval": "1m"
+    },
+    "historical_response_200": {
+      "success": true,
+      "data": [
+        {
+          "timestamp": "2024-01-01T09:15:00Z",
+          "close": 21510.5
+        }
+      ]
+    },
+    "error_response_400": {
+      "success": false,
+      "error": "Invalid instrument format",
+      "code": "INVALID_INSTRUMENT"
+    }
+  },
+  "marketplace": {
+    "verify_request": {
+      "token": "user_session_token_here",
+      "stream": "realtime_signals_v2"
+    },
+    "verify_response_200": {
+      "valid": true,
+      "user_id": "user_12345",
+      "entitlements": [
+        "premium_signals"
+      ]
+    }
+  },
+  "user_service": {
+    "note": "No examples available for simulation"
+  },
+  "alert_service": {
+    "note": "No examples available for simulation"
+  },
+  "metrics": {
+    "prometheus_response": "# HELP signal_service_requests_total Total requests\nsignal_service_requests_total{method=\"GET\"} 1234"
+  },
+  "config_service": {
+    "note": "No examples available for simulation"
+  }
+}
