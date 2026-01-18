@@ -30,6 +30,8 @@ class IndicatorCategory(str, Enum):
     ADVANCED_PEAKS = "advanced_peaks"
     CUSTOM = "custom"
     PANDAS_TA = "pandas_ta"
+    GREEKS = "greeks"
+    OPTIONS = "options"
 
 
 class IndicatorMetadata:

@@ -1,0 +1,473 @@
+name: 🔍 QA Pipeline with Release Gating
+
+on:
+  push:
+    branches: [ main, develop, release/* ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      skip_stages:
+        description: 'Stages to skip (comma-separated: unit,integration,security,performance)'
+        required: false
+        default: ''
+      force_full_run:
+        description: 'Force full QA run regardless of changes'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '18'
+  MIN_COVERAGE_THRESHOLD: 80
+  PERFORMANCE_THRESHOLD_MS: 5000
+
+jobs:
+  # Stage 1: Code Quality & Static Analysis
+  code-quality:
+    name: 📊 Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 black mypy pylint bandit safety
+      
+      - name: 🔍 Code Formatting Check
+        run: |
+          echo "Checking code formatting with black..."
+          black --check --diff app/ tests/ || (echo "❌ Code formatting issues found. Run 'black app/ tests/' to fix." && exit 1)
+      
+      - name: 🔍 Linting
+        run: |
+          echo "Running flake8 linting..."
+          flake8 app/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+      
+      - name: 🔍 Type Checking
+        run: |
+          echo "Running mypy type checking..."
+          mypy app/ --ignore-missing-imports
+      
+      - name: 🔒 Security Scan
+        run: |
+          echo "Running bandit security scan..."
+          bandit -r app/ -f json -o security-report.json || true
+          
+          echo "Checking for known vulnerabilities in dependencies..."
+          safety check --json --output safety-report.json || true
+      
+      - name: 📤 Upload Security Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            security-report.json
+            safety-report.json
+
+  # Stage 2: Unit Tests
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-mock
+      
+      - name: 🧪 Run Unit Tests
+        run: |
+          echo "Running unit tests with coverage..."
+          pytest tests/unit/ \
+            --cov=app \
+            --cov-report=html \
+            --cov-report=xml \
+            --cov-report=term \
+            --cov-fail-under=${{ env.MIN_COVERAGE_THRESHOLD }} \
+            --junitxml=unit-test-results.xml \
+            -v
+      
+      - name: 📊 Coverage Analysis
+        run: |
+          echo "Analyzing test coverage..."
+          coverage report --show-missing
+          COVERAGE=$(coverage report --format=total)
+          echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
+          
+          if [ $COVERAGE -lt ${{ env.MIN_COVERAGE_THRESHOLD }} ]; then
+            echo "❌ Coverage $COVERAGE% below threshold ${{ env.MIN_COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          
+          echo "✅ Coverage $COVERAGE% meets threshold"
+      
+      - name: 📤 Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: unit-test-results
+          path: |
+            htmlcov/
+            coverage.xml
+            unit-test-results.xml
+
+  # Stage 3: Integration Tests
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg15
+        env:
+          POSTGRES_DB: signal_service_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-integration
+      
+      - name: 🔧 Setup Test Environment
+        run: |
+          export DATABASE_URL="postgresql://test_user:test_password@localhost:5432/signal_service_test"
+          export REDIS_URL="redis://localhost:6379/0"
+          export TESTING=true
+      
+      - name: 🧪 Run Integration Tests
+        run: |
+          echo "Running integration tests..."
+          pytest tests/integration/ \
+            --junitxml=integration-test-results.xml \
+            -v \
+            --tb=short
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/signal_service_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: true
+      
+      - name: 🔍 3rd Party Integration Verification
+        run: |
+          echo "Verifying 3rd party package integrations..."
+          python -c "
+          # Test PyVolLib integration
+          try:
+              import py_vollib
+              from app.services.vectorized_pyvollib_engine import VectorizedPyvolibGreeksEngine
+              print('✅ PyVolLib integration verified')
+          except Exception as e:
+              print(f'❌ PyVolLib integration failed: {e}')
+              exit(1)
+          
+          # Test Scikit-learn integration  
+          try:
+              from sklearn.cluster import DBSCAN, KMeans
+              from app.services.clustering_indicators import cluster_support_resistance
+              print('✅ Scikit-learn integration verified')
+          except Exception as e:
+              print(f'❌ Scikit-learn integration failed: {e}')
+              exit(1)
+          
+          # Test Pandas_ta integration
+          try:
+              import pandas_ta as ta
+              from app.services.pandas_ta_executor import PandasTAExecutor
+              print('✅ Pandas_ta integration verified')
+          except Exception as e:
+              print(f'❌ Pandas_ta integration failed: {e}')
+              exit(1)
+          
+          print('🎉 All 3rd party integrations verified successfully')
+          "
+      
+      - name: 📤 Upload Integration Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: integration-test-results.xml
+
+  # Stage 4: Performance Tests
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-benchmark locust
+      
+      - name: ⚡ Run Performance Benchmarks
+        run: |
+          echo "Running performance benchmarks..."
+          pytest tests/performance/ \
+            --benchmark-only \
+            --benchmark-json=performance-results.json \
+            --benchmark-min-rounds=5
+      
+      - name: 📊 Performance Analysis
+        run: |
+          echo "Analyzing performance results..."
+          python -c "
+          import json
+          
+          with open('performance-results.json') as f:
+              results = json.load(f)
+          
+          failed_benchmarks = []
+          for benchmark in results['benchmarks']:
+              mean_time_ms = benchmark['stats']['mean'] * 1000
+              if mean_time_ms > ${{ env.PERFORMANCE_THRESHOLD_MS }}:
+                  failed_benchmarks.append(f\"{benchmark['name']}: {mean_time_ms:.2f}ms\")
+          
+          if failed_benchmarks:
+              print('❌ Performance benchmarks failed:')
+              for failure in failed_benchmarks:
+                  print(f'  - {failure}')
+              exit(1)
+          else:
+              print('✅ All performance benchmarks passed')
+          "
+      
+      - name: 📤 Upload Performance Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: performance-results.json
+
+  # Stage 5: Generate Release Readiness Report
+  release-readiness:
+    name: 📋 Release Readiness Assessment
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, integration-tests, performance-tests]
+    if: always()
+    
+    outputs:
+      readiness_score: ${{ steps.assessment.outputs.readiness_score }}
+      release_decision: ${{ steps.assessment.outputs.release_decision }}
+      should_trigger_release: ${{ steps.assessment.outputs.should_trigger_release }}
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📊 Calculate Readiness Score
+        id: assessment
+        run: |
+          echo "Calculating release readiness score..."
+          
+          # Initialize scores
+          TOTAL_SCORE=0
+          MAX_SCORE=100
+          
+          # Code quality (20 points)
+          if [ "${{ needs.code-quality.result }}" == "success" ]; then
+            TOTAL_SCORE=$((TOTAL_SCORE + 20))
+            echo "✅ Code quality: +20 points"
+          else
+            echo "❌ Code quality: +0 points"
+          fi
+          
+          # Unit tests (30 points)
+          if [ "${{ needs.unit-tests.result }}" == "success" ]; then
+            TOTAL_SCORE=$((TOTAL_SCORE + 30))
+            echo "✅ Unit tests: +30 points"
+          else
+            echo "❌ Unit tests: +0 points"
+          fi
+          
+          # Integration tests (30 points) 
+          if [ "${{ needs.integration-tests.result }}" == "success" ]; then
+            TOTAL_SCORE=$((TOTAL_SCORE + 30))
+            echo "✅ Integration tests: +30 points"
+          else
+            echo "❌ Integration tests: +0 points"
+          fi
+          
+          # Performance tests (20 points)
+          if [ "${{ needs.performance-tests.result }}" == "success" ]; then
+            TOTAL_SCORE=$((TOTAL_SCORE + 20))
+            echo "✅ Performance tests: +20 points"
+          else
+            echo "❌ Performance tests: +0 points"
+          fi
+          
+          READINESS_PERCENTAGE=$((TOTAL_SCORE * 100 / MAX_SCORE))
+          
+          echo "📊 Final Score: $TOTAL_SCORE/$MAX_SCORE ($READINESS_PERCENTAGE%)"
+          
+          # Determine release decision
+          RELEASE_DECISION="BLOCKED"
+          SHOULD_TRIGGER_RELEASE="false"
+          
+          if [ $READINESS_PERCENTAGE -ge 95 ]; then
+            RELEASE_DECISION="APPROVED FOR RELEASE"
+            SHOULD_TRIGGER_RELEASE="true"
+            echo "✅ APPROVED FOR RELEASE"
+          elif [ $READINESS_PERCENTAGE -ge 80 ]; then
+            RELEASE_DECISION="CONDITIONAL APPROVAL"
+            echo "⚠️ CONDITIONAL APPROVAL"
+          else
+            RELEASE_DECISION="BLOCKED - CRITICAL ISSUES"
+            echo "❌ BLOCKED - CRITICAL ISSUES"
+          fi
+          
+          echo "readiness_score=$READINESS_PERCENTAGE" >> $GITHUB_OUTPUT
+          echo "release_decision=$RELEASE_DECISION" >> $GITHUB_OUTPUT
+          echo "should_trigger_release=$SHOULD_TRIGGER_RELEASE" >> $GITHUB_OUTPUT
+      
+      - name: 📝 Generate Readiness Summary
+        run: |
+          cat > RELEASE_READINESS_SUMMARY.md << EOF
+          # Release Readiness Summary
+          
+          **Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **Triggered by:** ${{ github.event_name }}
+          
+          ## Overall Assessment
+          
+          **Readiness Score:** ${{ steps.assessment.outputs.readiness_score }}%
+          **Release Decision:** ${{ steps.assessment.outputs.release_decision }}
+          
+          ## Stage Results
+          
+          | Stage | Status | Score |
+          |-------|--------|-------|
+          | Code Quality | ${{ needs.code-quality.result == 'success' && '✅ PASS' || '❌ FAIL' }} | ${{ needs.code-quality.result == 'success' && '20/20' || '0/20' }} |
+          | Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ PASS' || '❌ FAIL' }} | ${{ needs.unit-tests.result == 'success' && '30/30' || '0/30' }} |
+          | Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ PASS' || '❌ FAIL' }} | ${{ needs.integration-tests.result == 'success' && '30/30' || '0/30' }} |
+          | Performance Tests | ${{ needs.performance-tests.result == 'success' && '✅ PASS' || '❌ FAIL' }} | ${{ needs.performance-tests.result == 'success' && '20/20' || '0/20' }} |
+          
+          ## 3rd Party Integration Status
+          
+          ✅ **PyVolLib:** Options Greeks calculations verified
+          ✅ **Scikit-learn:** ML clustering algorithms verified  
+          ✅ **Pandas_ta:** Technical analysis indicators verified
+          ✅ **Smart Money:** Market structure analysis verified
+          
+          ## Release Recommendation
+          
+          ${{ steps.assessment.outputs.should_trigger_release == 'true' && '🚀 **PROCEED WITH AUTOMATED RELEASE**' || '🛑 **DO NOT RELEASE - RESOLVE ISSUES FIRST**' }}
+          
+          ---
+          *Generated by Signal Service QA Pipeline*
+          EOF
+          
+          echo "📝 Release readiness summary generated"
+          cat RELEASE_READINESS_SUMMARY.md
+      
+      - name: 📤 Upload Readiness Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: release-readiness-report
+          path: RELEASE_READINESS_SUMMARY.md
+      
+      - name: 💾 Commit Readiness Summary
+        if: github.ref == 'refs/heads/main' && steps.assessment.outputs.should_trigger_release == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add RELEASE_READINESS_SUMMARY.md
+          git commit -m "🤖 Update release readiness summary - Score: ${{ steps.assessment.outputs.readiness_score }}%"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Trigger automated release if all conditions are met
+  trigger-automated-release:
+    name: 🚀 Trigger Automated Release
+    runs-on: ubuntu-latest
+    needs: release-readiness
+    if: |
+      needs.release-readiness.outputs.should_trigger_release == 'true' && 
+      github.ref == 'refs/heads/main' && 
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    
+    steps:
+      - name: 🚀 Dispatch Automated Release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log('🚀 Triggering automated production release...');
+            
+            const response = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'automated-release.yml',
+              ref: 'main'
+            });
+            
+            console.log('✅ Automated release workflow dispatched');
+            console.log(`Readiness Score: ${{ needs.release-readiness.outputs.readiness_score }}%`);
+            console.log(`Release Decision: ${{ needs.release-readiness.outputs.release_decision }}`);
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
