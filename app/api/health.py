@@ -171,10 +171,15 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
             raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
         
         # Format according to dashboard expectations
+        from app.core.config import settings
         dashboard_format = {
             "service_name": service_name,
             "service_type": "signal_processing",
+<<<<<<< HEAD
             "port": int(service_port),
+=======
+            "port": settings.SERVICE_PORT,
+>>>>>>> compliance-violations-fixed
             "status": cluster_data['status'],
             "timestamp": cluster_data['timestamp'],
             # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned

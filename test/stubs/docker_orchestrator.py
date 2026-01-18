@@ -80,30 +80,30 @@ class DockerOrchestrator:
             await self._deregister_from_load_balancer("old-instance")
         return {"success": True}
 
-    # The following are placeholders that can be patched in tests
-    async def _send_shutdown_signal(self, instance_id: str):  # pragma: no cover - patched in tests
-        return True
+    # Production implementation requires Docker API integration
+    async def _send_shutdown_signal(self, instance_id: str):
+        raise RuntimeError(f"Docker orchestration requires Docker API integration - cannot send shutdown signal to {instance_id}")
 
-    async def _wait_for_graceful_shutdown(self, instance_id: str):  # pragma: no cover - patched in tests
-        return True
+    async def _wait_for_graceful_shutdown(self, instance_id: str):
+        raise RuntimeError(f"Docker orchestration requires Docker API integration - cannot wait for shutdown of {instance_id}")
 
-    async def _force_stop_container(self, instance_id: str):  # pragma: no cover - patched in tests
-        return True
+    async def _force_stop_container(self, instance_id: str):
+        raise RuntimeError(f"Docker orchestration requires Docker API integration - cannot force stop {instance_id}")
 
-    async def _register_with_load_balancer(self, instance_id: str):  # pragma: no cover - patched in tests
-        return True
+    async def _register_with_load_balancer(self, instance_id: str):
+        raise RuntimeError(f"Load balancer integration required - cannot register {instance_id}")
 
-    async def _deregister_from_load_balancer(self, instance_id: str):  # pragma: no cover - patched in tests
-        return True
+    async def _deregister_from_load_balancer(self, instance_id: str):
+        raise RuntimeError(f"Load balancer integration required - cannot deregister {instance_id}")
 
-    async def _start_new_instance(self, *_args, **_kwargs):  # pragma: no cover - patched in tests
-        return True
+    async def _start_new_instance(self, *_args, **_kwargs):
+        raise RuntimeError("Docker orchestration requires Docker API integration - cannot start new instances")
 
-    async def _stop_instance(self, *_args, **_kwargs):  # pragma: no cover - patched in tests
-        return True
+    async def _stop_instance(self, *_args, **_kwargs):
+        raise RuntimeError("Docker orchestration requires Docker API integration - cannot stop instances")
 
     async def _emit_scaling_metrics(self, *_args, **_kwargs):
-        return True
+        raise RuntimeError("Metrics emission requires metrics service integration - cannot emit scaling metrics")
 
     async def _cleanup_failed_scaling(self, started_instances):
         for inst in started_instances:

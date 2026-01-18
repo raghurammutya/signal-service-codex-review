@@ -1,0 +1,84 @@
+{
+  "groups": [
+    {
+      "name": "config-service",
+      "rules": [
+        {
+          "alert": "ConfigServiceDown",
+          "expr": "up{job=\"config-service\"} == 0",
+          "for": "1m",
+          "labels": {
+            "severity": "critical",
+            "service": "config-service",
+            "component": "infrastructure"
+          },
+          "annotations": {
+            "summary": "Config Service is down",
+            "description": "Config service has been down for more than 1 minute. Signal service cannot start or update configuration.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/config-service-down"
+          }
+        },
+        {
+          "alert": "ConfigServiceHighLatency",
+          "expr": "histogram_quantile(0.95, rate(config_service_fetch_duration_seconds_bucket[5m])) > 0.5",
+          "for": "2m",
+          "labels": {
+            "severity": "warning",
+            "service": "config-service",
+            "component": "performance"
+          },
+          "annotations": {
+            "summary": "Config Service high latency detected",
+            "description": "Config service P95 latency is {{ $value }}s, above 500ms threshold for 2 minutes.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/config-service-latency"
+          }
+        },
+        {
+          "alert": "ConfigServiceLowCacheHitRate",
+          "expr": "rate(config_service_cache_hits_total[5m]) / rate(config_service_cache_requests_total[5m]) * 100 < 80",
+          "for": "5m",
+          "labels": {
+            "severity": "warning",
+            "service": "config-service",
+            "component": "caching"
+          },
+          "annotations": {
+            "summary": "Config Service cache hit rate is low",
+            "description": "Config service cache hit rate is {{ $value }}%, below 80% threshold.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/config-service-cache"
+          }
+        },
+        {
+          "alert": "ConfigServiceHighErrorRate",
+          "expr": "rate(config_service_requests_total{status=~\"4..|5..\"}[5m]) / rate(config_service_requests_total[5m]) * 100 > 5",
+          "for": "2m",
+          "labels": {
+            "severity": "critical",
+            "service": "config-service",
+            "component": "reliability"
+          },
+          "annotations": {
+            "summary": "Config Service high error rate",
+            "description": "Config service error rate is {{ $value }}%, above 5% threshold for 2 minutes.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/config-service-errors"
+          }
+        },
+        {
+          "alert": "ServiceBootstrapFailure",
+          "expr": "increase(service_bootstrap_failures_total[5m]) > 0",
+          "for": "0m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "bootstrap"
+          },
+          "annotations": {
+            "summary": "Signal Service bootstrap failure detected",
+            "description": "Signal service failed to bootstrap {{ $value }} times in the last 5 minutes. Check config service connectivity.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/bootstrap-failure"
+          }
+        }
+      ]
+    }
+  ]
+}

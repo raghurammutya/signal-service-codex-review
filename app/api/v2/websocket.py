@@ -71,8 +71,9 @@ class ConnectionManager:
         from app.services.signal_processor import get_signal_processor
         self.signal_processor = await get_signal_processor()
 
-        from app.services.instrument_service_client import InstrumentServiceClient
-        instrument_client = InstrumentServiceClient()
+        from app.clients.client_factory import get_client_manager
+        manager = get_client_manager()
+        instrument_client = await manager.get_client('instrument_service')
         self.moneyness_calculator = MoneynessAwareGreeksCalculator(instrument_client)
 
         # Start background tasks
@@ -321,11 +322,12 @@ class ConnectionManager:
             logger.error("Redis listener cannot start - redis_subscriber is None")
             return
 
-        # Subscribe to a dummy channel to initialize pub/sub connection
-        # This prevents "pubsub connection not set" error
+        # Initialize pub/sub connection without dummy subscription
+        # Connection will be established when first real subscription occurs
         try:
-            await self.redis_subscriber.subscribe("_websocket:init")
-            logger.info("Redis listener started with initial dummy subscription")
+            # Just validate the connection is ready
+            await self.redis_subscriber.ping()
+            logger.info("Redis listener initialized - ready for subscriptions")
         except Exception as e:
             logger.error(f"Failed to initialize Redis pub/sub: {e}")
             return

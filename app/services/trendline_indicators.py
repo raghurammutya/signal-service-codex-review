@@ -30,7 +30,11 @@ try:
     logger.info("trendln library loaded successfully")
 except ImportError:
     TRENDLN_AVAILABLE = False
+<<<<<<< HEAD
     logger.error("trendln not available - Trendline indicators will fail fast")
+=======
+    logger.warning("trendln not available - Trendline indicators will raise ComputationError")
+>>>>>>> compliance-violations-fixed
 
 
 @register_indicator(
@@ -62,7 +66,12 @@ def support_trendline(
     """
     try:
         if not TRENDLN_AVAILABLE:
+<<<<<<< HEAD
             raise ImportError("trendln library required for support trendline calculation. No mock data allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("trendln library not available - support trendline detection requires trendln library")
+>>>>>>> compliance-violations-fixed
 
         prices = df['low'].values
 
@@ -73,7 +82,12 @@ def support_trendline(
         )
 
         if not minimaIdxs or len(minimaIdxs) < 2:
+<<<<<<< HEAD
             raise ValueError("Insufficient data for support trendline calculation. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("Insufficient swing lows found for support trendline detection")
+>>>>>>> compliance-violations-fixed
 
         # Get the strongest support line
         # Calculate slope and intercept
@@ -81,7 +95,12 @@ def support_trendline(
         y = prices[minimaIdxs]
 
         if len(x) < 2:
+<<<<<<< HEAD
             raise ValueError("Insufficient data for support trendline calculation. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("Insufficient data points for support trendline linear regression")
+>>>>>>> compliance-violations-fixed
 
         # Linear regression
         coeffs = np.polyfit(x, y, 1)
@@ -107,8 +126,13 @@ def support_trendline(
         }
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error detecting support trendline: {e}")
+<<<<<<< HEAD
         raise ValueError("Insufficient data for support trendline calculation. No fallback allowed in production.")
+=======
+        raise ComputationError(f"Failed to detect support trendline: {e}") from e
+>>>>>>> compliance-violations-fixed
 
 
 @register_indicator(
@@ -140,7 +164,12 @@ def resistance_trendline(
     """
     try:
         if not TRENDLN_AVAILABLE:
+<<<<<<< HEAD
             raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("trendln library not available - resistance trendline detection requires trendln library")
+>>>>>>> compliance-violations-fixed
 
         prices = df['high'].values
 
@@ -151,14 +180,24 @@ def resistance_trendline(
         )
 
         if not maximaIdxs or len(maximaIdxs) < 2:
+<<<<<<< HEAD
             raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("Insufficient swing highs found for resistance trendline detection")
+>>>>>>> compliance-violations-fixed
 
         # Get the strongest resistance line
         x = np.array(maximaIdxs)
         y = prices[maximaIdxs]
 
         if len(x) < 2:
+<<<<<<< HEAD
             raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("Insufficient data points for resistance trendline linear regression")
+>>>>>>> compliance-violations-fixed
 
         # Linear regression
         coeffs = np.polyfit(x, y, 1)
@@ -184,8 +223,13 @@ def resistance_trendline(
         }
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error detecting resistance trendline: {e}")
+<<<<<<< HEAD
         raise ValueError("Insufficient data for resistance trendline calculation. No fallback allowed in production.")
+=======
+        raise ComputationError(f"Failed to detect resistance trendline: {e}") from e
+>>>>>>> compliance-violations-fixed
 
 
 @register_indicator(
@@ -215,16 +259,27 @@ def trendline_breakout(
     """
     try:
         if not TRENDLN_AVAILABLE:
+<<<<<<< HEAD
             raise ImportError("trendln library required for breakout detection. No mock data allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("trendln library not available - breakout detection requires trendln library")
+>>>>>>> compliance-violations-fixed
 
         result = pd.Series(0, index=df.index)
 
         # Get support and resistance trendlines
-        support = support_trendline(df)
-        resistance = resistance_trendline(df)
+        try:
+            support = support_trendline(df)
+            resistance = resistance_trendline(df)
+        except Exception:
+            # If trendline detection fails, we cannot detect breakouts
+            from app.errors import ComputationError
+            raise ComputationError("Failed to compute trendlines required for breakout detection")
 
         if not support or not resistance:
-            return result
+            from app.errors import ComputationError
+            raise ComputationError("Could not establish valid support and resistance trendlines for breakout detection")
 
         # Calculate trendline values for each bar
         indices = np.arange(len(df))
@@ -249,8 +304,9 @@ def trendline_breakout(
         return result
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error detecting trendline breakout: {e}")
-        return pd.Series(0, index=df.index)
+        raise ComputationError(f"Failed to detect trendline breakout: {e}") from e
 
 
 @register_indicator(
@@ -278,14 +334,29 @@ def channel_detection(
     """
     try:
         if not TRENDLN_AVAILABLE:
+<<<<<<< HEAD
             raise ValueError("Channel detection failed: trendln library not available. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("trendln library not available - channel detection requires trendln library")
+>>>>>>> compliance-violations-fixed
 
         # Get both trendlines
-        support = support_trendline(df)
-        resistance = resistance_trendline(df)
+        try:
+            support = support_trendline(df)
+            resistance = resistance_trendline(df)
+        except Exception:
+            # If trendline detection fails, we cannot detect channels
+            from app.errors import ComputationError
+            raise ComputationError("Failed to compute trendlines required for channel detection")
 
         if not support or not resistance:
+<<<<<<< HEAD
             raise ValueError("Channel detection failed: unable to detect support or resistance trendlines. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("Could not establish valid support and resistance trendlines for channel detection")
+>>>>>>> compliance-violations-fixed
 
         # Check if lines are approximately parallel (similar slopes)
         slope_diff = abs(support['slope'] - resistance['slope'])
@@ -316,7 +387,16 @@ def channel_detection(
         }
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error detecting channel: {e}")
+<<<<<<< HEAD
         raise ValueError(f"Channel detection failed: {e}. No fallback allowed in production.")
 
 
+=======
+        raise ComputationError(f"Failed to detect channel: {e}") from e
+
+
+# Note: Mock functions removed - production code must handle missing dependencies properly
+# by raising ComputationError when trendln library is not available
+>>>>>>> compliance-violations-fixed

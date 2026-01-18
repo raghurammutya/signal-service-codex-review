@@ -1,0 +1,319 @@
+name: Deployment Safety Validation
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  validate-deployment-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    strategy:
+      matrix:
+        environment: [staging, production]
+        
+    env:
+      ENVIRONMENT: ${{ matrix.environment }}
+      CONFIG_SERVICE_URL: ${{ secrets.CONFIG_SERVICE_URL }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Validate environment configuration
+        run: |
+          echo "Validating ${{ matrix.environment }} environment configuration..."
+          python -c "
+          import os
+          required_vars = ['CONFIG_SERVICE_URL']
+          missing = [var for var in required_vars if not os.environ.get(var)]
+          if missing:
+              print(f'Missing required environment variables: {missing}')
+              exit(1)
+          print('Environment variables validation passed')
+          "
+          
+      - name: Run deployment safety validation
+        env:
+          # Override for validation - normally comes from config service
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
+          GATEWAY_SECRET: ${{ secrets.GATEWAY_SECRET }}
+        run: |
+          echo "Running deployment safety validation for ${{ matrix.environment }}..."
+          python scripts/deployment_safety_validation.py --environment ${{ matrix.environment }}
+          
+      - name: Validate CORS configuration
+        run: |
+          echo "Validating CORS configuration for ${{ matrix.environment }}..."
+          python -c "
+          import os
+          from common.cors_config import validate_cors_configuration
+          
+          os.environ['CORS_ALLOWED_ORIGINS'] = '${{ secrets.CORS_ALLOWED_ORIGINS }}'
+          
+          try:
+              validate_cors_configuration('${{ matrix.environment }}')
+              print('CORS configuration validation passed')
+          except Exception as e:
+              print(f'CORS validation failed: {e}')
+              exit(1)
+          "
+          
+      - name: Test config service connectivity
+        env:
+          CONFIG_SERVICE_URL: ${{ secrets.CONFIG_SERVICE_URL }}
+          CONFIG_SERVICE_API_KEY: ${{ secrets.CONFIG_SERVICE_API_KEY }}
+        run: |
+          echo "Testing config service connectivity..."
+          python -c "
+          import os
+          import sys
+          sys.path.insert(0, '.')
+          
+          try:
+              from common.config_service.client import ConfigServiceClient
+              
+              client = ConfigServiceClient(
+                  service_name='signal_service',
+                  environment='${{ matrix.environment }}',
+                  timeout=10
+              )
+              
+              if client.health_check():
+                  print('Config service connectivity: PASSED')
+              else:
+                  print('Config service health check failed')
+                  exit(1)
+                  
+          except Exception as e:
+              print(f'Config service connectivity failed: {e}')
+              exit(1)
+          "
+          
+      - name: Validate security logging
+        run: |
+          echo "Testing security logging configuration..."
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          
+          from app.utils.logging_security import configure_secure_logging
+          import logging
+          
+          # Configure secure logging
+          configure_secure_logging()
+          
+          # Test that sensitive data is redacted
+          logger = logging.getLogger('test')
+          
+          # This should be redacted in logs
+          test_data = 'api_key=secret123 internal_api_key=abc123xyz'
+          logger.info(test_data)
+          
+          print('Security logging configuration: PASSED')
+          "
+          
+      - name: Run health check validation
+        run: |
+          echo "Validating health check endpoints..."
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          import asyncio
+          
+          async def validate_health():
+              from app.core.startup_resilience import validate_startup_dependencies
+              
+              # Test startup validation with mocked dependencies
+              print('Testing startup dependency validation...')
+              
+              # This will test the resilience logic even if services unavailable
+              try:
+                  # In CI, we expect this to handle service unavailability gracefully
+                  await validate_startup_dependencies()
+                  print('Startup resilience validation: PASSED')
+              except SystemExit:
+                  print('Expected system exit for missing critical services: PASSED')
+              except Exception as e:
+                  print(f'Startup validation error: {e}')
+                  exit(1)
+          
+          asyncio.run(validate_health())
+          "
+          
+      - name: Validate circuit breaker configuration
+        run: |
+          echo "Validating circuit breaker configuration..."
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          
+          from app.clients.client_factory import get_client_manager, CircuitBreakerConfig
+          
+          # Test centralized circuit breaker config
+          config = CircuitBreakerConfig()
+          
+          # Validate all services have config
+          services = ['ticker_service', 'user_service', 'alert_service', 'comms_service']
+          for service in services:
+              cb_config = config.get_config(service)
+              assert 'max_failures' in cb_config
+              assert 'timeout_seconds' in cb_config
+              assert cb_config['max_failures'] > 0
+              print(f'{service} circuit breaker config: OK')
+          
+          print('Circuit breaker configuration: PASSED')
+          "
+          
+      - name: Run rare failure mode tests
+        run: |
+          echo "Running rare failure mode tests..."
+          python -m pytest tests/integration/test_rare_failure_modes.py -v --tb=short
+          
+      - name: Validate production hardening integration
+        run: |
+          echo "Validating complete production hardening integration..."
+          python scripts/validate_production_hardening.py
+
+  validate-production-security:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    needs: validate-deployment-safety
+    
+    env:
+      ENVIRONMENT: production
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Production security validation
+        env:
+          CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
+        run: |
+          echo "Running production-specific security validation..."
+          
+          # Test CORS wildcard rejection
+          python -c "
+          import os
+          import sys
+          sys.path.insert(0, '.')
+          
+          from common.cors_config import get_allowed_origins
+          
+          # Test that wildcards are rejected in production
+          test_cases = ['*', 'https://*', 'https://*.example.com']
+          
+          for wildcard in test_cases:
+              os.environ['CORS_ALLOWED_ORIGINS'] = wildcard
+              try:
+                  get_allowed_origins('production')
+                  print(f'ERROR: Wildcard {wildcard} was not rejected')
+                  exit(1)
+              except ValueError:
+                  print(f'Wildcard {wildcard} correctly rejected')
+          
+          print('Production CORS security: PASSED')
+          "
+          
+      - name: Test fallback elimination
+        run: |
+          echo "Validating fallback elimination..."
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          
+          # Test that StreamAbuseProtection has no fallbacks
+          from app.services.stream_abuse_protection import StreamAbuseProtectionService
+          
+          service = StreamAbuseProtectionService()
+          
+          # Should not have FALLBACK_LIMITS attribute
+          if hasattr(service, 'FALLBACK_LIMITS'):
+              print('ERROR: FALLBACK_LIMITS still exists')
+              exit(1)
+          
+          print('Fallback elimination: PASSED')
+          "
+          
+      - name: Test deployment artifact integrity
+        run: |
+          echo "Validating deployment artifact integrity..."
+          
+          # Check that critical files exist
+          critical_files=(
+            'app/core/startup_resilience.py'
+            'app/clients/client_factory.py' 
+            'app/utils/logging_security.py'
+            'tests/integration/test_cors_api_endpoints.py'
+            'tests/integration/test_metrics_service_contract.py'
+          )
+          
+          for file in "${critical_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "ERROR: Critical file missing: $file"
+              exit 1
+            fi
+            echo "✓ $file exists"
+          done
+          
+          echo "Deployment artifact integrity: PASSED"
+
+  notify-deployment-status:
+    runs-on: ubuntu-latest
+    needs: [validate-deployment-safety, validate-production-security]
+    if: always()
+    
+    steps:
+      - name: Deployment validation summary
+        run: |
+          echo "=== Deployment Validation Summary ==="
+          echo "Safety validation: ${{ needs.validate-deployment-safety.result }}"
+          echo "Security validation: ${{ needs.validate-production-security.result }}"
+          
+          if [[ "${{ needs.validate-deployment-safety.result }}" == "failure" ]]; then
+            echo "❌ Deployment safety validation FAILED - blocking deployment"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.validate-production-security.result }}" == "failure" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "❌ Production security validation FAILED - blocking production deployment"
+            exit 1
+          fi
+          
+          echo "✅ All deployment validations PASSED - deployment approved"

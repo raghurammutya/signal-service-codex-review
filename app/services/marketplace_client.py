@@ -148,6 +148,7 @@ class MarketplaceClient:
         
         try:
             # Use gateway headers for authentication since marketplace API requires it
+<<<<<<< HEAD
             # Get the real gateway secret from config_service (Architecture Principle #1: Config service exclusivity)
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -163,6 +164,13 @@ class MarketplaceClient:
                     raise ValueError("GATEWAY_SECRET not found in config_service")
             except Exception as e:
                 raise RuntimeError(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
+=======
+            # Get the real gateway secret from config_service
+            from app.core.config import settings
+            gateway_secret = settings.gateway_secret
+            if not gateway_secret:
+                raise RuntimeError("Gateway secret not available from config_service - required for marketplace authentication")
+>>>>>>> compliance-violations-fixed
                 
             headers = {
                 "X-User-ID": user_id,
@@ -212,6 +220,7 @@ class MarketplaceClient:
         client = self._get_client()
         
         try:
+<<<<<<< HEAD
             # Use gateway headers for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -228,6 +237,13 @@ class MarketplaceClient:
             except Exception as e:
                 logger.error(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 return {"subscriptions": [], "total_count": 0}
+=======
+            # Use gateway headers for authentication - get directly from config service
+            from app.core.config import settings
+            gateway_secret = settings.gateway_secret
+            if not gateway_secret:
+                raise RuntimeError("Gateway secret not available from config_service - required for marketplace authentication")
+>>>>>>> compliance-violations-fixed
             
             headers = {
                 "X-User-ID": user_id,
@@ -303,6 +319,7 @@ class MarketplaceClient:
         client = self._get_client()
         
         try:
+<<<<<<< HEAD
             # Use gateway headers for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -319,6 +336,13 @@ class MarketplaceClient:
             except Exception as e:
                 logger.error(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 return {"signal_groups": []}
+=======
+            # Use gateway headers for authentication - get directly from config service
+            from app.core.config import settings
+            gateway_secret = settings.gateway_secret
+            if not gateway_secret:
+                raise RuntimeError("Gateway secret not available from config_service - required for marketplace authentication")
+>>>>>>> compliance-violations-fixed
             
             headers = {
                 "X-User-ID": user_id,
@@ -372,6 +396,7 @@ class MarketplaceClient:
         client = self._get_client()
         
         try:
+<<<<<<< HEAD
             # Use gateway headers for authentication from config_service exclusively (Architecture Principle #1: Config service exclusivity)
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -388,6 +413,13 @@ class MarketplaceClient:
             except Exception as e:
                 logger.error(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
                 return {"has_access": False, "access_level": "none"}
+=======
+            # Use gateway headers for authentication - get directly from config service
+            from app.core.config import settings
+            gateway_secret = settings.gateway_secret
+            if not gateway_secret:
+                raise RuntimeError("Gateway secret not available from config_service - required for marketplace authentication")
+>>>>>>> compliance-violations-fixed
             
             headers = {
                 "X-User-ID": user_id,
@@ -421,6 +453,7 @@ def create_marketplace_client() -> MarketplaceClient:
     Returns:
         MarketplaceClient instance
     """
+<<<<<<< HEAD
     # Get marketplace URL and API key from config_service (Architecture Principle #1: Config service exclusivity)
     try:
         from common.config_service.client import ConfigServiceClient
@@ -445,6 +478,15 @@ def create_marketplace_client() -> MarketplaceClient:
     
     if not internal_api_key:
         logger.warning("INTERNAL_API_KEY not set - marketplace integration may fail")
+=======
+    from app.core.config import settings
+    base_url = settings.MARKETPLACE_SERVICE_URL
+    internal_api_key = settings.internal_api_key or ""
+    
+    # Internal API key from config service - fail fast if not available
+    if not internal_api_key:
+        raise RuntimeError("Internal API key not available from config_service - required for marketplace integration")
+>>>>>>> compliance-violations-fixed
     
     return MarketplaceClient(
         base_url=base_url,

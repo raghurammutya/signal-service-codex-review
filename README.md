@@ -102,6 +102,56 @@ This repository contains the **Signal Service** - a high-performance, enterprise
 - **Container Orchestration** ready
 - **Horizontal Scaling** capabilities
 
+## Configuration & Deployment
+
+### Required Environment Variables
+
+The Signal Service requires these environment variables for bootstrap and config service integration:
+
+#### Bootstrap Variables (Required at startup)
+- `ENVIRONMENT` - Deployment environment (e.g., "production", "staging", "development")
+- `CONFIG_SERVICE_URL` - URL to the config service API (e.g., "https://config.example.com")
+- `CONFIG_SERVICE_API_KEY` - Authentication token for config service access
+
+#### Service Configuration (From Config Service)
+All other configuration is loaded from the config service using the bootstrap credentials:
+
+- **Database**: `DATABASE_URL`, `REDIS_URL`
+- **Service URLs**: `ticker_service_url`, `marketplace_service_url`, etc.
+- **Secrets**: `GATEWAY_SECRET`, `INTERNAL_API_KEY`, webhook secrets
+- **Performance**: Cache TTL, batch sizes, timeouts
+- **Security**: Watermark secrets, enforcement policies
+
+### Deployment Checklist
+
+1. **Config Service Setup**:
+   ```bash
+   export ENVIRONMENT="production"
+   export CONFIG_SERVICE_URL="https://config.yourcompany.com"
+   export CONFIG_SERVICE_API_KEY="your-api-key"
+   ```
+
+2. **Config Service Health Check**:
+   ```bash
+   python -m tests.config.test_config_bootstrap
+   ```
+
+3. **Deployment Safety Check** (Automated validation):
+   ```bash
+   python scripts/deployment_safety_check.py
+   ```
+
+4. **Run Application**:
+   ```bash
+   python -m app.main
+   ```
+
+### Health & Smoke Tests
+
+- **Config Service Bootstrap Test**: `tests/config/test_config_bootstrap.py`
+- **Service Health Endpoint**: `GET /health` - Validates all critical dependencies
+- **Config Service Status**: `GET /config/status` - Shows config service connectivity
+
 ## Key Files for Review
 
 ### Core Application

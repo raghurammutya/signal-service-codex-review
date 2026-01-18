@@ -1,0 +1,122 @@
+{
+  "timestamp": "2026-01-18T08:15:51.991054",
+  "unused_tables_sweep": {
+    "total_tables_checked": 9,
+    "used_tables": 7,
+    "unused_tables": 2,
+    "table_usage_details": {
+      "signal_greeks": {
+        "usage_files": [
+          "app/repositories/signal_repository.py",
+          "app/api/v2/admin.py"
+        ],
+        "usage_count": 2,
+        "status": "USED"
+      },
+      "signal_indicators": {
+        "usage_files": [
+          "app/repositories/signal_repository.py",
+          "app/api/v2/admin.py"
+        ],
+        "usage_count": 2,
+        "status": "USED"
+      },
+      "custom_timeframes": {
+        "usage_files": [
+          "app/services/flexible_timeframe_manager.py",
+          "app/repositories/signal_repository.py",
+          "app/api/v2/historical.py"
+        ],
+        "usage_count": 3,
+        "status": "USED"
+      },
+      "user_preferences": {
+        "usage_files": [
+          "app/services/signal_delivery_service.py",
+          "app/services/enhanced_signal_delivery_service.py"
+        ],
+        "usage_count": 2,
+        "status": "USED"
+      },
+      "alert_configs": {
+        "usage_files": [
+          "app/services/indicator_aggregation_manager.py"
+        ],
+        "usage_count": 1,
+        "status": "USED"
+      },
+      "watermark_data": {
+        "usage_files": [],
+        "usage_count": 0,
+        "status": "UNUSED"
+      },
+      "budget_guard_metrics": {
+        "usage_files": [],
+        "usage_count": 0,
+        "status": "UNUSED"
+      },
+      "circuit_breaker_state": {
+        "usage_files": [
+          "app/api/monitoring.py"
+        ],
+        "usage_count": 1,
+        "status": "USED"
+      },
+      "processing_metrics": {
+        "usage_files": [
+          "app/services/signal_processor.py"
+        ],
+        "usage_count": 1,
+        "status": "USED"
+      }
+    },
+    "documented_tables": [
+      {
+        "table": "watermark_data",
+        "planned_usage": "Planned for watermark metadata storage - keep for security compliance",
+        "action": "KEEP - Document planned use"
+      },
+      {
+        "table": "budget_guard_metrics",
+        "planned_usage": "Planned for budget guard monitoring - keep for observability",
+        "action": "KEEP - Document planned use"
+      }
+    ],
+    "removal_candidates": []
+  },
+  "consistency_check_setup": {
+    "consistency_script_created": true,
+    "script_path": "scripts/nightly_db_consistency_check.py",
+    "cron_config_path": "scripts/db_consistency_cron.conf",
+    "scheduled_time": "02:00 daily",
+    "alerting_thresholds": {
+      "max_data_age_hours": 24,
+      "min_row_count": 1000,
+      "min_hypertable_health": 80
+    }
+  },
+  "production_readiness": {
+    "overall_ready": true,
+    "readiness_score": 100.0,
+    "checks": [
+      [
+        "Table Usage",
+        true,
+        "77.8% tables in use"
+      ],
+      [
+        "Monitoring Setup",
+        true,
+        "Nightly consistency checks configured"
+      ],
+      [
+        "Table Documentation",
+        true,
+        "2 tables documented"
+      ]
+    ],
+    "passed_checks": 3,
+    "total_checks": 3
+  },
+  "duration_seconds": 0.02406477928161621
+}

@@ -13,7 +13,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Query, Header
 from pydantic import BaseModel, Field
 
-from app.utils.logging_utils import log_info, log_error, log_exception
+from app.utils.logging_utils import log_info, log_error, log_exception, log_warning
 from app.services.signal_stream_contract import (
     SignalStreamContract, 
     StreamKeyFormat
@@ -21,8 +21,32 @@ from app.services.signal_stream_contract import (
 from app.services.unified_entitlement_service import get_unified_entitlement_service
 from app.api.v2.websocket import ConnectionManager
 from app.core.auth.gateway_trust import get_current_user_from_gateway
+from pydantic import BaseModel, Field, ValidationError
 
 router = APIRouter(prefix="/sdk", tags=["sdk-signals"])
+
+
+# Pydantic models for algo_engine API contract validation
+class AlgoEngineScriptResponse(BaseModel):
+    """Schema for individual script response from algo_engine API."""
+    script_id: str = Field(..., description="Unique script identifier")
+    name: str = Field(..., description="Human-readable script name")
+    script_type: str = Field(..., description="Type of script (signal, indicator, etc.)")
+    owner_id: str = Field(..., description="User ID of script owner")
+    status: str = Field(default="active", description="Script status")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
+    description: Optional[str] = Field(None, description="Script description")
+    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Script parameters")
+
+
+class AlgoEngineScriptsListResponse(BaseModel):
+    """Schema for scripts list response from algo_engine API."""
+    scripts: List[AlgoEngineScriptResponse] = Field(..., description="List of user scripts")
+    total_count: Optional[int] = Field(None, description="Total number of scripts")
+    page: Optional[int] = Field(None, description="Current page number")
+    limit: Optional[int] = Field(None, description="Results per page")
+
 
 # Global connection manager instance
 sdk_connection_manager: Optional[ConnectionManager] = None
@@ -491,8 +515,11 @@ async def sdk_websocket_endpoint(
                 stream_keys = message.get("stream_keys", [])
                 for stream_key in stream_keys:
                     client_allowed_streams.discard(stream_key)
+<<<<<<< HEAD
                     # Unsubscription mapping would be implemented here if needed
                     logger.debug(f"Client unsubscribed from stream: {stream_key}")
+=======
+>>>>>>> compliance-violations-fixed
                     
             elif message_type == "ping":
                 # Respond to ping
@@ -538,8 +565,15 @@ async def list_available_streams(
         
         # Use provided instruments or fetch from user watchlist/preferences
         if not instruments:
-            # Default instruments - in production, fetch from user preferences/watchlist
-            instruments = ["SYMBOL1", "SYMBOL2", "SYMBOL3", "SYMBOL4", "SYMBOL5"]
+            try:
+                # Fetch user's watchlist/preferences from user service
+                instruments = await _get_user_watchlist(user_id)
+                if not instruments:
+                    # If no watchlist, return empty streams
+                    instruments = []
+            except Exception as e:
+                log_warning(f"Failed to fetch user watchlist: {e}")
+                instruments = []
         
         available_streams = {
             "public": signal_contract.get_public_streams(instruments),
@@ -592,6 +626,7 @@ async def list_available_streams(
         
         # Fetch personal signals
         try:
+<<<<<<< HEAD
             # Use algo_engine API client instead of direct import (CONSOLIDATED)
             from app.clients.algo_engine_client import get_algo_engine_client
             
@@ -603,6 +638,11 @@ async def list_available_streams(
                 script_type="signal",
                 limit=100
             )
+=======
+            # Import personal script service
+            # Decouple from algo_engine - use internal API delegation
+            personal_scripts = await _get_personal_scripts_via_api(user_id)
+>>>>>>> compliance-violations-fixed
             
             for script_info in personal_scripts:
                 script_id = script_info.get("script_id")
@@ -691,3 +731,126 @@ async def validate_execution_token(
     except Exception as e:
         log_error(f"Error validating token: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+<<<<<<< HEAD
+=======
+
+
+async def _get_user_watchlist(user_id: str) -> List[str]:
+    """
+    Fetch user's watchlist/instruments from user service.
+    
+    Returns list of instrument symbols the user is watching.
+    """
+    try:
+        from app.clients.client_factory import get_client_manager
+        client_manager = get_client_manager()
+        client = await client_manager.get_client('user_service')
+        user_data = await client.get_user_profile(user_id)
+        
+        # Extract watchlist from user preferences
+        watchlist = user_data.get("preferences", {}).get("watchlist", [])
+        if isinstance(watchlist, list):
+            return [str(symbol).upper() for symbol in watchlist if symbol]
+        return []
+        
+    except Exception as e:
+        log_warning(f"Error fetching user watchlist: {e}")
+        return []
+
+
+async def _get_personal_scripts_via_api(user_id: str) -> List[Dict[str, Any]]:
+    """
+    Get personal scripts via API delegation instead of direct algo_engine import.
+    
+    This decouples signal_service from algo_engine by using HTTP API calls
+    instead of direct Python imports.
+    """
+    try:
+        import httpx
+        from app.core.config import settings
+        
+        # Get algo_engine service URL from config
+        algo_engine_url = getattr(settings, 'ALGO_ENGINE_SERVICE_URL', None)
+        if not algo_engine_url:
+            log_warning("ALGO_ENGINE_SERVICE_URL not configured - personal scripts unavailable")
+            return []
+        
+        # Get internal API key for service-to-service auth
+        api_key = getattr(settings, 'internal_api_key', None)
+        if not api_key:
+            log_warning("INTERNAL_API_KEY not configured - cannot fetch personal scripts")
+            return []
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{algo_engine_url}/api/v1/scripts",
+                params={
+                    "user_id": user_id,
+                    "script_type": "signal",
+                    "limit": 100
+                },
+                headers={
+                    "X-Internal-API-Key": api_key,
+                    "Content-Type": "application/json"
+                },
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                try:
+                    raw_response = response.json()
+                    
+                    # Validate response schema using Pydantic
+                    validated_response = AlgoEngineScriptsListResponse(**raw_response)
+                    
+                    log_info(f"Successfully validated {len(validated_response.scripts)} scripts from algo_engine")
+                    
+                    # Return validated scripts as dicts for backward compatibility
+                    return [script.dict() for script in validated_response.scripts]
+                    
+                except ValidationError as e:
+                    log_error(f"Schema validation failed for algo_engine response: {e}")
+                    log_error(f"Raw response: {raw_response}")
+                    
+                    # Fallback: try to extract scripts manually with safe access
+                    try:
+                        scripts = raw_response.get("scripts", [])
+                        safe_scripts = []
+                        
+                        for script in scripts:
+                            if not isinstance(script, dict):
+                                continue
+                                
+                            # Validate required fields manually
+                            if not all(key in script for key in ["script_id", "name"]):
+                                log_warning(f"Script missing required fields: {script}")
+                                continue
+                                
+                            safe_scripts.append({
+                                "script_id": script["script_id"],
+                                "name": script["name"],
+                                "script_type": script.get("script_type", "signal"),
+                                "owner_id": script.get("owner_id", user_id),
+                                "status": script.get("status", "active"),
+                                "description": script.get("description"),
+                                "parameters": script.get("parameters", {})
+                            })
+                        
+                        log_warning(f"Used fallback parsing for {len(safe_scripts)} scripts")
+                        return safe_scripts
+                        
+                    except Exception as fallback_e:
+                        log_error(f"Fallback parsing also failed: {fallback_e}")
+                        return []
+                        
+                except Exception as e:
+                    log_error(f"Error parsing algo_engine response: {e}")
+                    return []
+            else:
+                log_warning(f"Failed to fetch personal scripts: {response.status_code}")
+                return []
+                
+    except Exception as e:
+        log_warning(f"Error fetching personal scripts via API: {e}")
+        return []
+>>>>>>> compliance-violations-fixed

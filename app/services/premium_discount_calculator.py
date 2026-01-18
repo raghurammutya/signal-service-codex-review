@@ -599,10 +599,15 @@ class PremiumDiscountCalculator:
         # Simplified box spread check
         opportunities = []
         
+<<<<<<< HEAD
         # Box spread requires 4 options: long call + short put at strike K1, short call + long put at strike K2
         # Complex box spread analysis would be implemented here
         
         return opportunities
+=======
+        # Box spread analysis requires complex options pricing model integration
+        raise RuntimeError("Box spread arbitrage analysis requires advanced options pricing model - cannot provide placeholder analysis")
+>>>>>>> compliance-violations-fixed
 
     def _calculate_expiry_summary_stats(self, expiry_results: List[Dict]) -> Dict[str, Any]:
         """Calculate summary statistics for expiry analysis."""

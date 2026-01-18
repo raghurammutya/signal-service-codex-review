@@ -54,7 +54,9 @@ async def get_moneyness_calculator() -> MoneynessAwareGreeksCalculator:
     """Get moneyness calculator instance"""
     global moneyness_calculator
     if not moneyness_calculator:
-        instrument_client = InstrumentServiceClient()
+        from app.clients.client_factory import get_client_manager
+        manager = get_client_manager()
+        instrument_client = await manager.get_client('instrument_service')
         moneyness_calculator = MoneynessAwareGreeksCalculator(instrument_client)
     return moneyness_calculator
 
@@ -266,15 +268,10 @@ async def get_historical_moneyness_greeks(
         Historical moneyness Greeks time series
     """
     try:
-        # Get historical moneyness data
-        data = await manager.get_aggregated_data(
-            f"{underlying}#{moneyness_level}",
-            "moneyness_greeks",
-            timeframe,
-            start_time,
-            end_time
-        )
+        # Production implementation: route through ticker_service for historical moneyness data
+        from app.clients.ticker_service_client import ticker_service_context
         
+<<<<<<< HEAD
         if not data:
             # Historical data must come from ticker_service - fail fast if unavailable
             log_error(f"No historical moneyness data found in cache for {underlying} {expiry_date} {moneyness_level}")
@@ -305,6 +302,38 @@ async def get_historical_moneyness_greeks(
             data_points=len(time_series),
             time_series=time_series
         )
+=======
+        async with ticker_service_context() as ticker_client:
+            # Get historical moneyness data from ticker service
+            result = await ticker_client.get_historical_moneyness_data(
+                underlying=underlying,
+                moneyness_level=moneyness_level,
+                start_time=start_time,
+                end_time=end_time,
+                timeframe=timeframe
+            )
+            
+            if not result:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No historical moneyness data found for {underlying} at moneyness {moneyness_level}"
+                )
+            
+            # Format response according to API schema
+            return {
+                "underlying": underlying,
+                "moneyness_level": moneyness_level,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "timeframe": timeframe,
+                "data": result.get("data", []),
+                "metadata": {
+                    "source": "ticker_service",
+                    "data_points": len(result.get("data", [])),
+                    "expiry_date": expiry_date
+                }
+            }
+>>>>>>> compliance-violations-fixed
         
     except HTTPException:
         raise

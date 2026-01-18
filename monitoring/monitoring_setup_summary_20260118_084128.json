@@ -1,0 +1,12 @@
+{
+  "setup_timestamp": "2026-01-18T08:41:28.365693",
+  "dashboards_created": 4,
+  "monitoring_directory": "monitoring",
+  "import_script": "monitoring/import_dashboards.sh",
+  "dashboards": {
+    "config_service": "Config service health, latency, cache hit rate, errors",
+    "database_redis": "DB/Redis pools, connection usage, query latency, hypertable health",
+    "circuit_breaker": "Circuit breaker states, failure rates, recovery metrics",
+    "slo_performance": "Request latency SLOs, error rates, throughput, backpressure"
+  }
+}

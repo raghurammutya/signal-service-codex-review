@@ -1,0 +1,246 @@
+{
+  "timestamp": "2026-01-18T07:52:51.392559",
+  "tests": {
+    "test_files_existence": {
+      "status": "tested",
+      "test_files_found": 85,
+      "missing_test_files": [
+        "pyvollib_engine",
+        "rate_limit",
+        "delivery",
+        "clients",
+        "startup_resilience",
+        "client_factory"
+      ],
+      "test_file_paths": [
+        "tests/test_leak_blocking.py",
+        "tests/test_custom_indicators.py",
+        "tests/test_subscription_metadata_watermarking.py",
+        "tests/test_v2_api.py",
+        "tests/test_dynamic_billing_tiers.py",
+        "tests/test_sdk_signal_listing.py",
+        "tests/test_signal_version_policy.py",
+        "tests/test_enhanced_ticker_adapter.py",
+        "tests/test_timeframe_integration.py",
+        "tests/test_signal_execution.py",
+        "tests/integration/test_signal_delivery_business_value_validation.py",
+        "tests/integration/test_database_failure_modes.py",
+        "tests/integration/test_scaling_distributed_coordination.py",
+        "tests/integration/test_service_integrations.py",
+        "tests/integration/test_timeframe_manager_integration.py",
+        "tests/integration/test_gateway_only_operation_validation.py",
+        "tests/integration/test_cors_api_endpoints.py",
+        "tests/integration/test_distributed_coordination_coverage.py",
+        "tests/integration/test_entitlement_gateway_only_access.py",
+        "tests/integration/test_rare_failure_modes.py",
+        "tests/integration/test_signal_processing_coverage.py",
+        "tests/integration/test_additional_integrations.py",
+        "tests/integration/test_gateway_acl_integration.py",
+        "tests/integration/test_watermark_fail_secure.py",
+        "tests/integration/test_ticker_service_integration.py",
+        "tests/integration/test_metrics_service_contract.py",
+        "tests/integration/test_metrics_service.py",
+        "tests/integration/test_service_integrations_coverage.py",
+        "tests/integration/test_screener_service_contract.py",
+        "tests/integration/test_signal_processor_integration.py",
+        "tests/integration/test_historical_data_coverage.py",
+        "tests/e2e/test_complete_workflows.py",
+        "tests/contracts/test_external_service_contracts.py",
+        "tests/performance/test_load_performance.py",
+        "tests/performance/test_additional_performance.py",
+        "tests/unit/test_cors_middleware_integration.py",
+        "tests/unit/test_signal_delivery_service.py",
+        "tests/unit/test_timeframe_cache_invalidation.py",
+        "tests/unit/test_cors_environment_validation.py",
+        "tests/unit/test_entitlement_rate_limiting_comprehensive.py",
+        "tests/unit/test_service_integrations_cors.py",
+        "tests/unit/test_optional_dependencies_computation_errors.py",
+        "tests/unit/test_health_metrics_positive_coverage.py",
+        "tests/unit/test_database_session_coverage.py",
+        "tests/unit/test_premium_analysis_api.py",
+        "tests/unit/test_signal_processor_vectorized.py",
+        "tests/unit/test_marketplace_watermarking_fail_secure.py",
+        "tests/unit/test_scaling_components.py",
+        "tests/unit/test_pyvollib_vectorized_engine_fallback.py",
+        "tests/unit/test_signal_executor_minio_failures.py",
+        "tests/unit/test_premium_discount_calculator.py",
+        "tests/unit/test_cors_security_validation.py",
+        "tests/unit/test_cors_env_var_validation.py",
+        "tests/unit/test_vectorized_greeks_engine.py",
+        "tests/unit/test_pandas_ta_coverage_with_real_data.py",
+        "tests/unit/test_frequency_feed_manager.py",
+        "tests/unit/test_cors_validation_coverage.py",
+        "tests/unit/test_watermark_service.py",
+        "tests/unit/test_comprehensive_cors_validation.py",
+        "tests/unit/test_signal_delivery_comprehensive_coverage.py",
+        "tests/unit/test_timeframe_manager_cache.py",
+        "tests/unit/test_market_profile_calculator.py",
+        "tests/unit/test_moneyness_calculator.py",
+        "tests/config/test_config_coverage_validation.py",
+        "tests/config/test_config_bootstrap.py",
+        "test/integration/test_custom_scripts_api.py",
+        "test/integration/test_service_integration.py",
+        "test/integration/test_external_services.py",
+        "test/integration/test_pandas_ta_api_integration.py",
+        "test/e2e/test_minio_to_execution_workflow.py",
+        "test/core/test_configuration_management.py",
+        "test/performance/test_concurrent_execution.py",
+        "test/performance/test_load_greeks.py",
+        "test/performance/test_benchmarks.py",
+        "test/api/test_v2_endpoints_comprehensive.py",
+        "test/unit/services/test_smart_money_indicators.py",
+        "test/unit/services/test_greeks_calculator.py",
+        "test/unit/services/test_external_function_executor.py",
+        "test/unit/services/test_pandas_ta_executor.py",
+        "test/unit/core/test_critical_fixes.py",
+        "test/unit/repositories/test_signal_repository.py",
+        "test/system/test_end_to_end_workflows.py",
+        "test/auth/test_authentication_authorization.py",
+        "test/security/test_acl_enforcement.py",
+        "test/security/test_malicious_code_detection.py"
+      ]
+    },
+    "coverage_configuration": {
+      "status": "tested",
+      "config_files_found": 1,
+      "coverage_configurations": [
+        {
+          "file": "pytest.ini",
+          "patterns": [
+            "pytest-cov configuration"
+          ]
+        }
+      ]
+    },
+    "critical_module_coverage_structure": {
+      "status": "tested",
+      "modules_analyzed": 9,
+      "module_analysis": [
+        {
+          "module": "signal_processor",
+          "files": [
+            "app/services/signal_processor.py",
+            "app/scaling/scalable_signal_processor.py"
+          ],
+          "test_files": [
+            "./tests/integration/test_signal_processor_integration.py",
+            "./tests/unit/test_signal_processor_vectorized.py"
+          ]
+        },
+        {
+          "module": "pandas_ta_executor",
+          "files": [
+            "app/services/pandas_ta_executor.py",
+            "app/services/pandas_ta_executor_update.py"
+          ],
+          "test_files": [
+            "./test/unit/services/test_pandas_ta_executor.py"
+          ]
+        },
+        {
+          "module": "pyvollib_engine",
+          "files": [
+            "app/services/vectorized_pyvollib_engine.py"
+          ],
+          "test_files": []
+        },
+        {
+          "module": "entitlement",
+          "files": [
+            "app/middleware/entitlement_middleware.py"
+          ],
+          "test_files": [
+            "./tests/integration/test_entitlement_gateway_only_access.py",
+            "./tests/unit/test_entitlement_rate_limiting_comprehensive.py"
+          ]
+        },
+        {
+          "module": "rate_limit",
+          "files": [],
+          "test_files": [
+            "./tests/unit/test_entitlement_rate_limiting_comprehensive.py"
+          ]
+        },
+        {
+          "module": "delivery",
+          "files": [
+            "app/services/signal_delivery_service.py",
+            "app/services/enhanced_signal_delivery_service.py"
+          ],
+          "test_files": [
+            "./tests/integration/test_signal_delivery_business_value_validation.py",
+            "./tests/unit/test_signal_delivery_service.py",
+            "./tests/unit/test_signal_delivery_comprehensive_coverage.py"
+          ]
+        },
+        {
+          "module": "metrics",
+          "files": [
+            "app/services/metrics_service.py",
+            "app/metrics/threshold_metrics.py"
+          ],
+          "test_files": [
+            "./tests/integration/test_metrics_service_contract.py",
+            "./tests/integration/test_metrics_service.py",
+            "./tests/unit/test_health_metrics_positive_coverage.py"
+          ]
+        },
+        {
+          "module": "startup_resilience",
+          "files": [
+            "app/core/startup_resilience.py"
+          ],
+          "test_files": []
+        },
+        {
+          "module": "client_factory",
+          "files": [
+            "app/clients/client_factory.py"
+          ],
+          "test_files": []
+        }
+      ]
+    },
+    "coverage_tools_availability": {
+      "status": "tested",
+      "tools_available": [
+        "coverage"
+      ],
+      "total_tools_checked": 3
+    },
+    "coverage_thresholds_configuration": {
+      "status": "tested",
+      "threshold_configs": 1,
+      "has_95_percent_threshold": true,
+      "configurations": [
+        {
+          "file": "pytest.ini",
+          "thresholds": [
+            "cov-fail-under",
+            "cov-report"
+          ]
+        }
+      ]
+    }
+  },
+  "coverage_requirements": {},
+  "critical_modules": [],
+  "duration_seconds": 1.2331604957580566,
+  "summary": {
+    "total_tests": 5,
+    "successfully_tested": 5,
+    "success_rate": 100.0,
+    "critical_modules": [
+      "signal_processor",
+      "pandas_ta_executor",
+      "pyvollib_engine",
+      "entitlement",
+      "rate_limit",
+      "delivery",
+      "metrics",
+      "clients",
+      "startup_resilience",
+      "client_factory"
+    ]
+  }
+}

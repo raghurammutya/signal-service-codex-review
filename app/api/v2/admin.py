@@ -372,6 +372,7 @@ async def trigger_scaling_action(
         Scaling action result
     """
     try:
+<<<<<<< HEAD
         # Integrate with scaling infrastructure
         from app.scaling.scalable_signal_processor import ScalableSignalProcessor
         
@@ -391,6 +392,16 @@ async def trigger_scaling_action(
             "message": f"Scaling action {action} completed successfully",
             "timestamp": datetime.utcnow().isoformat()
         }
+=======
+        # Production implementation requires Docker orchestrator integration
+        from fastapi import HTTPException
+        log_warning(f"Manual scaling requested: {action} by {instances} instances - requires orchestrator integration")
+        
+        raise HTTPException(
+            status_code=501, 
+            detail=f"Manual scaling requires Docker orchestrator integration - cannot perform {action} operation"
+        )
+>>>>>>> compliance-violations-fixed
         
     except Exception as e:
         log_error(f"Error triggering scaling: {e}")
@@ -495,7 +506,9 @@ async def check_dependencies_health(
             
         # Check Instrument Service
         try:
-            client = InstrumentServiceClient()
+            from app.clients.client_factory import get_client_manager
+            manager = get_client_manager()
+            client = await manager.get_client('instrument_service')
             await client.get_instrument("NSE@RELIANCE@equities")
             health_checks["instrument_service"] = {"status": "healthy"}
         except Exception as e:

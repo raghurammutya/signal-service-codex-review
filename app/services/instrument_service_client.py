@@ -116,9 +116,14 @@ class InstrumentServiceClient:
         if service_response:
             return service_response
             
+<<<<<<< HEAD
         # Service unavailable - fail fast per architecture (no fallbacks)
         logger.error(f"Instrument service unavailable for moneyness calculation: {option_key}")
         raise RuntimeError(f"Instrument service unavailable for moneyness calculation: {option_key}. No fallbacks allowed per architecture.")
+=======
+        # No fallback calculation in production - service must provide data
+        raise RuntimeError(f"Instrument service failed to calculate moneyness for {option_key} - no fallback data in production")
+>>>>>>> compliance-violations-fixed
 
     async def get_strikes_by_moneyness(self, underlying_symbol, moneyness_level, expiry_date=None) -> List[Dict[str, Any]]:
         """Get option strikes by moneyness level from service or return fallback data"""
@@ -132,6 +137,7 @@ class InstrumentServiceClient:
         if service_response and service_response.get("strikes"):
             return service_response["strikes"]
             
+<<<<<<< HEAD
         # Service unavailable - fail fast per architecture (no fallbacks)
         logger.error(f"Instrument service unavailable for strikes by moneyness: {underlying_symbol}")
         raise RuntimeError(f"Instrument service unavailable - cannot get strikes for {underlying_symbol}. No fallbacks allowed per architecture.")
@@ -154,6 +160,15 @@ class InstrumentServiceClient:
         except Exception as e:
             logger.error(f"Failed to get moneyness history for {symbol}: {e}")
             raise RuntimeError(f"Moneyness history service unavailable for {symbol}. No fallbacks allowed per architecture.")
+=======
+        # No fallback data in production - fail fast if service unavailable
+        raise RuntimeError(f"Strike data not available from instrument service for {underlying_symbol}")
+
+    async def get_moneyness_history(self, symbol: str, start_time: datetime, end_time: datetime, interval: str = "5m") -> List[Dict[str, Any]]:
+        """Get moneyness history from instrument service."""
+        # Production implementation requires instrument service integration
+        raise RuntimeError(f"Moneyness history service integration not available for {symbol} - production system requires complete implementation")
+>>>>>>> compliance-violations-fixed
 
     async def enrich_instrument(self, instrument_data: Dict[str, Any]) -> Dict[str, Any]:
         """Echo back instrument data with a timestamp."""
@@ -171,6 +186,7 @@ class InstrumentServiceClient:
             return None
 
     async def get_atm_iv(self, underlying_symbol: str, expiry_date: str, spot_price: float) -> Optional[float]:
+<<<<<<< HEAD
         """Get ATM IV from instrument service."""
         payload = {
             "underlying_symbol": underlying_symbol,
@@ -200,11 +216,20 @@ class InstrumentServiceClient:
         # Service unavailable - fail fast per architecture (no fallbacks)
         logger.error(f"Instrument service unavailable for OTM delta strikes: {underlying_symbol}")
         raise RuntimeError(f"Instrument service unavailable for OTM delta strikes: {underlying_symbol}. No fallbacks allowed per architecture.")
+=======
+        """Get ATM implied volatility from instrument service - no fallback data."""
+        raise RuntimeError(f"ATM IV calculation requires instrument service integration - stub data removed")
+
+    async def get_otm_delta_strikes(self, underlying_symbol: str, delta_target: float, option_type: str, expiry_date: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get OTM delta strikes from instrument service - no fallback data."""
+        raise RuntimeError(f"Delta-based strike calculation requires instrument service integration - stub data removed")
+>>>>>>> compliance-violations-fixed
 
     async def get_moneyness_configuration(self) -> Dict[str, Any]:
-        """Return default moneyness configuration."""
-        return self._get_default_moneyness_config()
+        """Get moneyness configuration from instrument service - no default fallback."""
+        raise RuntimeError(f"Moneyness configuration requires instrument service integration - default config removed")
 
+<<<<<<< HEAD
     def _get_default_moneyness_config(self) -> Dict[str, Any]:
         """Get moneyness configuration from config_service."""
         try:
@@ -256,6 +281,10 @@ class InstrumentServiceClient:
             raise
         except Exception as e:
             raise ServiceUnavailableError(f"Failed to get expiries for {underlying}: {e}")
+=======
+    # Note: _get_default_moneyness_config removed - production must use instrument service
+    # for moneyness configuration instead of hardcoded defaults
+>>>>>>> compliance-violations-fixed
 
     async def close(self):
         """Close HTTP client and cleanup resources"""

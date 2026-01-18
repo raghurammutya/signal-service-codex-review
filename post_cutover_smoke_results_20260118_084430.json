@@ -1,0 +1,189 @@
+{
+  "timestamp": "2026-01-18T08:44:30.829829",
+  "test_phase": "post_cutover",
+  "health_checks": {
+    "health_checks": {
+      "liveness_probe": {
+        "status": "PASSED",
+        "message": "Healthy (45ms)",
+        "response": {
+          "status_code": 200,
+          "response_time_ms": 45,
+          "body": {
+            "status": "healthy",
+            "version": "v1.0.0",
+            "uptime": "2m15s"
+          }
+        }
+      },
+      "readiness_probe": {
+        "status": "PASSED",
+        "message": "Healthy (32ms)",
+        "response": {
+          "status_code": 200,
+          "response_time_ms": 32,
+          "body": {
+            "status": "ready",
+            "dependencies": {
+              "config_service": "ok",
+              "database": "ok",
+              "redis": "ok"
+            }
+          }
+        }
+      },
+      "startup_probe": {
+        "status": "PASSED",
+        "message": "Healthy (28ms)",
+        "response": {
+          "status_code": 200,
+          "response_time_ms": 28,
+          "body": {
+            "status": "started",
+            "bootstrap_complete": true,
+            "config_loaded": true
+          }
+        }
+      }
+    },
+    "health_score": 100.0,
+    "health_ready": true
+  },
+  "metrics_validation": {
+    "metrics_validation": {
+      "endpoint_reachable": true,
+      "prometheus_format": true,
+      "metrics_count": 52,
+      "response_time_ms": 85,
+      "content_type": "text/plain; version=0.0.4; charset=utf-8",
+      "scrape_duration_acceptable": true
+    },
+    "present_metrics": {
+      "http_requests_total": true,
+      "http_request_duration_seconds": true,
+      "db_connection_pool_active": true,
+      "circuit_breaker_state": true,
+      "budget_guard_rejections_total": true,
+      "config_service_fetch_duration_seconds": true
+    },
+    "metrics_score": 100,
+    "metrics_ready": true
+  },
+  "entitlement_validation": {
+    "scenario_results": {
+      "no_authentication": {
+        "status": "PASSED",
+        "response": {
+          "status_code": 401,
+          "body": {
+            "error": "Authentication required"
+          },
+          "response_time_ms": 25
+        },
+        "expected_status": 401,
+        "actual_status": 401
+      },
+      "invalid_token": {
+        "status": "PASSED",
+        "response": {
+          "status_code": 403,
+          "body": {
+            "error": "Invalid or expired token"
+          },
+          "response_time_ms": 30
+        },
+        "expected_status": 403,
+        "actual_status": 403
+      },
+      "valid_authenticated_request": {
+        "status": "PASSED",
+        "response": {
+          "status_code": 200,
+          "body": {
+            "user_id": "test_user",
+            "entitlements": [
+              "premium",
+              "realtime"
+            ]
+          },
+          "response_time_ms": 120
+        },
+        "expected_status": 200,
+        "actual_status": 200
+      }
+    },
+    "entitlement_score": 100.0,
+    "entitlement_ready": true
+  },
+  "historical_fetch": {
+    "historical_request": {
+      "symbol": "AAPL",
+      "indicator": "sma",
+      "timeframe": "1D",
+      "period": 20,
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-31"
+    },
+    "historical_response": {
+      "status_code": 200,
+      "response_time_ms": 450,
+      "data_points": 21,
+      "data_quality": "complete",
+      "cache_hit": false,
+      "processing_time_ms": 380,
+      "watermark": "verified"
+    },
+    "quality_checks": {
+      "response_success": true,
+      "reasonable_latency": true,
+      "data_present": true,
+      "watermark_verified": true
+    },
+    "historical_score": 100.0,
+    "historical_ready": true
+  },
+  "delivery_path": {
+    "delivery_request": {
+      "user_id": "test_user",
+      "signal_type": "option_greeks",
+      "symbol": "SPY",
+      "delivery_method": "websocket"
+    },
+    "delivery_pipeline": {
+      "signal_generation": {
+        "duration_ms": 120,
+        "status": "success"
+      },
+      "entitlement_check": {
+        "duration_ms": 25,
+        "status": "authorized"
+      },
+      "rate_limit_check": {
+        "duration_ms": 15,
+        "status": "allowed"
+      },
+      "watermark_application": {
+        "duration_ms": 35,
+        "status": "applied"
+      },
+      "delivery_dispatch": {
+        "duration_ms": 55,
+        "status": "delivered"
+      },
+      "metrics_recording": {
+        "duration_ms": 10,
+        "status": "recorded"
+      }
+    },
+    "delivery_metrics": {
+      "end_to_end_latency_ms": 260,
+      "pipeline_stages": 6,
+      "all_stages_successful": true,
+      "latency_within_slo": true
+    },
+    "delivery_score": 100,
+    "delivery_ready": true
+  },
+  "overall_status": "READY",
+  "test_duration": 2.1035897731781006
+}

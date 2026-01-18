@@ -219,12 +219,16 @@ class SignalRedisManager:
         try:
             if not self.redis_client:
                 self.redis_client = await get_redis_client()
+<<<<<<< HEAD
             
             # Initialize cluster manager
             if not self.cluster_manager:
                 self.cluster_manager = RedisClusterManager(self.redis_client)
             
             logger.info("SignalRedisManager connected to Redis with cluster manager")
+=======
+            logger.info("SignalRedisManager connected to Redis")
+>>>>>>> compliance-violations-fixed
         except Exception as e:
             logger.error(f"Failed to initialize SignalRedisManager: {e}")
             raise
@@ -241,7 +245,8 @@ class SignalRedisManager:
         """Assign a symbol to a worker with TTL"""
         try:
             key = self.key_patterns["worker_assignment"].format(symbol=symbol)
-            return await self.cluster_manager.store_with_expiry(key, worker_id, ttl)
+            await self.redis_client.setex(key, ttl, worker_id)
+            return True
         except Exception as e:
             log_error(f"Failed to set worker assignment for {symbol}: {e}")
             return False
@@ -250,7 +255,7 @@ class SignalRedisManager:
         """Get worker assignment for a symbol"""
         try:
             key = self.key_patterns["worker_assignment"].format(symbol=symbol)
-            result = await self.cluster_manager.get_value(key)
+            result = await self.redis_client.get(key)
             return result if result else None
         except Exception as e:
             log_error(f"Failed to get worker assignment for {symbol}: {e}")
@@ -259,78 +264,86 @@ class SignalRedisManager:
     async def register_worker(self, worker_id: str, worker_info: Dict[str, Any]) -> bool:
         """Register a worker in the cluster"""
         try:
-            # Use hash for worker registry to keep all workers in same slot
-            return await self.cluster_manager.hash_set(
+            # Use hash for worker registry
+            await self.redis_client.hset(
                 self.key_patterns["worker_registry"],
                 worker_id,
                 json.dumps(worker_info)
             )
+            return True
         except Exception as e:
             log_error(f"Failed to register worker {worker_id}: {e}")
             return False
     
     async def update_worker_heartbeat(self, worker_id: str, heartbeat_data: Dict[str, Any]) -> bool:
-        """Update worker heartbeat with cluster-aware key"""
+        """Update worker heartbeat with TTL"""
         try:
             key = self.key_patterns["worker_heartbeat"].format(worker_id=worker_id)
-            return await self.cluster_manager.store_json_with_expiry(
+            await self.redis_client.setex(
                 key,
-                heartbeat_data,
-                30  # 30 second TTL
+                30,  # 30 second TTL
+                json.dumps(heartbeat_data)
             )
+            return True
         except Exception as e:
             log_error(f"Failed to update worker heartbeat: {e}")
             return False
     
     async def get_healthy_workers(self) -> List[Dict[str, Any]]:
-        """Get all healthy workers from the cluster"""
+        """Get all healthy workers from Redis"""
         try:
             # Get all registered workers
-            workers_data = await self.cluster_manager.hash_get_all(self.key_patterns["worker_registry"])
+            workers_data = await self.redis_client.hgetall(self.key_patterns["worker_registry"])
             healthy_workers = []
             
             if workers_data:
                 for worker_id, info_json in workers_data.items():
                     # Check heartbeat
                     heartbeat_key = self.key_patterns["worker_heartbeat"].format(worker_id=worker_id)
-                    heartbeat_data = await self.cluster_manager.get_json(heartbeat_key)
+                    heartbeat_json = await self.redis_client.get(heartbeat_key)
                     
-                    if heartbeat_data:
-                        worker_info = json.loads(info_json)
-                        worker_info['worker_id'] = worker_id
-                        worker_info['heartbeat'] = heartbeat_data
-                        healthy_workers.append(worker_info)
+                    if heartbeat_json:
+                        try:
+                            worker_info = json.loads(info_json)
+                            heartbeat_data = json.loads(heartbeat_json)
+                            worker_info['worker_id'] = worker_id
+                            worker_info['heartbeat'] = heartbeat_data
+                            healthy_workers.append(worker_info)
+                        except json.JSONDecodeError:
+                            log_error(f"Invalid JSON for worker {worker_id}")
             
             return healthy_workers
             
         except Exception as e:
             log_error(f"Failed to get healthy workers: {e}")
             from app.errors import WorkerRegistryError
-            raise WorkerRegistryError(f"Failed to retrieve workers: {str(e)}") from e
+            raise WorkerRegistryError(f"Failed to retrieve workers: {str(e)}") from e from e
     
     async def add_symbol_to_worker(self, worker_id: str, symbol: str) -> bool:
-        """Add a symbol to worker's assigned symbols set"""
+        """Add a symbol to worker's assigned symbols set using Redis SADD"""
         try:
             key = self.key_patterns["worker_symbols"].format(worker_id=worker_id)
-            return await self.cluster_manager.set_add(key, symbol)
+            await self.redis_client.sadd(key, symbol)
+            return True
         except Exception as e:
             log_error(f"Failed to add symbol to worker: {e}")
             return False
     
     async def remove_symbol_from_worker(self, worker_id: str, symbol: str) -> bool:
-        """Remove a symbol from worker's assigned symbols set"""
+        """Remove a symbol from worker's assigned symbols set using Redis SREM"""
         try:
             key = self.key_patterns["worker_symbols"].format(worker_id=worker_id)
-            return await self.cluster_manager.set_remove(key, symbol)
+            result = await self.redis_client.srem(key, symbol)
+            return result > 0
         except Exception as e:
             log_error(f"Failed to remove symbol from worker: {e}")
             return False
     
     async def get_worker_symbols(self, worker_id: str) -> Set[str]:
-        """Get all symbols assigned to a worker"""
+        """Get all symbols assigned to a worker using Redis SMEMBERS"""
         try:
             key = self.key_patterns["worker_symbols"].format(worker_id=worker_id)
-            members = await self.cluster_manager.set_members(key)
+            members = await self.redis_client.smembers(key)
             return set(members) if members else set()
         except Exception as e:
             log_error(f"Failed to get worker symbols: {e}")
@@ -343,11 +356,12 @@ class SignalRedisManager:
                 symbol=symbol,
                 indicator=indicator
             )
-            return await self.cluster_manager.store_json_with_expiry(
+            await self.redis_client.setex(
                 key,
-                state,
-                3600  # 1 hour TTL
+                3600,  # 1 hour TTL
+                json.dumps(state)
             )
+            return True
         except Exception as e:
             log_error(f"Failed to store indicator state: {e}")
             return False
@@ -359,7 +373,10 @@ class SignalRedisManager:
                 symbol=symbol,
                 indicator=indicator
             )
-            return await self.cluster_manager.get_json(key)
+            result = await self.redis_client.get(key)
+            if result:
+                return json.loads(result)
+            return None
         except Exception as e:
             log_error(f"Failed to get indicator state: {e}")
             return None
@@ -374,11 +391,12 @@ class SignalRedisManager:
         """
         try:
             stream_key = self.streams["computation_results"].format(symbol=symbol)
-            return await self.cluster_manager.stream_add(
+            await self.redis_client.xadd(
                 stream_key,
                 {"result": json.dumps(result), "timestamp": datetime.utcnow().isoformat()},
                 maxlen=1000  # Keep last 1000 results
             )
+            return True
         except Exception as e:
             log_error(f"Failed to publish computation result: {e}")
             return False
@@ -392,8 +410,16 @@ class SignalRedisManager:
             try:
                 await self.redis_client.xgroup_create(stream_key, consumer_group, id="0")
             except Exception as e:
+<<<<<<< HEAD
                 # Expected when group already exists (BUSYGROUP error)
                 logger.debug(f"Consumer group '{consumer_group}' creation skipped: {e}")
+=======
+                # Only ignore BUSYGROUP error, log all others
+                error_str = str(e).upper()
+                if 'BUSYGROUP' not in error_str:
+                    log_error(f"Failed to create consumer group for {stream_key}: {e}")
+                # BUSYGROUP means group already exists, which is expected
+>>>>>>> compliance-violations-fixed
             
             # Read messages
             messages = await self.redis_client.xreadgroup(
@@ -412,10 +438,16 @@ class SignalRedisManager:
                             "id": msg_id.decode('utf-8'),
                             "data": json.loads(data[b"request"].decode('utf-8'))
                         })
+<<<<<<< HEAD
                     except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as e:
                         logger.warning(f"Failed to parse stream message {msg_id}: {e}")
                     except Exception as e:
                         logger.error(f"Unexpected error processing stream message {msg_id}: {e}")
+=======
+                    except Exception as e:
+                        log_error(f"Failed to parse message {msg_id}: {e}")
+                        continue  # Skip malformed messages
+>>>>>>> compliance-violations-fixed
             
             return results
             
@@ -430,22 +462,21 @@ class SignalRedisManager:
         """Cleanup all data for a worker"""
         try:
             # Remove from registry
-            await self.cluster_manager.hash_delete(self.key_patterns["worker_registry"], worker_id)
+            await self.redis_client.hdel(self.key_patterns["worker_registry"], worker_id)
             
             # Get and release all assigned symbols
             symbols = await self.get_worker_symbols(worker_id)
             for symbol in symbols:
                 assignment_key = self.key_patterns["worker_assignment"].format(symbol=symbol)
-                current_worker = await self.cluster_manager.get_value(assignment_key)
+                current_worker = await self.redis_client.get(assignment_key)
                 if current_worker and current_worker == worker_id:
-                    await self.cluster_manager.delete_key(assignment_key)
+                    await self.redis_client.delete(assignment_key)
             
             # Delete worker-specific keys
             symbols_key = self.key_patterns["worker_symbols"].format(worker_id=worker_id)
             heartbeat_key = self.key_patterns["worker_heartbeat"].format(worker_id=worker_id)
             
-            await self.cluster_manager.delete_key(symbols_key)
-            await self.cluster_manager.delete_key(heartbeat_key)
+            await self.redis_client.delete(symbols_key, heartbeat_key)
             
             return True
             

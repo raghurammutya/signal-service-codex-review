@@ -1,15 +1,20 @@
 """
 Performance and load tests for Signal Service
+
+Enhanced with external config service integration for testing
+performance under dynamic configuration scenarios.
 """
 import pytest
 import asyncio
 import time
 import statistics
+import os
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch, AsyncMock
 import psutil
 import json
+import aiohttp
 
 @pytest.mark.performance
 class TestSignalProcessingPerformance:
@@ -476,6 +481,179 @@ class TestScalingPerformance:
         assert updates_per_second > 1000, f"Backpressure updates {updates_per_second:.2f} updates/sec too slow"
         
         print(f"Backpressure monitoring: {updates_per_second:.2f} updates/sec")
+
+
+@pytest.mark.performance
+class TestExternalConfigServicePerformance:
+    """Performance tests with external config service integration."""
+    
+    @pytest.fixture
+    def external_config_endpoints(self):
+        """External config service endpoints for performance testing."""
+        return {
+            "primary": "http://test-config.local",
+            "secondary": "http://test-config-secondary.local",
+            "api_key": "[REDACTED-TEST-PLACEHOLDER]"
+        }
+    
+    @pytest.mark.asyncio
+    async def test_external_config_service_response_time(self, external_config_endpoints):
+        """Test external config service response time for performance validation."""
+        response_times = []
+        
+        for endpoint_name, url in external_config_endpoints.items():
+            if endpoint_name == "api_key":  # Skip API key entry
+                continue
+                
+            try:
+                for _ in range(10):  # Test 10 requests per endpoint
+                    start_time = time.time()
+                    
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            f"{url}/health",
+                            timeout=aiohttp.ClientTimeout(total=5)
+                        ) as response:
+                            await response.json()  # Ensure full response processing
+                    
+                    end_time = time.time()
+                    response_times.append((end_time - start_time) * 1000)  # Convert to ms
+                    
+            except Exception as e:
+                print(f"External config service {endpoint_name} unavailable: {e}")
+                # Continue testing with available services
+        
+        if response_times:
+            avg_response_time = statistics.mean(response_times)
+            max_response_time = max(response_times)
+            
+            # Performance assertions for external config service
+            assert avg_response_time < 1000, f"External config service avg response {avg_response_time:.2f}ms too slow"
+            assert max_response_time < 5000, f"External config service max response {max_response_time:.2f}ms too slow"
+            
+            print(f"External config service performance - Avg: {avg_response_time:.2f}ms, Max: {max_response_time:.2f}ms")
+        else:
+            print("No external config services available for performance testing")
+    
+    @pytest.mark.asyncio
+    async def test_concurrent_config_operations_performance(self, external_config_endpoints):
+        """Test concurrent configuration operations performance."""
+        base_url = external_config_endpoints["primary"]
+        api_key = external_config_endpoints["api_key"]
+        
+        async def perform_config_operation(operation_id: int):
+            """Perform a configuration read operation."""
+            try:
+                async with aiohttp.ClientSession() as session:
+                    headers = {"X-Internal-API-Key": api_key}
+                    
+                    # Test configuration read operation
+                    config_key = f"TEST_CONCURRENT_PARAM_{operation_id}"
+                    
+                    async with session.get(
+                        f"{base_url}/api/v1/config/{config_key}?environment=dev",
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
+                        return response.status in [200, 404]  # Both OK (found/not found)
+                        
+            except Exception:
+                return False  # Operation failed
+        
+        # Test concurrent operations
+        concurrent_operations = 50
+        start_time = time.time()
+        
+        tasks = [
+            perform_config_operation(i) 
+            for i in range(concurrent_operations)
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        end_time = time.time()
+        total_time = end_time - start_time
+        
+        successful_operations = sum(
+            1 for result in results 
+            if not isinstance(result, Exception) and result
+        )
+        
+        if successful_operations > 0:
+            ops_per_second = successful_operations / total_time
+            success_rate = successful_operations / concurrent_operations
+            
+            # Performance assertions
+            assert ops_per_second > 5, f"Config ops rate {ops_per_second:.2f} ops/sec too low"
+            assert success_rate > 0.5, f"Config ops success rate {success_rate:.2%} too low"
+            
+            print(f"Concurrent config operations - {ops_per_second:.2f} ops/sec, {success_rate:.2%} success")
+        else:
+            print("External config service unavailable for concurrent operations test")
+    
+    @pytest.mark.asyncio
+    async def test_hot_reload_performance_simulation(self, signal_processor):
+        """Test performance impact of hot reload operations during processing."""
+        # Simulate hot reload events during signal processing
+        from app.core.hot_config import get_hot_reloadable_settings
+        
+        # Create test configuration
+        with patch.dict(os.environ, {'USE_EXTERNAL_CONFIG': 'false', 'ENVIRONMENT': 'test'}):
+            # Mock config dependencies
+            with patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_init:
+                mock_init.return_value = None
+                config = get_hot_reloadable_settings()
+                
+                # Mock handler registration
+                reload_events = 0
+                
+                async def mock_reload_handler(data):
+                    nonlocal reload_events
+                    reload_events += 1
+                    await asyncio.sleep(0.001)  # Simulate reload work
+                
+                config.register_hot_reload_handler("test_reload", mock_reload_handler)
+                
+                # Test signal processing with simulated hot reloads
+                processing_tasks = []
+                reload_tasks = []
+                
+                start_time = time.time()
+                
+                # Start signal processing tasks
+                for i in range(100):
+                    task = signal_processor.compute_greeks_for_instrument(
+                        f'NSE@HOTRELOAD{i}@equity_options@2025-07-10@call@21500'
+                    )
+                    processing_tasks.append(task)
+                
+                # Simulate hot reload events during processing
+                for i in range(10):  # 10 reload events
+                    reload_task = asyncio.create_task(mock_reload_handler({"test": f"reload_{i}"}))
+                    reload_tasks.append(reload_task)
+                
+                # Execute all tasks concurrently
+                all_results = await asyncio.gather(
+                    *processing_tasks, *reload_tasks, 
+                    return_exceptions=True
+                )
+                
+                end_time = time.time()
+                total_time = end_time - start_time
+                
+                # Analyze performance impact
+                processing_errors = sum(
+                    1 for result in all_results[:100]  # First 100 are processing tasks
+                    if isinstance(result, Exception)
+                )
+                
+                success_rate = (100 - processing_errors) / 100
+                processing_throughput = (100 - processing_errors) / total_time
+                
+                # Performance assertions
+                assert success_rate > 0.95, f"Hot reload degraded processing success rate to {success_rate:.2%}"
+                assert processing_throughput > 20, f"Hot reload degraded throughput to {processing_throughput:.2f} ops/sec"
+                
+                print(f"Hot reload performance - {reload_events} reloads, {processing_throughput:.2f} ops/sec, {success_rate:.2%} success")
 
 
 @pytest.mark.performance

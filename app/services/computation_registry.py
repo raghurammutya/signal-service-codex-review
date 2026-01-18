@@ -4,8 +4,6 @@ Manages registration and discovery of computation capabilities
 """
 from typing import Dict, List, Optional, Callable, Any, Set
 from dataclasses import dataclass
-from enum import Enum
-import inspect
 from datetime import datetime
 
 from app.utils.logging_utils import log_info, log_error

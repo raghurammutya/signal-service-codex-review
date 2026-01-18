@@ -13,11 +13,14 @@ import logging
 
 from app.core.config import settings
 from app.utils.logging_config import get_logger
+from app.clients.shared_metadata import (
+    MetadataBuilder, SignalDataTransformer, ServiceClientBase, build_service_response
+)
 
 logger = get_logger(__name__)
 
 
-class CommsServiceClient:
+class CommsServiceClient(ServiceClientBase):
     """
     Client for delegating email/communication operations to dedicated comms_service.
     
@@ -26,13 +29,14 @@ class CommsServiceClient:
     """
     
     def __init__(self, comms_service_url: str = None):
-        self.comms_service_url = comms_service_url or self._get_comms_service_url()
-        self.internal_api_key = self._get_internal_api_key()
-        self.session: Optional[aiohttp.ClientSession] = None
+        super().__init__("COMMS", 8086)
+        if comms_service_url:
+            self._service_url = comms_service_url
         
-        logger.info(f"CommsServiceClient initialized with URL: {self.comms_service_url}")
+        logger.info(f"CommsServiceClient initialized with URL: {self._get_service_url()}")
     
     def _get_comms_service_url(self) -> str:
+<<<<<<< HEAD
         """Get comms service URL from config service exclusively (Architecture Principle #1: Config service exclusivity)"""
         try:
             from common.config_service.client import ConfigServiceClient
@@ -51,6 +55,14 @@ class CommsServiceClient:
             
         except Exception as e:
             raise RuntimeError(f"Failed to get comms service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+=======
+        """Get comms service URL from config service"""
+        # Use config service to get comms_service URL
+        # Fallback to standard naming convention if not available
+        if hasattr(settings, 'COMMS_SERVICE_URL'):
+            return settings.COMMS_SERVICE_URL
+        raise RuntimeError("COMMS_SERVICE_URL not configured in config_service - cannot operate without service URL")
+>>>>>>> compliance-violations-fixed
     
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""
@@ -68,6 +80,21 @@ class CommsServiceClient:
                 headers={'X-Internal-API-Key': self.internal_api_key}
             )
     
+    async def close_session(self):
+        """Close HTTP session to prevent resource leaks"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+    
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.ensure_session()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with automatic session cleanup"""
+        await self.close_session()
+    
     async def send_signal_email(
         self,
         to_email: str,
@@ -83,31 +110,24 @@ class CommsServiceClient:
         await self.ensure_session()
         
         try:
-            # Transform signal data to comms_service format
+            # Transform signal data to comms_service format using shared utilities
             email_request = {
                 "to": [to_email],
                 "template": template,
                 "priority": priority,
-                "template_data": {
-                    "signal_type": signal_data.get("signal_type", "Signal"),
-                    "symbol": signal_data.get("symbol", "Unknown"),
-                    "instrument_key": signal_data.get("instrument_key"),
-                    "message": signal_data.get("message", "Signal notification"),
-                    "value": signal_data.get("value"),
-                    "timestamp": signal_data.get("timestamp", datetime.utcnow().isoformat()),
-                    "priority": priority,
-                    "user_id": signal_data.get("user_id"),
-                    "signal_id": signal_data.get("signal_id")
-                },
-                "metadata": {
-                    "source": "signal_service",
-                    "type": "signal_notification",
-                    "signal_id": signal_data.get("signal_id")
-                }
+                "template_data": SignalDataTransformer.extract_template_data(
+                    signal_data, 
+                    priority=priority,
+                    include_user_info=True
+                ),
+                "metadata": MetadataBuilder.build_signal_metadata(
+                    signal_data, 
+                    metadata_type="signal_notification"
+                )
             }
             
             async with self.session.post(
-                f"{self.comms_service_url}/api/v1/email/send",
+                f"{self._get_service_url()}/api/v1/email/send",
                 json=email_request
             ) as response:
                 if response.status == 200 or response.status == 201:
@@ -150,7 +170,7 @@ class CommsServiceClient:
             }
             
             async with self.session.post(
-                f"{self.comms_service_url}/api/v1/email/bulk",
+                f"{self._get_service_url()}/api/v1/email/bulk",
                 json=bulk_request
             ) as response:
                 if response.status == 200 or response.status == 201:
@@ -192,7 +212,7 @@ class CommsServiceClient:
             }
             
             async with self.session.post(
-                f"{self.comms_service_url}/api/v1/email/send",
+                f"{self._get_service_url()}/api/v1/email/send",
                 json=email_request
             ) as response:
                 if response.status == 200 or response.status == 201:
@@ -214,17 +234,17 @@ class CommsServiceClient:
         
         try:
             async with self.session.get(
-                f"{self.comms_service_url}/api/v1/email/templates"
+                f"{self._get_service_url()}/api/v1/email/templates"
             ) as response:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    logger.warning(f"Failed to get email templates: {response.status}")
-                    return {"templates": []}
+                    logger.error(f"Failed to get email templates: {response.status}")
+                    raise RuntimeError(f"Comms service unavailable - cannot get email templates: HTTP {response.status}")
                     
         except Exception as e:
             logger.error(f"Error getting email templates: {e}")
-            return {"templates": []}
+            raise RuntimeError(f"Comms service connection failed - cannot get email templates: {e}") from e
     
     async def validate_email_address(self, email: str) -> Dict[str, Any]:
         """Validate email address via comms_service"""
@@ -232,18 +252,18 @@ class CommsServiceClient:
         
         try:
             async with self.session.post(
-                f"{self.comms_service_url}/api/v1/email/validate",
+                f"{self._get_service_url()}/api/v1/email/validate",
                 json={"email": email}
             ) as response:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    logger.warning(f"Failed to validate email: {response.status}")
-                    return {"valid": False, "error": "Validation service unavailable"}
+                    logger.error(f"Failed to validate email: {response.status}")
+                    raise RuntimeError(f"Comms service unavailable - cannot validate email: HTTP {response.status}")
                     
         except Exception as e:
             logger.error(f"Error validating email: {e}")
-            return {"valid": False, "error": str(e)}
+            raise RuntimeError(f"Comms service connection failed - cannot validate email: {e}") from e
     
     async def get_email_delivery_status(self, email_id: str) -> Optional[Dict[str, Any]]:
         """Get email delivery status from comms_service"""
@@ -251,7 +271,7 @@ class CommsServiceClient:
         
         try:
             async with self.session.get(
-                f"{self.comms_service_url}/api/v1/email/status/{email_id}"
+                f"{self._get_service_url()}/api/v1/email/status/{email_id}"
             ) as response:
                 if response.status == 200:
                     return await response.json()
@@ -351,7 +371,7 @@ class CommsServiceClient:
         
         try:
             async with self.session.get(
-                f"{self.comms_service_url}/health"
+                f"{self._get_service_url()}/health"
             ) as response:
                 return response.status == 200
         except Exception as e:
@@ -369,11 +389,19 @@ class CommsServiceClient:
 _comms_client = None
 
 def get_comms_service_client() -> CommsServiceClient:
-    """Get singleton comms service client instance"""
-    global _comms_client
-    if _comms_client is None:
-        _comms_client = CommsServiceClient()
-    return _comms_client
+    """Get comms service client instance via centralized factory"""
+    import asyncio
+    from app.clients.client_factory import get_client_manager
+    
+    # For backward compatibility, maintain sync interface
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    client_manager = get_client_manager()
+    return loop.run_until_complete(client_manager.get_client('comms_service'))
 
 
 # Compatibility function to replace email_integration service

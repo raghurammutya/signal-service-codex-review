@@ -42,6 +42,7 @@ async def process_email_webhook(
     Sprint 5A: Enables SDK to receive and process emails.
     """
     try:
+<<<<<<< HEAD
         # Verify webhook secret from config_service (Architecture Principle #1: Config service exclusivity)
         try:
             from common.config_service.client import ConfigServiceClient
@@ -57,6 +58,11 @@ async def process_email_webhook(
                 raise ValueError("EMAIL_WEBHOOK_SECRET not found in config_service")
         except Exception as e:
             raise RuntimeError(f"Failed to get email webhook secret from config_service: {e}. No environment fallbacks allowed per architecture.")
+=======
+        # Verify webhook secret from config_service  
+        from app.core.config import settings
+        expected_secret = getattr(settings, 'EMAIL_WEBHOOK_SECRET', None)
+>>>>>>> compliance-violations-fixed
         if expected_secret and x_webhook_secret != expected_secret:
             raise HTTPException(status_code=401, detail="Invalid webhook secret")
         

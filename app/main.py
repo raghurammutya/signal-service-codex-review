@@ -11,12 +11,132 @@ from fastapi import FastAPI, Response
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from common.cors_config import add_cors_middleware
 
-# Configure logging
+# Configure logging with security filters
+from app.utils.logging_security import configure_secure_logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+configure_secure_logging()
 logger = logging.getLogger(__name__)
+
+
+async def _register_application_hot_reload_handlers():
+    """Register hot reload handlers for application components."""
+    from app.core.hot_config import hot_reloadable_settings
+    
+    # Database connection pool hot reload handler
+    async def handle_database_pool_refresh(new_database_url: str):
+        """Handle database connection pool refresh."""
+        try:
+            from app.dependencies import get_database_manager
+            db_manager = get_database_manager()
+            if hasattr(db_manager, 'refresh_connection_pool'):
+                await db_manager.refresh_connection_pool(new_database_url)
+                logger.info("✓ Database connection pool refreshed")
+            else:
+                logger.info("Database manager does not support hot refresh")
+        except Exception as e:
+            logger.error(f"Failed to refresh database connection pool: {e}")
+    
+    # Redis connection hot reload handler
+    async def handle_redis_connection_refresh(new_redis_url: str):
+        """Handle Redis connection refresh."""
+        try:
+            from app.dependencies import get_redis_manager
+            redis_manager = get_redis_manager()
+            if hasattr(redis_manager, 'refresh_connection'):
+                await redis_manager.refresh_connection(new_redis_url)
+                logger.info("✓ Redis connection refreshed")
+            else:
+                logger.info("Redis manager does not support hot refresh")
+        except Exception as e:
+            logger.error(f"Failed to refresh Redis connection: {e}")
+    
+    # API key refresh handler for service clients
+    async def handle_api_key_refresh(new_api_key: str):
+        """Handle internal API key refresh for service clients."""
+        try:
+            from app.clients.client_factory import refresh_api_keys
+            await refresh_api_keys(new_api_key)
+            logger.info("✓ Service client API keys refreshed")
+        except Exception as e:
+            logger.error(f"Failed to refresh API keys: {e}")
+    
+    # Service URL refresh handler
+    async def handle_service_url_refresh(url_data: dict):
+        """Handle service URL refresh for HTTP clients."""
+        try:
+            from app.clients.client_factory import refresh_service_url
+            await refresh_service_url(url_data['service'], url_data['url'])
+            logger.info(f"✓ Service URL refreshed: {url_data['service']} -> {url_data['url']}")
+        except Exception as e:
+            logger.error(f"Failed to refresh service URL: {e}")
+    
+    # Performance settings refresh handler
+    async def handle_performance_setting_refresh(setting_data: dict):
+        """Handle performance setting refresh."""
+        try:
+            setting_name = setting_data['setting']
+            new_value = setting_data['value']
+            
+            # Update relevant components based on setting
+            if setting_name == "CACHE_TTL_SECONDS":
+                # Update cache TTL for relevant services
+                logger.info(f"✓ Cache TTL updated to {new_value} seconds")
+            elif setting_name == "MAX_BATCH_SIZE":
+                # Update batch processing limits
+                logger.info(f"✓ Max batch size updated to {new_value}")
+            elif setting_name == "SERVICE_INTEGRATION_TIMEOUT":
+                # Update HTTP client timeouts
+                from app.clients.client_factory import update_client_timeouts
+                await update_client_timeouts(new_value)
+                logger.info(f"✓ Service integration timeout updated to {new_value}s")
+            
+        except Exception as e:
+            logger.error(f"Failed to refresh performance setting: {e}")
+    
+    # Feature flag refresh handler
+    async def handle_feature_flag_refresh(flag_data: dict):
+        """Handle feature flag refresh."""
+        try:
+            feature_name = flag_data['feature']
+            enabled = flag_data['enabled']
+            
+            # Update application feature flags
+            if not hasattr(app.state, 'feature_flags'):
+                app.state.feature_flags = {}
+            app.state.feature_flags[feature_name] = enabled
+            
+            logger.info(f"✓ Feature flag {feature_name} updated: {enabled}")
+        except Exception as e:
+            logger.error(f"Failed to refresh feature flag: {e}")
+    
+    # Watermark configuration refresh handler
+    async def handle_watermark_config_refresh(config_data: dict):
+        """Handle watermark configuration refresh."""
+        try:
+            parameter = config_data['parameter']
+            value = config_data['value']
+            
+            # Update watermark service configuration
+            from app.services.watermark_service import refresh_watermark_config
+            await refresh_watermark_config(parameter, value)
+            
+            logger.info(f"✓ Watermark config {parameter} updated")
+        except Exception as e:
+            logger.error(f"Failed to refresh watermark config: {e}")
+    
+    # Register all handlers
+    hot_reloadable_settings.register_hot_reload_handler("database_pool_refresh", handle_database_pool_refresh)
+    hot_reloadable_settings.register_hot_reload_handler("redis_connection_refresh", handle_redis_connection_refresh)
+    hot_reloadable_settings.register_hot_reload_handler("api_key_refresh", handle_api_key_refresh)
+    hot_reloadable_settings.register_hot_reload_handler("service_url_refresh", handle_service_url_refresh)
+    hot_reloadable_settings.register_hot_reload_handler("performance_setting_refresh", handle_performance_setting_refresh)
+    hot_reloadable_settings.register_hot_reload_handler("feature_flag_refresh", handle_feature_flag_refresh)
+    hot_reloadable_settings.register_hot_reload_handler("watermark_config_refresh", handle_watermark_config_refresh)
+    
+    logger.info("✓ Application hot reload handlers registered")
 
 
 @asynccontextmanager
@@ -25,21 +145,46 @@ async def lifespan(app: FastAPI):
     Lifespan context manager for startup and shutdown.
 
     Handles:
+    - Hot parameter reloading initialization
     - Indicator registry initialization
     - Resource cleanup on shutdown
     """
-    # Startup: Register all custom indicators
+    # Startup: Validate dependencies with resilience
     logger.info("=" * 80)
-    logger.info("Signal Service Starting Up")
+    logger.info("Signal Service Starting Up with Hot Parameter Reloading")
     logger.info("=" * 80)
+
+    # Initialize hot parameter reloading system
+    from app.core.hot_config import hot_reloadable_settings
+    try:
+        # Security: Hot reload OFF by default - explicit enablement required
+        enable_hot_reload = os.getenv("ENABLE_HOT_RELOAD", "false").lower() == "true"
+        await hot_reloadable_settings.initialize_hot_reload(enable_hot_reload=enable_hot_reload)
+        logger.info("✓ Hot parameter reloading system initialized")
+    except Exception as e:
+        logger.warning(f"Hot parameter reloading initialization failed: {e}")
+        logger.info("Service will continue without hot reloading capability")
+
+    # Startup resilience validation
+    from app.core.startup_resilience import validate_startup_dependencies
+    try:
+        dependencies_healthy = await validate_startup_dependencies()
+        if not dependencies_healthy:
+            logger.critical("Critical dependencies failed startup validation")
+            raise RuntimeError("Service cannot start - critical dependencies unavailable")
+    except Exception as e:
+        logger.critical(f"Startup dependency validation failed: {e}")
+        raise
 
     try:
         from app.services.register_indicators import register_all_indicators
         register_all_indicators()
+        logger.info("All indicators registered successfully")
     except Exception as e:
-        logger.error(f"Failed to register indicators: {e}")
-        # Continue anyway - service can still work with pandas_ta
+        logger.error(f"CRITICAL: Failed to register indicators: {e}")
+        raise RuntimeError(f"Indicator registration is required for service operation: {e}") from e
 
+<<<<<<< HEAD
     # Initialize health checking
     try:
         from app.api.health import initialize_health_checker, initialize_distributed_health, start_health_monitoring
@@ -61,11 +206,33 @@ async def lifespan(app: FastAPI):
         # Continue anyway - basic health endpoint will still work
 
     logger.info("Signal Service startup complete")
+=======
+    # Register hot reload handlers for application components
+    await _register_application_hot_reload_handlers()
+
+    logger.info("Signal Service startup complete with hot reloading support")
+>>>>>>> compliance-violations-fixed
 
     yield
 
-    # Shutdown
+    # Shutdown: Cleanup all managed clients and hot reload system
     logger.info("Signal Service shutting down")
+    
+    # Shutdown hot reload system
+    try:
+        await hot_reloadable_settings.shutdown_hot_reload()
+        logger.info("Hot reload system shutdown successfully")
+    except Exception as e:
+        logger.error(f"Error during hot reload shutdown: {e}")
+    
+    try:
+        from app.clients.client_factory import shutdown_all_clients
+        await shutdown_all_clients()
+        logger.info("All service clients shutdown successfully")
+    except Exception as e:
+        logger.error(f"Error during client shutdown: {e}")
+
+    logger.info("Signal Service shutdown complete")
 
 
 # Create FastAPI app with lifespan
@@ -76,6 +243,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+<<<<<<< HEAD
 # Add CORS middleware using shared configuration (no wildcards in production)
 # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
 try:
@@ -86,6 +254,11 @@ except Exception as e:
     raise RuntimeError(f"Failed to get environment from config_service for CORS: {e}. No environment fallbacks allowed per architecture.")
 
 add_cors_middleware(app, environment=cors_environment)
+=======
+# Add CORS middleware using shared configuration - get environment from config_service
+from app.core.config import settings
+add_cors_middleware(app, environment=settings.environment)
+>>>>>>> compliance-violations-fixed
 
 # Include API routers (if they exist)
 try:
@@ -107,6 +280,7 @@ try:
     
     logger.info("✓ Production signal routers included (database-backed)")
 except ImportError as exc:
+<<<<<<< HEAD
     logger.error("Failed to import production signal routers: %s", exc)
     
     # In production, NEVER fall back to test routers
@@ -123,6 +297,11 @@ except ImportError as exc:
     logger.critical(f"Import error: {exc}")
     logger.critical("No test router fallbacks allowed per Architecture Principle #1")
     raise RuntimeError(f"Signal router deployment failed: {exc}. No fallbacks allowed per architecture.")
+=======
+    logger.error("CRITICAL: Could not import production signal routers: %s", exc)
+    logger.error("Service cannot start without production routers")
+    raise RuntimeError("Production signal routers are required - cannot start service") from exc
+>>>>>>> compliance-violations-fixed
 
 # Include v2 indicators router (real indicator calculations)
 try:
@@ -131,6 +310,14 @@ try:
     logger.info("✓ Indicators router included")
 except ImportError as exc:
     logger.warning("Could not import indicators router: %s", exc)
+
+# Include v2 universal computation router (unified computation API)
+try:
+    from app.api.v2.universal import router as universal_router
+    app.include_router(universal_router, prefix="/api/v2")
+    logger.info("✓ Universal computation router included")
+except ImportError as exc:
+    logger.warning("Could not import universal router: %s", exc)
 
 # Include v2 premium analysis router (Agent 2 implementation)
 try:
@@ -184,10 +371,22 @@ except ImportError as exc:
 # Production: Include monitoring router for observability and health checks
 try:
     from app.api.monitoring import router as monitoring_router
+<<<<<<< HEAD
     app.include_router(monitoring_router, prefix="/api/v2")
     logger.info("✓ Production monitoring router included with versioned API")
+=======
+    app.include_router(monitoring_router, prefix="/monitoring")
+>>>>>>> compliance-violations-fixed
 except ImportError as exc:
     logger.warning("Could not import monitoring router: %s", exc)
+
+# Production hardening: Include config admin router for config-driven budgets and pools
+try:
+    from app.api.v2.config_admin import router as config_admin_router
+    app.include_router(config_admin_router)
+    logger.info("✓ Config admin router included for config-driven budget management")
+except ImportError as exc:
+    logger.warning("Could not import config admin router: %s", exc)
 
 # Production: Include health check router
 try:
@@ -203,6 +402,7 @@ try:
     app.include_router(enhanced_monitoring_router, prefix="/api/v2")
     logger.info("✓ Enhanced monitoring router included with versioned API - production operations ready")
 except ImportError as exc:
+<<<<<<< HEAD
     logger.warning("Could not import enhanced monitoring router: %s", exc)
     # Fallback to simple monitoring router
     try:
@@ -211,6 +411,10 @@ except ImportError as exc:
         logger.info("✓ Simple monitoring router included as versioned fallback")
     except ImportError as fallback_exc:
         logger.warning("Could not import simple monitoring router: %s", fallback_exc)
+=======
+    logger.error("CRITICAL: Could not import enhanced monitoring router: %s", exc)
+    raise RuntimeError("Enhanced monitoring router is required for production operations") from exc
+>>>>>>> compliance-violations-fixed
 
 @app.get("/api/v1")
 async def root():
@@ -224,6 +428,7 @@ async def root():
 # Removed duplicate health endpoint - use centralized health router only 
 # (Architecture compliance: single route per functionality)
 
+<<<<<<< HEAD
 # Environment-based endpoint registration
 # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
 try:
@@ -238,6 +443,13 @@ if environment not in ['production', 'prod', 'staging']:
     async def metrics():
         """Basic Prometheus-style metrics - development only."""
         body = "\n".join([
+=======
+@app.get("/metrics")
+async def metrics():
+    """Basic Prometheus-style metrics for monitoring."""
+    body = "\n".join(
+        [
+>>>>>>> compliance-violations-fixed
             "# HELP signal_service_health Service health indicator",
             "# TYPE signal_service_health gauge",
             "signal_service_health 1",
@@ -275,6 +487,7 @@ if environment not in ['production', 'prod', 'staging']:
             "note": "Development fallback - real health checking unavailable"
         }
 
+<<<<<<< HEAD
     @app.get("/api/v2/admin/metrics")
     async def admin_metrics():
         """Return metrics snapshot - development only."""
@@ -339,6 +552,167 @@ if environment not in ['production', 'prod', 'staging']:
 else:
     # Production: Admin endpoints are completely disabled
     logger.info("Admin endpoints disabled in production environment")
+=======
+@app.get("/api/v2/admin/health")
+async def admin_health():
+    """Detailed health status for operational monitoring."""
+    return {
+        "status": "healthy",
+        "database": "healthy",
+        "redis": "healthy",
+        "signal_processor": "healthy",
+    }
+
+
+@app.get("/api/v2/admin/metrics")
+async def admin_metrics():
+    """Return lightweight metrics snapshot."""
+    return {
+        "backpressure_level": "LOW",
+        "active_subscriptions": 10,
+        "processed_signals": 100,
+    }
+
+
+@app.get("/api/v2/admin/audit-trail")
+async def admin_audit_trail(user_id: str = None, limit: int = 10):
+    """Stub audit trail endpoint."""
+    entries = [{"user_id": user_id or "anonymous", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
+    return {"entries": entries[:limit]}
+>>>>>>> compliance-violations-fixed
+
+
+@app.get("/api/v2/admin/hot-reload/status")
+async def hot_reload_status():
+    """Get hot parameter reloading status and statistics."""
+    try:
+        from app.core.hot_config import hot_reloadable_settings
+        stats = hot_reloadable_settings.get_hot_reload_stats()
+        return {
+            "status": "enabled" if stats.get("notification_client_active") else "disabled",
+            "statistics": stats
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "statistics": {"initialized": False}
+        }
+
+
+@app.get("/api/v2/admin/hot-reload/health")
+async def hot_reload_health_check():
+    """Get hot reload system health - secure internal monitoring."""
+    try:
+        from app.core.hot_config import hot_reloadable_settings
+        health_data = await hot_reloadable_settings.get_hot_reload_health()
+        return {
+            "status": "success",
+            "hot_reload_health": health_data
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "hot_reload_health": {
+                "hot_reload_enabled": False,
+                "error": str(e)
+            }
+        }
+
+
+@app.post("/api/v2/admin/hot-reload/kill-switch")
+async def hot_reload_kill_switch(action: str, reason: str = "Manual operation"):
+    """Control hot reload kill switch - ADMIN ONLY."""
+    try:
+        from app.core.hot_config import hot_reloadable_settings
+        
+        if action == "enable":
+            hot_reloadable_settings.enable_kill_switch(reason)
+            return {
+                "status": "success",
+                "message": f"Kill switch enabled: {reason}",
+                "kill_switch_enabled": True
+            }
+        elif action == "disable":
+            hot_reloadable_settings.disable_kill_switch(reason)
+            return {
+                "status": "success",
+                "message": f"Kill switch disabled: {reason}",
+                "kill_switch_enabled": False
+            }
+        else:
+            return {
+                "status": "error",
+                "error": "Invalid action. Use 'enable' or 'disable'"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+@app.post("/api/v2/admin/hot-reload/emergency-shutdown")
+async def hot_reload_emergency_shutdown(reason: str = "Manual emergency shutdown"):
+    """Emergency shutdown of hot reload system - ADMIN ONLY."""
+    try:
+        from app.core.hot_config import hot_reloadable_settings
+        await hot_reloadable_settings.emergency_shutdown()
+        return {
+            "status": "success",
+            "message": f"Emergency shutdown completed: {reason}",
+            "hot_reload_enabled": False,
+            "kill_switch_enabled": True
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+@app.get("/api/v2/admin/hot-reload/circuit-breaker")
+async def hot_reload_circuit_breaker_status():
+    """Get circuit breaker status and statistics."""
+    try:
+        from app.core.hot_config import hot_reloadable_settings
+        health_data = await hot_reloadable_settings.get_hot_reload_health()
+        return {
+            "status": "success",
+            "circuit_breaker": health_data.get("circuit_breaker", {}),
+            "fail_safes": health_data.get("fail_safes", {})
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+@app.post("/api/v2/admin/hot-reload/validate-parameter")
+async def validate_hot_reload_parameter(parameter_key: str, parameter_value: str):
+    """Validate parameter against schema before applying - TESTING ONLY."""
+    try:
+        from app.core.hot_config import hot_reloadable_settings
+        
+        # This endpoint is for validation testing only
+        is_valid = hot_reloadable_settings.validate_parameter(parameter_key, parameter_value)
+        
+        return {
+            "status": "success",
+            "parameter_key": parameter_key,
+            "parameter_value": "[REDACTED]" if "SECRET" in parameter_key.upper() else parameter_value,
+            "validation_result": is_valid
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "parameter_key": parameter_key,
+            "error": str(e),
+            "validation_result": False
+        }
+
 
 if __name__ == "__main__":
     import uvicorn

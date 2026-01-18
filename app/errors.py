@@ -30,6 +30,16 @@ class DataAccessError(SignalServiceError):
     pass
 
 
+class SecurityError(SignalServiceError):
+    """Security-related errors"""
+    pass
+
+
+class WatermarkError(SecurityError):
+    """Watermark-related security errors"""
+    pass
+
+
 class TimescaleDBConnectionError(DataAccessError):
     """TimescaleDB connection or query errors"""
     pass
@@ -47,6 +57,11 @@ class DataValidationError(DataAccessError):
 
 class ComputationError(SignalServiceError):
     """Computation and processing errors"""
+    pass
+
+
+class CalculationError(ComputationError):
+    """General calculation errors (alias for ComputationError for backward compatibility)"""
     pass
 
 

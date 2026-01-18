@@ -76,11 +76,16 @@ class EntitlementMiddleware:
         if user_id_header:
             return user_id_header
         
+<<<<<<< HEAD
         # ARCHITECTURE COMPLIANCE: No Authorization header processing (Architecture Principle #7)
         # JWT validation ONLY happens at API Gateway - services only trust gateway headers
         
         # ARCHITECTURE COMPLIANCE: No query parameter identity extraction (Architecture Principle #7)
         # User identity ONLY from validated gateway headers - no direct parameter access
+=======
+        # Production: No Authorization header or query parameter bypasses allowed
+        # All authentication must come through API Gateway headers only
+>>>>>>> compliance-violations-fixed
         
         # No user ID found
         raise HTTPException(

@@ -206,6 +206,7 @@ async def premium_analysis_strike_range(
         while current_strike <= strike_max:
             # Create both CE and PE options for each strike
             for option_type in ['CE', 'PE']:
+<<<<<<< HEAD
                 option_dict = {
                     'strike': current_strike,
                     'expiry_date': expiry_date,
@@ -235,6 +236,10 @@ async def premium_analysis_strike_range(
                         status_code=503,
                         detail=f"Market data unavailable for option chain analysis. No synthetic data allowed in production."
                     )
+=======
+                # Production premium analysis requires real market data - cannot operate with synthetic pricing
+                raise HTTPException(status_code=501, detail="Strike range premium analysis requires market data service integration - cannot provide synthetic pricing")
+>>>>>>> compliance-violations-fixed
             
             current_strike += strike_step
         
@@ -296,6 +301,7 @@ async def premium_analysis_term_structure(request: TermStructureRequest):
             option_chain_data = []
             market_prices = []
             
+<<<<<<< HEAD
             for strike in request.strikes:
                 for option_type in ['CE', 'PE']:
                     option_dict = {
@@ -326,6 +332,10 @@ async def premium_analysis_term_structure(request: TermStructureRequest):
                             status_code=503,
                             detail="Market data unavailable for term structure analysis. No synthetic data allowed in production."
                         )
+=======
+            # Production term structure analysis requires real market data across multiple expiries
+            raise HTTPException(status_code=501, detail="Term structure analysis requires market data service integration - cannot provide synthetic pricing across expiries")
+>>>>>>> compliance-violations-fixed
             
             # Calculate premium analysis for this expiry
             expiry_analysis = await premium_calculator.calculate_premium_analysis(
@@ -382,6 +392,7 @@ async def get_arbitrage_opportunities(
     try:
         log_info(f"[AGENT-2] Arbitrage scan for {symbol}, min severity: {min_severity}")
         
+<<<<<<< HEAD
         # Fetch live option chain data for arbitrage detection - fail fast if unavailable
         try:
             from app.adapters import EnhancedTickerAdapter
@@ -414,6 +425,10 @@ async def get_arbitrage_opportunities(
                 'status': 'Real arbitrage detection not yet implemented'
             }
         }
+=======
+        # Production arbitrage scan requires live option chain data and real-time pricing
+        raise HTTPException(status_code=501, detail="Arbitrage opportunities scan requires option chain data service integration - cannot provide synthetic arbitrage signals")
+>>>>>>> compliance-violations-fixed
         
     except Exception as e:
         log_exception(f"[AGENT-2] Arbitrage opportunities scan failed: {e}")
@@ -484,6 +499,14 @@ def _calculate_summary_stats(results: List[Dict]) -> Dict[str, Any]:
         return {}
 
 
+<<<<<<< HEAD
+=======
+def _get_real_market_price(underlying_price: float, strike: float, option_type: str, expiry_date: str) -> float:
+    """Get real market price from market data service."""
+    # Production implementation requires market data service integration
+    raise RuntimeError(f"Market price retrieval requires market data service integration - cannot provide pricing for {option_type} strike {strike} expiry {expiry_date}")
+
+>>>>>>> compliance-violations-fixed
 
 def _analyze_term_structure_patterns(term_results: Dict, strikes: List[float]) -> Dict[str, Any]:
     """Analyze patterns across the term structure."""

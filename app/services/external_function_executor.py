@@ -1,13 +1,10 @@
 """External function executor with security sandboxing"""
 import asyncio
-import importlib.util
 import sys
-import tempfile
 import os
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import resource
-import signal
 
 try:
     from RestrictedPython import compile_restricted
@@ -481,6 +478,7 @@ class ExternalFunctionExecutor:
     
     # ACL Methods
     
+<<<<<<< HEAD
     async def _get_user_role(self, user_id: str) -> Dict[str, Any]:
         """Get user role and permissions from unified entitlement service"""
         try:
@@ -531,6 +529,28 @@ class ExternalFunctionExecutor:
         except Exception as e:
             log_error(f"Failed to get user role for {user_id}: {e}")
             raise ValueError(f"Unable to verify user permissions. No default access allowed in production.")
+=======
+    def _get_user_role(self, user_id: str) -> Dict[str, Any]:
+        """Get user role and permissions from user service"""
+        # Production implementation must query user service - no mock data
+        try:
+            # Query user service for actual permissions via centralized factory
+            from app.clients.client_factory import get_client_manager
+            import asyncio
+            
+            client_manager = get_client_manager()
+            user_client = asyncio.run(client_manager.get_client('user_service'))
+            user_data = user_client.get_user_permissions_sync(user_id)
+            
+            if not user_data:
+                raise ValueError(f"User {user_id} not found or has no permissions")
+                
+            return user_data
+        except Exception as e:
+            # Fail fast for security - no default permissions
+            from app.errors import SecurityError
+            raise SecurityError(f"Failed to get user permissions for {user_id}: {e}") from e
+>>>>>>> compliance-violations-fixed
     
     async def _check_user_access(self, user_id: str, config: ExternalFunctionConfig) -> bool:
         """Check if user has access to execute the function"""

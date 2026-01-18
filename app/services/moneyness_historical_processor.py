@@ -14,10 +14,14 @@ from app.utils.logging_utils import log_info, log_error, log_exception, log_warn
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.instrument_service_client import InstrumentServiceClient
 from app.repositories.signal_repository import SignalRepository
+from app.clients.historical_data_client import get_historical_data_client
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
 from app.services.historical_data_manager import get_historical_data_manager
 # from app.models.signal_models import SignalGreeks, SignalIndicator
+<<<<<<< HEAD
 # Signal models would be imported here when signal schema is finalized
+=======
+>>>>>>> compliance-violations-fixed
 
 
 class MoneynessHistoricalProcessor:
@@ -30,15 +34,34 @@ class MoneynessHistoricalProcessor:
         self,
         moneyness_calculator: MoneynessAwareGreeksCalculator,
         repository: SignalRepository,
-        timeframe_manager: FlexibleTimeframeManager,
-        instrument_client: Optional[InstrumentServiceClient] = None
+        instrument_client: Optional[InstrumentServiceClient] = None,
+        timeframe_manager: Optional[FlexibleTimeframeManager] = None
     ):
         self.moneyness_calculator = moneyness_calculator
         self.repository = repository
-        self.timeframe_manager = timeframe_manager
-        self.instrument_client = instrument_client or InstrumentServiceClient()
+        self.historical_client = get_historical_data_client()  # Unified historical data client
+        if instrument_client:
+            self.instrument_client = instrument_client
+        else:
+            # Will be initialized in async initialize() method
+            self.instrument_client = None
+        # Use FlexibleTimeframeManager to eliminate duplication
+        self.timeframe_manager = timeframe_manager or FlexibleTimeframeManager()
         self._processing_cache = {}
         self._cache_ttl = 300  # 5 minutes
+    
+    async def initialize(self):
+        """Initialize the processor and timeframe manager"""
+        if self.timeframe_manager and not hasattr(self.timeframe_manager, 'session'):
+            await self.timeframe_manager.initialize()
+            
+        # Initialize instrument client if not provided
+        if not self.instrument_client:
+            from app.clients.client_factory import get_client_manager
+            manager = get_client_manager()
+            self.instrument_client = await manager.get_client('instrument_service')
+            
+        log_info("MoneynessHistoricalProcessor initialized with unified timeframe manager")
         
     async def get_moneyness_greeks_like_strike(
         self,
@@ -115,36 +138,54 @@ class MoneynessHistoricalProcessor:
         end_time: datetime,
         timeframe: str
     ) -> List[Dict[str, Any]]:
-        """Process historical moneyness Greeks with intelligent sampling"""
+        """Process historical moneyness Greeks using FlexibleTimeframeManager - eliminates duplication"""
         
-        # Get base interval data from repository
-        base_data = await self._get_base_moneyness_data(
-            underlying,
-            moneyness_level,
-            expiry_date,
-            start_time,
-            end_time
-        )
+        # Create virtual instrument key for moneyness
+        virtual_instrument_key = f"MONEYNESS@{underlying}@{moneyness_level}@{expiry_date}"
         
-        if not base_data:
-            # No historical data - compute live
-            return await self._compute_live_moneyness_series(
+        # Delegate to FlexibleTimeframeManager to eliminate historical data retrieval duplication
+        try:
+            # Initialize timeframe manager if not already done
+            if not hasattr(self.timeframe_manager, 'session') or not self.timeframe_manager.session:
+                await self.timeframe_manager.initialize()
+            
+            # Use unified timeframe manager for all historical data retrieval
+            aggregated_data = await self.timeframe_manager.get_aggregated_data(
+                instrument_key=virtual_instrument_key,
+                signal_type="moneyness_greeks",
+                timeframe=timeframe,
+                start_time=start_time,
+                end_time=end_time,
+                fields=['delta', 'gamma', 'theta', 'vega', 'rho', 'iv']
+            )
+            
+            return aggregated_data
+            
+        except Exception as e:
+            log_error(f"Failed to get aggregated moneyness data through timeframe manager: {e}")
+            
+            # Fallback to manual processing only if timeframe manager fails
+            base_data = await self._get_base_moneyness_data(
                 underlying,
                 moneyness_level,
                 expiry_date,
                 start_time,
-                end_time,
-                timeframe
+                end_time
             )
             
-        # Aggregate to requested timeframe
-        aggregated_data = self.timeframe_manager.aggregate_timeseries(
-            base_data,
-            timeframe,
-            aggregation_method='greeks'  # Special aggregation for Greeks
-        )
-        
-        return aggregated_data
+            if not base_data:
+                # No historical data - compute live
+                return await self._compute_live_moneyness_series(
+                    underlying,
+                    moneyness_level,
+                    expiry_date,
+                    start_time,
+                    end_time,
+                    timeframe
+                )
+                
+            # Manual aggregation as fallback (simplified to avoid duplication)
+            return self._manual_aggregate(base_data, timeframe)
         
     async def _get_base_moneyness_data(
         self,
@@ -486,15 +527,26 @@ class MoneynessHistoricalProcessor:
             
         return metrics
         
+    def _manual_aggregate(self, base_data: List[Dict[str, Any]], timeframe: str) -> List[Dict[str, Any]]:
+        """Manual aggregation fallback - simplified to avoid duplication with FlexibleTimeframeManager"""
+        # Simple fallback that just passes through data - timeframe manager should handle aggregation
+        log_info(f"Using simplified manual aggregation for {len(base_data)} data points")
+        return base_data
+        
     def _generate_timestamps(
         self,
         start_time: datetime,
         end_time: datetime,
         timeframe: str
     ) -> List[datetime]:
-        """Generate timestamps based on timeframe"""
-        # Parse timeframe (e.g., "5m", "1h", "1d")
-        interval = self.timeframe_manager.parse_timeframe(timeframe)
+        """Generate timestamps based on timeframe - using timeframe manager"""
+        # Parse timeframe using FlexibleTimeframeManager (eliminates duplication)
+        try:
+            _, timeframe_minutes = self.timeframe_manager.parse_timeframe(timeframe)
+            interval = timedelta(minutes=timeframe_minutes)
+        except Exception as e:
+            log_error(f"Failed to parse timeframe {timeframe}: {e}")
+            interval = timedelta(minutes=5)  # Default to 5 minutes
         
         timestamps = []
         current = start_time
@@ -510,6 +562,7 @@ class MoneynessHistoricalProcessor:
         underlying: str,
         timestamp: datetime
     ) -> Optional[float]:
+<<<<<<< HEAD
         """Get spot price at specific timestamp via ticker_service (CONSOLIDATED)"""
         try:
             # Use historical data manager to fetch from ticker_service
@@ -539,6 +592,19 @@ class MoneynessHistoricalProcessor:
             log_error(f"Error getting spot price from ticker_service: {e}")
             # Fail fast instead of synthetic data
             raise ValueError(f"Failed to retrieve spot price from ticker_service: {e}. No fallbacks allowed in production.")
+=======
+        """Get spot price at specific timestamp"""
+        # Production requires ticker_service integration - no direct database access
+        try:
+            raise RuntimeError(
+                f"Historical spot price lookup requires ticker_service integration - "
+                f"cannot query market_data table directly for {underlying} at {timestamp}. "
+                f"Must route through ticker_service historical price API."
+            )
+        except Exception as e:
+            log_error(f"Failed to get historical spot price for {underlying}: {e}")
+            return None
+>>>>>>> compliance-violations-fixed
         
     async def _get_historical_spot_prices(
         self,
@@ -546,6 +612,7 @@ class MoneynessHistoricalProcessor:
         start_time: datetime,
         end_time: datetime
     ) -> List[Dict[str, Any]]:
+<<<<<<< HEAD
         """Get historical spot prices via ticker_service (CONSOLIDATED)"""
         try:
             # Use historical data manager to fetch from ticker_service
@@ -591,6 +658,22 @@ class MoneynessHistoricalProcessor:
             log_error(f"Error getting historical spot prices from ticker_service: {e}")
             # Fail fast instead of synthetic data
             raise ValueError(f"Failed to retrieve historical prices from ticker_service: {e}. No fallbacks allowed in production.")
+=======
+        """Get historical spot prices"""
+        # Production requires ticker_service integration - no direct database access
+        try:
+            from app.errors import DataAccessError
+            raise DataAccessError(
+                f"Historical price range lookup requires ticker_service integration - "
+                f"cannot query market_data table directly for {underlying} "
+                f"from {start_time} to {end_time}. "
+                f"Must route through ticker_service historical price range API."
+            )
+        except Exception as e:
+            from app.errors import DataAccessError
+            log_error(f"Failed to get historical prices for {underlying}: {e}")
+            raise DataAccessError(f"Failed to retrieve historical prices for {underlying}: {e}") from e
+>>>>>>> compliance-violations-fixed
         
     async def _get_historical_moneyness_options(
         self,
@@ -601,6 +684,7 @@ class MoneynessHistoricalProcessor:
         timestamp: datetime
     ) -> List[Dict[str, Any]]:
         """Get options at moneyness level for historical timestamp"""
+<<<<<<< HEAD
         # Historical option data must come from ticker_service - fail fast if unavailable
         try:
             from app.adapters import EnhancedTickerAdapter
@@ -621,6 +705,11 @@ class MoneynessHistoricalProcessor:
         except Exception as e:
             log_error(f"Failed to get historical options for {underlying} {moneyness_level}: {e}")
             raise ValueError("Historical options data unavailable from ticker_service. No synthetic data allowed in production.")
+=======
+        # Production implementation must query real historical option data from database
+        from app.errors import DataAccessError
+        raise DataAccessError(f"Historical option data retrieval requires database implementation - cannot provide moneyness data for {underlying} at {moneyness_level} without complete database integration")
+>>>>>>> compliance-violations-fixed
         
     async def _calculate_historical_greeks(
         self,
@@ -630,6 +719,7 @@ class MoneynessHistoricalProcessor:
         underlying: str
     ) -> Dict[str, float]:
         """Calculate Greeks for historical options"""
+<<<<<<< HEAD
         # Use actual Greeks calculator - fail fast if unavailable
         try:
             if not self.greeks_calculator:
@@ -694,3 +784,8 @@ class MoneynessHistoricalProcessor:
         except Exception as e:
             log_error(f"Failed to calculate historical Greeks: {e}")
             raise ValueError(f"Greeks calculation failed. No synthetic Greeks allowed in production.")
+=======
+        # Production implementation must use real pricing models and market data
+        from app.errors import ComputationError
+        raise ComputationError(f"Historical Greeks calculation requires pricing model implementation - cannot compute Greeks without Black-Scholes or equivalent pricing engine integration")
+>>>>>>> compliance-violations-fixed

@@ -18,6 +18,7 @@ class BrokerSymbolConverter:
     """
     
     def __init__(self, instrument_service_url: str = None):
+<<<<<<< HEAD
         # Get instrument service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
         if instrument_service_url is None:
             try:
@@ -38,6 +39,14 @@ class BrokerSymbolConverter:
                 raise RuntimeError(f"Failed to get instrument service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
         
         self.instrument_service_url = instrument_service_url
+=======
+        if instrument_service_url:
+            self.instrument_service_url = instrument_service_url
+        elif hasattr(settings, 'INSTRUMENT_SERVICE_URL') and settings.INSTRUMENT_SERVICE_URL:
+            self.instrument_service_url = settings.INSTRUMENT_SERVICE_URL
+        else:
+            raise ValueError("instrument_service_url must be provided via config service - no hardcoded fallbacks allowed")
+>>>>>>> compliance-violations-fixed
         self.cache = {}  # Simple in-memory cache
         self.cache_ttl = 3600  # 1 hour cache
         self.session: Optional[aiohttp.ClientSession] = None

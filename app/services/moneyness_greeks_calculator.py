@@ -22,7 +22,7 @@ class MoneynessAwareGreeksCalculator:
     """
     
     def __init__(self, instrument_client: InstrumentServiceClient = None):
-        self.instrument_client = instrument_client or InstrumentServiceClient()
+        self.instrument_client = instrument_client  # Should be provided via dependency injection
         self.greeks_calculator = GreeksCalculator(None)  # timescale_session will be initialized later
         self._moneyness_cache = {}
         self._cache_ttl = 60  # 1 minute cache for moneyness data

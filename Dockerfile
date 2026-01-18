@@ -15,12 +15,18 @@ RUN groupadd -r signalservice && \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
+# Copy service-specific requirements 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
+
+# Copy tests for in-container execution
+COPY tests/ ./tests/
+COPY conftest.py ./conftest.py
+
+# Copy config service client (if using common directory)
 COPY common/ ./common/
 
 # Copy tests and configuration

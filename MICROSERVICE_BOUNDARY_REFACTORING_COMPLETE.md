@@ -39,7 +39,7 @@ signal_delivery.deliver_signal(user_id, signal_data, config)
 
 ### ✅ Internal API Key Authentication
 - All service calls use Internal API Key from CLAUDE.md
-- Header: `X-Internal-API-Key: AShhRzWhfXd6IomyzZnE3d-lCcAvT1L5GDCCZRSXZGsJq7_eAJGxeMi-4AlfTeOc`
+- Header: `X-Internal-API-Key: [REDACTED-PRODUCTION-API-KEY]`
 
 ### ✅ Service Discovery via Config Service
 - Dynamic service URL resolution through config_service

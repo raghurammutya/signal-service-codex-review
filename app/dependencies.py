@@ -44,7 +44,9 @@ async def get_instrument_client() -> InstrumentServiceClient:
     """Get or create instrument service client"""
     global _instrument_client
     if not _instrument_client:
-        _instrument_client = InstrumentServiceClient()
+        from app.clients.client_factory import get_client_manager
+        manager = get_client_manager()
+        _instrument_client = await manager.get_client('instrument_service')
     return _instrument_client
 
 

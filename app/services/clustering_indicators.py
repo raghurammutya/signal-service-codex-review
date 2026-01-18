@@ -297,7 +297,12 @@ def persistent_peaks(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
+<<<<<<< HEAD
             raise ImportError("findpeaks library required for persistent peaks detection. No mock data allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("findpeaks library not available - advanced peak detection requires findpeaks library")
+>>>>>>> compliance-violations-fixed
 
         fp = findpeaks(method=method, lookahead=lookahead, verbose=0)
 
@@ -324,8 +329,13 @@ def persistent_peaks(
         return peak_df
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error in persistent peak detection: {e}")
+<<<<<<< HEAD
         raise ImportError("findpeaks library required for persistent peaks detection. No mock data allowed in production.")
+=======
+        raise ComputationError(f"Failed to compute persistent peaks: {e}") from e
+>>>>>>> compliance-violations-fixed
 
 
 @register_indicator(
@@ -355,7 +365,12 @@ def persistent_valleys(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
+<<<<<<< HEAD
             raise ValueError("Persistent valley detection failed: findpeaks library not available. No fallback allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("findpeaks library not available - advanced valley detection requires findpeaks library")
+>>>>>>> compliance-violations-fixed
 
         fp = findpeaks(method=method, lookahead=lookahead, verbose=0)
 
@@ -383,8 +398,13 @@ def persistent_valleys(
         return valley_df
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error in persistent valley detection: {e}")
+<<<<<<< HEAD
         raise ValueError(f"Persistent valley detection failed: {e}. No fallback allowed in production.")
+=======
+        raise ComputationError(f"Failed to compute persistent valleys: {e}") from e
+>>>>>>> compliance-violations-fixed
 
 
 @register_indicator(
@@ -414,7 +434,12 @@ def peaks_ranked_by_persistence(
     """
     try:
         if not FINDPEAKS_AVAILABLE:
+<<<<<<< HEAD
             raise ImportError("findpeaks library required for peak ranking. No mock data allowed in production.")
+=======
+            from app.errors import ComputationError
+            raise ComputationError("findpeaks library not available - peak ranking requires findpeaks library")
+>>>>>>> compliance-violations-fixed
 
         peaks_df = persistent_peaks(df, method='topology')
 
@@ -428,7 +453,16 @@ def peaks_ranked_by_persistence(
         return peaks_df
 
     except Exception as e:
+        from app.errors import ComputationError
         logger.exception(f"Error ranking peaks by persistence: {e}")
+<<<<<<< HEAD
         raise ImportError("findpeaks library required for peak ranking. No mock data allowed in production.")
 
 
+=======
+        raise ComputationError(f"Failed to rank peaks by persistence: {e}") from e
+
+
+# Note: Mock functions removed - production code must handle missing dependencies properly
+# by raising ComputationError when findpeaks library is not available
+>>>>>>> compliance-violations-fixed

@@ -431,6 +431,7 @@ class EnhancedTickerAdapter:
     ) -> Dict[str, Any]:
         """
         Calculate indicators with timezone and currency awareness.
+<<<<<<< HEAD
         Integrates with pandas_ta_executor and other indicator calculation services.
         """
         try:
@@ -459,6 +460,14 @@ class EnhancedTickerAdapter:
             }
             
             return indicators
+=======
+        Production implementation requires pandas_ta_executor integration.
+        """
+        try:
+            # Production implementation requires indicator calculation service integration
+            from app.errors import ComputationError
+            raise ComputationError(f"Indicator calculation requires pandas_ta_executor integration - cannot compute indicators for {instrument_key}")
+>>>>>>> compliance-violations-fixed
             
         except Exception as e:
             logger.exception("Error calculating indicators: %s", e)

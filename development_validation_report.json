@@ -1,0 +1,196 @@
+{
+  "environment": "development",
+  "timestamp": "2026-01-17T16:39:21.482116",
+  "summary": {
+    "total_checks": 17,
+    "passed_checks": 0,
+    "warnings": 0,
+    "critical_failures": 17,
+    "overall_status": "FAIL"
+  },
+  "results": [
+    {
+      "name": "env_var_environment_value",
+      "passed": false,
+      "message": "ENVIRONMENT variable has invalid value: dev",
+      "critical": true,
+      "suggestions": [
+        "Use 'development', 'staging', or 'production'"
+      ]
+    },
+    {
+      "name": "env_var_database_url",
+      "passed": false,
+      "message": "Required environment variable DATABASE_URL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set DATABASE_URL environment variable",
+        "Ensure config service provides DATABASE_URL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_redis_url",
+      "passed": false,
+      "message": "Required environment variable REDIS_URL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set REDIS_URL environment variable",
+        "Ensure config service provides REDIS_URL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_log_level",
+      "passed": false,
+      "message": "Required environment variable LOG_LEVEL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set LOG_LEVEL environment variable",
+        "Ensure config service provides LOG_LEVEL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_calendar_service_url",
+      "passed": false,
+      "message": "Required environment variable CALENDAR_SERVICE_URL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set CALENDAR_SERVICE_URL environment variable",
+        "Ensure config service provides CALENDAR_SERVICE_URL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_alert_service_url",
+      "passed": false,
+      "message": "Required environment variable ALERT_SERVICE_URL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set ALERT_SERVICE_URL environment variable",
+        "Ensure config service provides ALERT_SERVICE_URL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_messaging_service_url",
+      "passed": false,
+      "message": "Required environment variable MESSAGING_SERVICE_URL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set MESSAGING_SERVICE_URL environment variable",
+        "Ensure config service provides MESSAGING_SERVICE_URL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_marketplace_service_url",
+      "passed": false,
+      "message": "Required environment variable MARKETPLACE_SERVICE_URL is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set MARKETPLACE_SERVICE_URL environment variable",
+        "Ensure config service provides MARKETPLACE_SERVICE_URL",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_cors_allowed_origins",
+      "passed": false,
+      "message": "Required environment variable CORS_ALLOWED_ORIGINS is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set CORS_ALLOWED_ORIGINS environment variable",
+        "Ensure config service provides CORS_ALLOWED_ORIGINS",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_gateway_secret",
+      "passed": false,
+      "message": "Required environment variable GATEWAY_SECRET is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set GATEWAY_SECRET environment variable",
+        "Ensure config service provides GATEWAY_SECRET",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_internal_api_key",
+      "passed": false,
+      "message": "Required environment variable INTERNAL_API_KEY is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set INTERNAL_API_KEY environment variable",
+        "Ensure config service provides INTERNAL_API_KEY",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_jwt_secret_key",
+      "passed": false,
+      "message": "Required environment variable JWT_SECRET_KEY is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set JWT_SECRET_KEY environment variable",
+        "Ensure config service provides JWT_SECRET_KEY",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_minio_endpoint",
+      "passed": false,
+      "message": "Required environment variable MINIO_ENDPOINT is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set MINIO_ENDPOINT environment variable",
+        "Ensure config service provides MINIO_ENDPOINT",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_minio_access_key",
+      "passed": false,
+      "message": "Required environment variable MINIO_ACCESS_KEY is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set MINIO_ACCESS_KEY environment variable",
+        "Ensure config service provides MINIO_ACCESS_KEY",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_minio_secret_key",
+      "passed": false,
+      "message": "Required environment variable MINIO_SECRET_KEY is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set MINIO_SECRET_KEY environment variable",
+        "Ensure config service provides MINIO_SECRET_KEY",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "env_var_service_integration_timeout",
+      "passed": false,
+      "message": "Required environment variable SERVICE_INTEGRATION_TIMEOUT is not set or empty",
+      "critical": true,
+      "suggestions": [
+        "Set SERVICE_INTEGRATION_TIMEOUT environment variable",
+        "Ensure config service provides SERVICE_INTEGRATION_TIMEOUT",
+        "Check deployment configuration"
+      ]
+    },
+    {
+      "name": "cors_configuration",
+      "passed": false,
+      "message": "CORS_ALLOWED_ORIGINS not configured",
+      "critical": true,
+      "suggestions": [
+        "Configure CORS_ALLOWED_ORIGINS environment variable"
+      ]
+    }
+  ]
+}

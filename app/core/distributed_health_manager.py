@@ -74,14 +74,26 @@ class DistributedHealthManager:
     def _get_host_ip(self) -> str:
         """Get host IP address"""
         try:
+            # Get IP from environment first (for containerized deployments)
+            import os
+            pod_ip = os.environ.get('POD_IP')
+            if pod_ip:
+                return pod_ip
+            
             # Connect to external address to determine local IP
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
+            # Use cluster DNS or gateway instead of hardcoded public IP
+            gateway_ip = os.environ.get('GATEWAY_IP', '10.96.0.1')  # Kubernetes default service subnet
+            s.connect((gateway_ip, 80))
             ip = s.getsockname()[0]
             s.close()
             return ip
         except Exception:
-            return "127.0.0.1"
+            # Last resort fallback - get from hostname resolution
+            try:
+                return socket.gethostbyname(socket.gethostname())
+            except Exception:
+                return "127.0.0.1"
     
     async def register_instance(self, health_checker) -> None:
         """Register this instance in the distributed registry"""
@@ -190,6 +202,7 @@ class DistributedHealthManager:
     
     async def _get_request_rate(self) -> float:
         """Get current request rate (requests per minute)"""
+<<<<<<< HEAD
         # Get real request rate from metrics system
         try:
             from app.metrics.threshold_metrics import get_metrics_collector
@@ -255,10 +268,93 @@ class DistributedHealthManager:
             logger.error(f"Failed to get processing rate from Redis metrics: {e}")
             # Fail fast instead of returning mock data
             raise ValueError("Unable to get real processing rate from Redis metrics. No mock data allowed in production.")
+=======
+        try:
+            # Get request rate from metrics service if available
+            if hasattr(self, '_metrics_client') and self._metrics_client:
+                return await self._metrics_client.get_request_rate()
+            
+            # Fallback: estimate from Redis stats if available
+            redis_info = await self.redis_client.info('stats')
+            total_commands = redis_info.get('total_commands_processed', 0)
+            
+            # Store current count and calculate rate
+            current_time = datetime.utcnow().timestamp()
+            if hasattr(self, '_last_command_count') and hasattr(self, '_last_check_time'):
+                time_diff = current_time - self._last_check_time
+                command_diff = total_commands - self._last_command_count
+                rate = (command_diff / time_diff) * 60 if time_diff > 0 else 0.0
+            else:
+                rate = 0.0
+            
+            self._last_command_count = total_commands
+            self._last_check_time = current_time
+            
+            return rate
+        except Exception as e:
+            logger.warning(f"Failed to get request rate: {e}")
+            return 0.0
+    
+    async def _get_queue_size(self) -> int:
+        """Get current processing queue size"""
+        try:
+            # Get queue size from metrics service if available
+            if hasattr(self, '_metrics_client') and self._metrics_client:
+                return await self._metrics_client.get_queue_size()
+            
+            # Fallback: estimate from Redis queue lengths
+            queue_keys = [
+                'signal_service:processing_queue',
+                'signal_service:priority_queue',
+                'signal_service:retry_queue'
+            ]
+            
+            total_size = 0
+            for key in queue_keys:
+                try:
+                    size = await self.redis_client.llen(key)
+                    total_size += size
+                except Exception:
+                    continue
+            
+            return total_size
+        except Exception as e:
+            logger.warning(f"Failed to get queue size: {e}")
+            return 0
+    
+    async def _get_processing_rate(self) -> float:
+        """Get current signal processing rate"""
+        try:
+            # Get processing rate from metrics service if available
+            if hasattr(self, '_metrics_client') and self._metrics_client:
+                return await self._metrics_client.get_processing_rate()
+            
+            # Fallback: calculate from processed signals count
+            processed_key = f"signal_service:processed_count:{self.instance_id}"
+            current_count = await self.redis_client.get(processed_key) or 0
+            current_count = int(current_count)
+            
+            current_time = datetime.utcnow().timestamp()
+            if hasattr(self, '_last_processed_count') and hasattr(self, '_last_processing_check'):
+                time_diff = current_time - self._last_processing_check
+                count_diff = current_count - self._last_processed_count
+                rate = (count_diff / time_diff) * 60 if time_diff > 0 else 0.0
+            else:
+                rate = 0.0
+            
+            self._last_processed_count = current_count
+            self._last_processing_check = current_time
+            
+            return rate
+        except Exception as e:
+            logger.warning(f"Failed to get processing rate: {e}")
+            return 0.0
+>>>>>>> compliance-violations-fixed
     
     async def _get_assigned_instruments(self) -> List[str]:
         """Get list of instruments assigned to this instance"""
         try:
+<<<<<<< HEAD
             # Get assigned instruments from Redis metrics (try both key formats for compatibility)
             assignments_metrics_key = f"signal:pod:metrics:{self.instance_id}"
             metrics_data = await self.redis_client.get(assignments_metrics_key)
@@ -279,6 +375,29 @@ class DistributedHealthManager:
             logger.error(f"Failed to get assigned instruments from Redis metrics: {e}")
             # Fail fast instead of returning mock data
             raise ValueError("Unable to get real assigned instruments from Redis metrics. No mock data allowed in production.")
+=======
+            # Get assigned instruments from Redis assignment registry
+            assignment_key = f"signal_service:assignments:{self.instance_id}"
+            assignments = await self.redis_client.smembers(assignment_key)
+            
+            if assignments:
+                return [assignment.decode() if isinstance(assignment, bytes) else assignment for assignment in assignments]
+            
+            # Fallback: get from global assignment if no specific assignments
+            global_assignments = await self.redis_client.hget(
+                "signal_service:global_assignments", 
+                self.instance_id
+            )
+            
+            if global_assignments:
+                import json
+                return json.loads(global_assignments)
+            
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to get assigned instruments: {e}")
+            return []
+>>>>>>> compliance-violations-fixed
     
     async def _update_aggregate_health(self) -> None:
         """Update aggregate health status across all instances"""

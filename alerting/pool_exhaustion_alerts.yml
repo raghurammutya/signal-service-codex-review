@@ -1,0 +1,84 @@
+{
+  "groups": [
+    {
+      "name": "pool-exhaustion",
+      "rules": [
+        {
+          "alert": "DatabaseConnectionPoolExhaustion",
+          "expr": "db_connection_pool_active / db_connection_pool_max * 100 > 90",
+          "for": "1m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "database"
+          },
+          "annotations": {
+            "summary": "Database connection pool near exhaustion",
+            "description": "Database connection pool usage is {{ $value }}%, above 90% threshold for 1 minute.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/db-pool-exhaustion"
+          }
+        },
+        {
+          "alert": "RedisConnectionPoolExhaustion",
+          "expr": "redis_connection_pool_active / redis_connection_pool_max * 100 > 85",
+          "for": "1m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "redis"
+          },
+          "annotations": {
+            "summary": "Redis connection pool near exhaustion",
+            "description": "Redis connection pool usage is {{ $value }}%, above 85% threshold for 1 minute.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/redis-pool-exhaustion"
+          }
+        },
+        {
+          "alert": "DatabaseConnectionLeaks",
+          "expr": "db_connection_pool_leaks > 5",
+          "for": "2m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "database"
+          },
+          "annotations": {
+            "summary": "Database connection leaks detected",
+            "description": "{{ $value }} database connection leaks detected. This may lead to pool exhaustion.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/db-connection-leaks"
+          }
+        },
+        {
+          "alert": "DatabaseHighLatency",
+          "expr": "histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 0.1",
+          "for": "3m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "database"
+          },
+          "annotations": {
+            "summary": "Database query latency high",
+            "description": "Database P95 query latency is {{ $value }}s, above 100ms threshold for 3 minutes.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/db-high-latency"
+          }
+        },
+        {
+          "alert": "RedisHighLatency",
+          "expr": "histogram_quantile(0.95, rate(redis_operation_duration_seconds_bucket[5m])) > 0.05",
+          "for": "3m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "redis"
+          },
+          "annotations": {
+            "summary": "Redis operation latency high",
+            "description": "Redis P95 operation latency is {{ $value }}s, above 50ms threshold for 3 minutes.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/redis-high-latency"
+          }
+        }
+      ]
+    }
+  ]
+}

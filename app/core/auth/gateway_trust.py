@@ -53,10 +53,17 @@ def verify_gateway_secret(gateway_secret: Optional[str]) -> bool:
     # (prevents timing attacks)
     import secrets
     expected = settings.gateway_secret
+    
+    if not expected:
+        logger.error("settings.gateway_secret is not configured - denying all requests")
+        return False
+        
     is_valid = secrets.compare_digest(gateway_secret, expected)
 
     if not is_valid:
-        logger.warning("Gateway secret invalid - denying access")
+        logger.warning(f"Gateway secret invalid - denying access. Expected length: {len(expected)}, Received length: {len(gateway_secret)}")
+    else:
+        logger.debug("Gateway secret validation successful")
 
     return is_valid
 
@@ -113,10 +120,23 @@ async def get_current_user_from_gateway(
             # ... your logic here
     """
     # =========================================================================
+<<<<<<< HEAD
     # ARCHITECTURE COMPLIANCE: Gateway-only JWT validation (Architecture Principle #7)
     # =========================================================================
     # SECURITY: Fail-closed - verify gateway secret FIRST before processing any headers
     
+=======
+    # PRODUCTION ENFORCEMENT: Strict gateway authentication only
+    # =========================================================================
+    # All requests must come through API Gateway with proper headers
+    # No development bypasses allowed
+
+    # =========================================================================
+    # PRODUCTION MODE: Strict gateway authentication
+    # =========================================================================
+
+    # SECURITY: Fail-closed - deny if gateway secret is invalid
+>>>>>>> compliance-violations-fixed
     if not verify_gateway_secret(x_gateway_secret):
         logger.error(
             "Direct access attempt blocked - missing or invalid gateway secret. "

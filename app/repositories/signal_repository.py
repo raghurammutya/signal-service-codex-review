@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 from common.storage.database import get_timescaledb_session
 from app.services.historical_data_manager import get_historical_data_manager
 # from app.models.signal_models import SignalGreeks, SignalIndicators
+<<<<<<< HEAD
 # Signal models would be imported here when signal schema is finalized
+=======
+>>>>>>> compliance-violations-fixed
 
 
 class DatabaseError(Exception):

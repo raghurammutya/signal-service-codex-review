@@ -282,9 +282,14 @@ class TimeframeCacheManager:
             try:
                 cache = await self.get_or_create_cache(instrument_key, timeframe)
                 
+<<<<<<< HEAD
                 # Trigger data load (implementation depends on data source)
                 # Cache warming implementation would trigger data load here
                 logger.info("Warming cache for %s:%s", instrument_key, timeframe)
+=======
+                # Production implementation requires data source integration
+                raise RuntimeError(f"Cache warming requires data source integration - cannot warm cache for {instrument_key}:{timeframe}")
+>>>>>>> compliance-violations-fixed
                 
             except Exception as e:
                 logger.exception("Failed to warm cache for %s:%s: %s", instrument_key, timeframe, e)

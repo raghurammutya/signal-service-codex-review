@@ -11,7 +11,6 @@ import logging
 
 from app.utils.logging_utils import log_info, log_exception, log_warning, log_error
 from app.utils.redis import get_redis_client
-from common.storage.database import get_timescaledb_session
 from app.utils.resilience import CircuitBreaker, CircuitBreakerConfig, retry_with_exponential_backoff
 
 from app.core.config import settings
@@ -84,7 +83,6 @@ class SignalProcessor:
         try:
             # Get shared connections
             self.redis_client = await get_redis_client()
-            self.timescale_session_factory = get_timescaledb_session()
             
             # Initialize component dependencies
             from app.services.config_handler import ConfigHandler
@@ -99,13 +97,16 @@ class SignalProcessor:
             from app.repositories.signal_repository import SignalRepository
             
             self.config_handler = ConfigHandler(self.redis_client)
-            self.greeks_calculator = GreeksCalculator(self.timescale_session_factory)
+            self.greeks_calculator = GreeksCalculator()
             self.realtime_greeks_calculator = RealTimeGreeksCalculator(self.redis_client)
             self.pandas_ta_executor = PandasTAExecutor(self.redis_client)
             self.external_function_executor = ExternalFunctionExecutor()
             
-            # Initialize moneyness components
-            self.instrument_client = InstrumentServiceClient()
+            # Initialize moneyness components - instrument_client will be set later in initialize()
+            from app.clients.client_factory import get_client_manager
+            manager = get_client_manager()
+            self.instrument_client = await manager.get_client('instrument_service')
+            
             self.moneyness_calculator = MoneynessAwareGreeksCalculator(self.instrument_client)
             self.signal_repository = SignalRepository()
             self.timeframe_manager = FlexibleTimeframeManager()
@@ -454,8 +455,12 @@ class SignalProcessor:
                 await self.redis_client.xgroup_create(
                     stream_name, self.consumer_group, id='0', mkstream=True
                 )
-            except Exception:
-                pass  # Group already exists
+            except Exception as e:
+                # Only ignore BUSYGROUP error, log all others
+                error_str = str(e).upper()
+                if 'BUSYGROUP' not in error_str:
+                    log_error(f"Failed to create consumer group for {stream_name}: {e}")
+                # BUSYGROUP means group already exists, which is expected
             
             log_info(f"Starting configuration updates consumer for stream: {stream_name}")
             
@@ -542,8 +547,12 @@ class SignalProcessor:
                             )
                             self.active_streams.add(stream_name)
                             log_info(f"Added stream to monitoring: {stream_name}")
-                        except Exception:
-                            pass  # Group already exists
+                        except Exception as e:
+                            # Only ignore BUSYGROUP error, log all others
+                            error_str = str(e).upper()
+                            if 'BUSYGROUP' not in error_str:
+                                log_error(f"Failed to create consumer group for {stream_name}: {e}")
+                            # BUSYGROUP means group already exists, which is expected
                 
                 # Read from all active streams
                 if self.active_streams:
@@ -813,6 +822,7 @@ class SignalProcessor:
             log_exception(f"Failed to get aggregated data for {instrument_key}: {e}")
             return None
     
+<<<<<<< HEAD
     async def fetch_from_ticker_service(self, instrument_key: str, interval: str) -> Optional[Dict]:
         """CONSOLIDATED: Fetch data from ticker_service instead of direct TimescaleDB"""
         try:
@@ -855,6 +865,9 @@ class SignalProcessor:
         except Exception as e:
             log_error(f"Error fetching data from ticker_service: {e}")
             return None
+=======
+    # TimescaleDB access removed - use self.signal_repository for database operations
+>>>>>>> compliance-violations-fixed
     
     async def compute_greeks(self, config: SignalConfigData, context: TickProcessingContext) -> Dict:
         """Compute option Greeks"""
@@ -1138,8 +1151,13 @@ class SignalProcessor:
             if data:
                 return json.loads(data)
                 
+<<<<<<< HEAD
             # No fallback to mock data - fail fast if real data unavailable
             log_warning(f"No latest market data available for {instrument_key}")
+=======
+            # No mock data in production - fail fast if data not available
+            log_error(f"Market data not available for {instrument_key}")
+>>>>>>> compliance-violations-fixed
             return None
             
         except Exception as e:

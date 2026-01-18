@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class DashboardRegistrar:
     """Manages registration with the dynamic dashboard"""
     
+<<<<<<< HEAD
     def __init__(self, dashboard_url: str = None, service_url: str = None):
         # Get URLs from config_service exclusively (Architecture Principle #1: Config service exclusivity)
         if dashboard_url is None:
@@ -49,6 +50,22 @@ class DashboardRegistrar:
                 
         self.dashboard_url = dashboard_url
         self.service_url = service_url
+=======
+    def __init__(self, dashboard_url: str = None):
+        if dashboard_url is None:
+            from app.core.config import settings
+            if not hasattr(settings, 'DASHBOARD_URL'):
+                raise RuntimeError("DASHBOARD_URL not configured in config_service - cannot register with dashboard")
+            dashboard_url = settings.DASHBOARD_URL
+        self.dashboard_url = dashboard_url
+        
+        # Get service configuration from config service
+        from app.core.config import settings
+        if not hasattr(settings, 'SERVICE_HOST') or not hasattr(settings, 'SERVICE_PORT'):
+            raise RuntimeError("SERVICE_HOST and SERVICE_PORT not configured in config_service")
+        
+        self.service_url = f"http://{settings.SERVICE_HOST}:{settings.SERVICE_PORT}"
+>>>>>>> compliance-violations-fixed
         self.registration_endpoint = f"{dashboard_url}/api/services/register"
         self.health_update_endpoint = f"{dashboard_url}/api/services/health"
         self.registration_interval = 30  # seconds
@@ -84,6 +101,7 @@ class DashboardRegistrar:
                 "service_name": service_name,
                 "service_id": "signal_service", 
                 "service_type": "signal_processing",
+<<<<<<< HEAD
                 "host": service_host,
                 "port": int(service_port),
                 # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
@@ -91,6 +109,14 @@ class DashboardRegistrar:
                 "detailed_health_endpoint": f"{self.service_url}/api/v1/health/detailed", 
                 "cluster_health_endpoint": f"{self.service_url}/api/v1/health/cluster",
                 "metrics_endpoint": f"{self.service_url}/api/v1/health/metrics",
+=======
+                "host": settings.SERVICE_HOST,
+                "port": int(settings.SERVICE_PORT),
+                "health_endpoint": f"{self.service_url}/health/dashboard",
+                "detailed_health_endpoint": f"{self.service_url}/health/detailed",
+                "cluster_health_endpoint": f"{self.service_url}/health/cluster",
+                "metrics_endpoint": f"{self.service_url}/health/metrics",
+>>>>>>> compliance-violations-fixed
                 "api_base_url": f"{self.service_url}/api/v2",
                 
                 # Service metadata
@@ -162,7 +188,7 @@ class DashboardRegistrar:
                     return False
                     
         except httpx.ConnectError:
-            logger.warning("Could not connect to dashboard at localhost:8500 - dashboard may not be running")
+            logger.warning(f"Could not connect to dashboard at {self.dashboard_url} - dashboard may not be running")
             return False
         except Exception as e:
             logger.error(f"Dashboard registration failed: {e}")
@@ -261,6 +287,7 @@ class DashboardIntegration:
     """Main integration class for dashboard connectivity"""
     
     def __init__(self, dashboard_url: str = None):
+<<<<<<< HEAD
         # Get dashboard URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
         if dashboard_url is None:
             try:
@@ -278,6 +305,13 @@ class DashboardIntegration:
             except Exception as e:
                 raise RuntimeError(f"Failed to get dashboard URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
                 
+=======
+        if dashboard_url is None:
+            from app.core.config import settings
+            if not hasattr(settings, 'DASHBOARD_URL'):
+                raise RuntimeError("DASHBOARD_URL not configured in config_service")
+            dashboard_url = settings.DASHBOARD_URL
+>>>>>>> compliance-violations-fixed
         self.registrar = DashboardRegistrar(dashboard_url)
         self.background_tasks = []
     
@@ -353,15 +387,23 @@ def format_instance_data_for_dashboard(instances: list) -> Dict[str, Any]:
                 "name": inst["container_name"],
                 "status": inst["status"],
                 "host": inst["host"],
+<<<<<<< HEAD
                 "port": int(service_port),
+=======
+                "port": int(inst.get("port", 8003)),
+>>>>>>> compliance-violations-fixed
                 "uptime": inst["uptime_seconds"],
                 "cpu_usage": inst["load_metrics"].get("cpu_percent", 0),
                 "memory_usage": inst["load_metrics"].get("memory_percent", 0),
                 "requests_per_minute": inst["load_metrics"].get("requests_per_minute", 0),
                 "queue_size": inst["load_metrics"].get("queue_size", 0),
                 "assigned_instruments": inst["assigned_instruments_count"],
+<<<<<<< HEAD
                 # Architecture Principle #3: API versioning is mandatory - health endpoints must be versioned
                 "health_endpoint": f"http://{inst['host']}:{service_port}/api/v1/health/detailed"
+=======
+                "health_endpoint": f"http://{inst['host']}:{inst.get('port', 8003)}/health/detailed"
+>>>>>>> compliance-violations-fixed
             }
             for inst in instances
         ],

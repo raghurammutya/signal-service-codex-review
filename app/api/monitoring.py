@@ -121,70 +121,46 @@ async def get_greeks_performance_metrics():
     Compares vectorized vs individual calculation performance.
     """
     try:
-        # This would typically fetch from a metrics store
-        # For now, we'll return sample performance data
+        from app.services.metrics_service import get_metrics_collector
         
-        performance_data = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'period': '1h',  # Last 1 hour
-            
-            # Calculation type performance
-            'calculation_types': {
-                'vectorized': {
-                    'total_requests': 450,
-                    'successful_requests': 445,
-                    'failed_requests': 5,
-                    'avg_response_time_ms': 8.5,
-                    'p95_response_time_ms': 12.0,
-                    'p99_response_time_ms': 18.0,
-                    'options_per_second': 2500,
-                    'failure_rate': 0.011
-                },
-                'individual': {
-                    'total_requests': 1200,
-                    'successful_requests': 1185,
-                    'failed_requests': 15,
-                    'avg_response_time_ms': 45.0,
-                    'p95_response_time_ms': 78.0,
-                    'p99_response_time_ms': 120.0,
-                    'options_per_second': 26,
-                    'failure_rate': 0.0125
-                }
-            },
-            
-            # Greeks-specific metrics
-            'greeks_metrics': {
-                'delta_calculations': 1650,
-                'gamma_calculations': 1650,
-                'theta_calculations': 1420,
-                'vega_calculations': 1380,
-                'rho_calculations': 1200,
-                'model_configuration_errors': 2,
-                'parameter_validation_errors': 3,
-                'calculation_timeouts': 1
-            },
-            
-            # Performance comparison
-            'performance_comparison': {
-                'vectorized_speedup': 5.3,  # 5.3x faster than individual
-                'vectorized_efficiency': 0.95,  # 95% efficiency
-                'cost_per_calculation': {
-                    'vectorized': 0.00034,  # seconds CPU time
-                    'individual': 0.00180
-                }
-            },
-            
-            # Resource utilization
-            'resource_utilization': {
-                'cpu_usage_percent': 35.0,
-                'memory_usage_mb': 450.0,
-                'cache_hit_rate': 0.83,
-                'database_connections_active': 8,
-                'redis_connections_active': 12
-            }
+        metrics_collector = get_metrics_collector()
+        
+        # Get real Greeks performance metrics
+        greeks_metrics = metrics_collector.get_greeks_performance_metrics()
+        system_metrics = metrics_collector.get_system_metrics()
+        cache_metrics = metrics_collector.get_cache_performance_metrics()
+        
+        # Calculate performance insights
+        performance_analysis = {
+            'overall_performance': 'excellent' if greeks_metrics.get('success_rate', 0) > 0.95 else 'good',
+            'throughput_assessment': 'high' if greeks_metrics.get('calculations_per_minute', 0) > 30 else 'moderate',
+            'latency_assessment': 'fast' if greeks_metrics.get('average_duration_ms', 0) < 100 else 'acceptable',
+            'reliability_score': round(greeks_metrics.get('success_rate', 0) * 100, 1)
         }
         
-        return performance_data
+        # Get comparison metrics by calculation type
+        breakdown = greeks_metrics.get('breakdown_by_type', {})
+        performance_comparison = {}
+        
+        for calc_type, metrics in breakdown.items():
+            performance_comparison[calc_type] = {
+                'average_duration_ms': metrics.get('average_duration_ms', 0),
+                'error_rate': metrics.get('error_rate', 0),
+                'total_calculations': metrics.get('count', 0),
+                'performance_grade': 'A' if metrics.get('average_duration_ms', 1000) < 100 else 'B'
+            }
+        
+        return {
+            'summary': greeks_metrics,
+            'performance_analysis': performance_analysis,
+            'calculation_type_comparison': performance_comparison,
+            'cache_performance': cache_metrics,
+            'system_impact': {
+                'cpu_utilization': system_metrics.get('process', {}).get('cpu_percent', 0),
+                'memory_usage_mb': system_metrics.get('process', {}).get('memory_mb', 0)
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        }
         
     except Exception as e:
         logger.error(f"Performance metrics collection failed: {e}")
@@ -289,6 +265,52 @@ async def get_active_alerts():
                     'timestamp': datetime.utcnow().isoformat()
                 })
         
+<<<<<<< HEAD
+=======
+        # Check for performance issues using real metrics
+        try:
+            # Get actual Greeks calculation performance metrics
+            greeks_engine = GreeksCalculationEngine()
+            vectorized_engine = VectorizedPyvolibGreeksEngine()
+            
+            # Check if any circuit breakers indicate performance degradation
+            for name, metrics_data in metrics.items():
+                if metrics_data['metrics']['failure_rate'] > 0.1:  # 10% failure rate threshold
+                    alerts.append({
+                        'severity': 'warning',
+                        'source': name,
+                        'message': f'High failure rate detected: {metrics_data["metrics"]["failure_rate"]:.2%}',
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'metadata': {
+                            'failure_rate': metrics_data['metrics']['failure_rate'],
+                            'total_requests': metrics_data['metrics']['total_requests'],
+                            'failed_requests': metrics_data['metrics']['failed_requests']
+                        }
+                    })
+                    
+                # Check for high response times indicating performance issues
+                if 'avg_response_time' in metrics_data['metrics'] and metrics_data['metrics']['avg_response_time'] > 1000:  # 1 second threshold
+                    alerts.append({
+                        'severity': 'critical' if metrics_data['metrics']['avg_response_time'] > 5000 else 'warning',
+                        'source': name,
+                        'message': f'High response time: {metrics_data["metrics"]["avg_response_time"]}ms',
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'metadata': {
+                            'avg_response_time': metrics_data['metrics']['avg_response_time']
+                        }
+                    })
+        except Exception as perf_e:
+            logger.warning(f"Could not gather performance metrics: {perf_e}")
+            # Add a warning alert about metrics collection failure
+            alerts.append({
+                'severity': 'warning',
+                'source': 'monitoring_system',
+                'message': 'Performance metrics collection failed - monitoring degraded',
+                'timestamp': datetime.utcnow().isoformat(),
+                'metadata': {'error': str(perf_e)}
+            })
+        
+>>>>>>> compliance-violations-fixed
         return {
             'total_alerts': len(alerts),
             'critical_alerts': len([a for a in alerts if a['severity'] == 'critical']),
@@ -328,7 +350,66 @@ async def reset_circuit_breaker(breaker_type: str):
         internal_server_error(f"Circuit breaker reset failed for {breaker_type}", {"error": str(e)})
 
 
+<<<<<<< HEAD
 @router.get("/metrics/prometheus")
+=======
+@router.get("/monitoring/health/detailed")
+async def get_detailed_health_status():
+    """
+    Get detailed health status with real metrics and 200ms target response time.
+    Provides comprehensive health assessment for production monitoring.
+    """
+    try:
+        from app.core.enhanced_health_checker import get_enhanced_health_checker
+        
+        health_checker = await get_enhanced_health_checker()
+        detailed_health = await health_checker.check_overall_health()
+        
+        return detailed_health
+        
+    except Exception as e:
+        logger.error(f"Detailed health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {e}")
+
+
+@router.get("/monitoring/metrics/real-time")
+async def get_real_time_metrics():
+    """
+    Get real-time metrics for dashboards and monitoring systems.
+    Returns current performance metrics with minimal latency.
+    """
+    try:
+        from app.services.metrics_service import get_metrics_collector
+        
+        metrics_collector = get_metrics_collector()
+        
+        # Get real-time metrics
+        real_time_data = {
+            'performance': {
+                'request_rate_per_minute': metrics_collector.get_request_rate(window_minutes=1),
+                'processing_rate_per_minute': metrics_collector.get_processing_rate(window_minutes=1),
+                'error_rate': metrics_collector.get_error_rate(window_minutes=5),
+                'average_response_time_ms': metrics_collector.get_average_response_time(window_minutes=5)
+            },
+            'greeks_calculations': metrics_collector.get_greeks_performance_metrics(),
+            'cache_performance': metrics_collector.get_cache_performance_metrics(),
+            'system_resources': metrics_collector.get_system_metrics(),
+            'health_score': metrics_collector.get_health_score(),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        # Export to Redis for other monitoring systems
+        await metrics_collector.export_metrics_to_redis()
+        
+        return real_time_data
+        
+    except Exception as e:
+        logger.error(f"Real-time metrics collection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Real-time metrics failed: {e}")
+
+
+@router.get("/monitoring/metrics/prometheus")
+>>>>>>> compliance-violations-fixed
 async def get_prometheus_metrics():
     """
     Export metrics in Prometheus format for scraping.
@@ -347,6 +428,7 @@ async def get_prometheus_metrics():
             metrics.append(f'signal_service_circuit_breaker_rejections_total{{type="{breaker_type}"}} {data["metrics"]["rejected_requests"]}')
             metrics.append(f'signal_service_circuit_breaker_failure_rate{{type="{breaker_type}"}} {data["metrics"]["failure_rate"]}')
         
+<<<<<<< HEAD
         # Processing metrics from the running signal processor
         try:
             from app.services.signal_processor import get_signal_processor
@@ -363,6 +445,10 @@ async def get_prometheus_metrics():
         except Exception as e:
             logger.error(f"Failed to get processing metrics: {e}")
             metrics.append('signal_service_metrics_collection_failures_total 1')
+=======
+        # Performance metrics require real metrics collection - no synthetic data
+        # Production implementation would collect from actual metrics store
+>>>>>>> compliance-violations-fixed
         
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse('\n'.join(metrics))

@@ -12,6 +12,7 @@ import hmac
 import os
 
 from app.utils.logging_utils import log_info, log_error
+from app.errors import WatermarkError
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +40,9 @@ class SignalWatermarkService:
     def _load_config(self):
         """Load watermark configuration"""
         try:
-            # Try to get from config service first
+            # Get configuration from settings only - no environment variable fallbacks
             try:
+<<<<<<< HEAD
                 from common.config_service.client import ConfigServiceClient
                 from app.core.config import settings
                 
@@ -50,27 +52,43 @@ class SignalWatermarkService:
                     environment=settings.environment,
                     timeout=5
                 )
+=======
+                from app.core.config import settings
+                if not hasattr(settings, 'environment'):
+                    raise RuntimeError("Environment not configured in settings from config service")
                 
-                # Get watermark secret (required for marketplace signals)
-                self._watermark_secret = config_client.get_secret("WATERMARK_SECRET")
+                # Get watermark secret from settings (required for marketplace signals)
+                if not hasattr(settings, 'WATERMARK_SECRET'):
+                    raise RuntimeError("WATERMARK_SECRET not configured in config service")
+                self._watermark_secret = settings.WATERMARK_SECRET
+>>>>>>> compliance-violations-fixed
                 
-                # Get enforcement flag
-                enforcement = config_client.get_secret("WATERMARK_ENFORCEMENT_ENABLED")
-                self._enforcement_enabled = enforcement != "false" if enforcement else True
+                # Get enforcement flag from settings
+                if not hasattr(settings, 'WATERMARK_ENFORCEMENT_ENABLED'):
+                    raise RuntimeError("WATERMARK_ENFORCEMENT_ENABLED not configured in config service")
+                self._enforcement_enabled = settings.WATERMARK_ENFORCEMENT_ENABLED != "false"
                 
-                # Get enforcement policy (audit-only vs auto-enforce)
-                policy = config_client.get_secret("WATERMARK_ENFORCEMENT_POLICY")
+                # Get enforcement policy from settings
+                if not hasattr(settings, 'WATERMARK_ENFORCEMENT_POLICY'):
+                    raise RuntimeError("WATERMARK_ENFORCEMENT_POLICY not configured in config service")
+                policy = settings.WATERMARK_ENFORCEMENT_POLICY
                 self._enforcement_policy = policy if policy in ["audit-only", "auto-enforce"] else "auto-enforce"
                 
                 log_info(f"Watermark service configured from config service - policy: {self._enforcement_policy}")
                 
             except ImportError:
+<<<<<<< HEAD
                 # No environment fallbacks allowed per architecture
                 raise RuntimeError("Failed to import config_service but no environment fallbacks allowed per Architecture Principle #1")
+=======
+                # Config service integration required - no environment variable fallbacks
+                raise RuntimeError("Config service unavailable and watermark configuration required - cannot operate without config service")
+>>>>>>> compliance-violations-fixed
                     
         except Exception as e:
             log_error(f"Failed to load watermark config: {e}")
-            # Service can continue but marketplace signals won't be watermarked
+            # FAIL SECURE: Cannot operate without proper watermark configuration
+            raise RuntimeError(f"Watermark service configuration failed - cannot operate without proper config: {e}")
             
     def is_enabled(self) -> bool:
         """Check if watermarking is enabled and configured"""
@@ -137,6 +155,7 @@ class SignalWatermarkService:
         try:
             import httpx
             
+<<<<<<< HEAD
             # Get marketplace service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -152,6 +171,11 @@ class SignalWatermarkService:
                     raise ValueError("MARKETPLACE_SERVICE_URL not found in config_service")
             except Exception as e:
                 return {"success": False, "error": f"Failed to get marketplace URL from config_service: {e}. No environment fallbacks allowed per architecture."}
+=======
+            # Get marketplace service URL
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
+>>>>>>> compliance-violations-fixed
             
             # Get gateway secret for authentication
             gateway_secret = await self._get_gateway_secret()
@@ -193,14 +217,19 @@ class SignalWatermarkService:
                     log_error(
                         f"Marketplace watermarking failed: {response.status_code} - {response.text}"
                     )
-                    return signal_data
+                    # Fail secure - do not return unwatermarked data 
+                    raise WatermarkError(f"Watermarking failed with status {response.status_code} - failing secure to preserve business trust")
                     
+        except WatermarkError:
+            # Re-raise watermark errors to maintain fail-secure behavior
+            raise
         except Exception as e:
             log_error(f"Failed to watermark signal via marketplace service: {e}")
-            # Return original data on error (fail open for availability)
-            return signal_data
+            # Fail secure - do not return unwatermarked data on unexpected errors
+            raise WatermarkError(f"Watermarking service error: {e} - failing secure to preserve business trust")
     
     async def _get_gateway_secret(self) -> Optional[str]:
+<<<<<<< HEAD
         """Get gateway secret from config service exclusively (Architecture Principle #1: Config service exclusivity)"""
         try:
             from common.config_service.client import ConfigServiceClient
@@ -217,6 +246,16 @@ class SignalWatermarkService:
             return gateway_secret
         except Exception as e:
             raise RuntimeError(f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture.")
+=======
+        """Get gateway secret from config service settings only"""
+        try:
+            from app.core.config import settings
+            if not hasattr(settings, 'gateway_secret') or not settings.gateway_secret:
+                raise RuntimeError("GATEWAY_SECRET not configured in settings from config service")
+            return settings.gateway_secret
+        except Exception as e:
+            raise RuntimeError(f"Failed to get gateway secret from config service: {e}")
+>>>>>>> compliance-violations-fixed
             
     def verify_watermark(
         self,
@@ -292,8 +331,8 @@ class SignalWatermarkService:
             
         except Exception as e:
             log_error(f"Failed to verify watermark: {e}")
-            # Fail open for availability
-            return True
+            # FAIL SECURE: Verification failures should block signal delivery
+            raise WatermarkError(f"Watermark verification failed - failing secure to preserve business trust: {e}")
     
     async def detect_leak_and_enforce(
         self,
@@ -398,22 +437,26 @@ class SignalWatermarkService:
                         enforcement_result["marketplace_confirmed"] = True
                         
                     else:
-                        # Marketplace detection failed
+                        # Marketplace detection failed - FAIL SECURE
                         log_error(
                             f"MARKETPLACE DETECTION FAILED for user {receiving_user_id}: "
-                            f"{detection_result.get('error', 'Unknown error')}"
+                            f"{detection_result.get('error', 'Unknown error')} - FAILING SECURE"
                         )
-                        enforcement_result["leak_detected"] = False  # Fail safe - assume no leak on error
-                        enforcement_result["action"] = "detection_failed"
+                        enforcement_result["leak_detected"] = True  # FAIL SECURE - assume leak on error
+                        enforcement_result["action"] = "detection_failed_blocking"
                         enforcement_result["error"] = detection_result.get("error")
                         enforcement_result["marketplace_confirmed"] = False
+                        enforcement_result["should_block"] = True  # Block delivery on detection failure
+                        enforcement_result["severity"] = "critical"
                         
                 except Exception as e:
-                    log_error(f"Error calling marketplace detection: {e}")
-                    enforcement_result["leak_detected"] = False  # Fail safe
-                    enforcement_result["action"] = "detection_error"
+                    log_error(f"Error calling marketplace detection: {e} - FAILING SECURE")
+                    enforcement_result["leak_detected"] = True  # FAIL SECURE
+                    enforcement_result["action"] = "detection_error_blocking"
                     enforcement_result["error"] = str(e)
                     enforcement_result["marketplace_confirmed"] = False
+                    enforcement_result["should_block"] = True  # Block delivery on error
+                    enforcement_result["severity"] = "critical"
             
             return enforcement_result
             
@@ -441,6 +484,7 @@ class SignalWatermarkService:
         try:
             import httpx
             
+<<<<<<< HEAD
             # Get marketplace service URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -472,6 +516,20 @@ class SignalWatermarkService:
                     raise ValueError("GATEWAY_SECRET not found in config_service")
             except Exception as e:
                 return {"success": False, "error": f"Failed to get gateway secret from config_service: {e}. No environment fallbacks allowed per architecture."}
+=======
+            # Get marketplace service URL
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
+            
+            # Get gateway secret from settings only
+            try:
+                from app.core.config import settings
+                if not hasattr(settings, 'gateway_secret') or not settings.gateway_secret:
+                    return {"success": False, "error": "Gateway secret not configured in config service"}
+                gateway_secret = settings.gateway_secret
+            except Exception as e:
+                return {"success": False, "error": f"Failed to get gateway secret from config service: {e}"}
+>>>>>>> compliance-violations-fixed
             
             # Prepare leak detection request data 
             # Note: This function should only be called with signal_data that was already 

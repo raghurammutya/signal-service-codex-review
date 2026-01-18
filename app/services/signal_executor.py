@@ -37,6 +37,7 @@ class SignalExecutor:
     
     # MinIO configuration - fail fast if not properly configured
     # Match marketplace storage service bucket naming convention exactly
+<<<<<<< HEAD
     # Get environment and MinIO bucket from config_service (Architecture Principle #1: Config service exclusivity)
     from app.core.config import settings
     # Get environment from settings
@@ -73,6 +74,28 @@ class SignalExecutor:
             
     except Exception as e:
         raise RuntimeError(f"Failed to get MinIO configuration from config_service: {e}. No environment fallbacks allowed per architecture.")
+=======
+    from app.core.config import settings
+    ENVIRONMENT = settings.environment
+    BUCKET_MAP = {
+        "development": "stocksblitz-scripts-dev",
+        "staging": "stocksblitz-scripts-staging", 
+        "production": "stocksblitz-scripts-prod",
+        "dev": "stocksblitz-scripts-dev",
+        "prod": "stocksblitz-scripts-prod",
+    }
+    
+    # CRITICAL: Config service required - no environment variable fallbacks
+    from app.core.config import settings
+    try:
+        MINIO_ENDPOINT = settings.get_config("signal_service.minio_endpoint", required=True)
+        MINIO_ACCESS_KEY = settings.get_config("MINIO_ACCESS_KEY", required=True)  
+        MINIO_SECRET_KEY = settings.get_config("MINIO_SECRET_KEY", required=True)
+        MINIO_USE_SSL = settings.get_config("signal_service.minio_use_ssl", default="false").lower() == "true"
+    except Exception as e:
+        raise RuntimeError(f"MinIO configuration requires config_service integration - {e}")
+    MINIO_BUCKET = BUCKET_MAP.get(ENVIRONMENT.lower())
+>>>>>>> compliance-violations-fixed
     
     # Personal namespace prefix (matching algo_engine)
     PERSONAL_PREFIX = "personal"
@@ -227,12 +250,18 @@ class SignalExecutor:
         try:
             import httpx
             
+<<<<<<< HEAD
             # Get marketplace service URL from config_service (Architecture Principle #1: Config service exclusivity)
             from app.core.config import settings
             marketplace_url = settings.MARKETPLACE_SERVICE_URL
             if not marketplace_url:
                 log_error("MARKETPLACE_SERVICE_URL not configured in config_service")
                 return None
+=======
+            # Get marketplace service URL from config_service
+            from app.core.config import settings
+            marketplace_url = settings.MARKETPLACE_SERVICE_URL
+>>>>>>> compliance-violations-fixed
             
             # Get internal API key for service-to-service authentication
             try:
@@ -332,8 +361,13 @@ class SignalExecutor:
                     metadata = json.loads(meta_response.read())
                     meta_response.close()
                     meta_response.release_conn()
-                except:
-                    pass  # Metadata is optional
+                except json.JSONDecodeError as e:
+                    log_warning(f"Invalid JSON in metadata file {metadata_path}: {e}")
+                except Exception as e:
+                    # Metadata file doesn't exist or other MinIO error - this is expected/optional
+                    # Use log_info with debug level since log_debug not available
+                    if "NoSuchKey" not in str(e):  # Only log non-404 errors
+                        log_info(f"Metadata file {metadata_path} error (non-critical): {e}")
                 
                 return {
                     "content": content,

@@ -1,0 +1,99 @@
+{
+  "groups": [
+    {
+      "name": "backpressure",
+      "rules": [
+        {
+          "alert": "BudgetGuardActivation",
+          "expr": "rate(budget_guard_rejections_total[5m]) * 60 > 5",
+          "for": "1m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "backpressure"
+          },
+          "annotations": {
+            "summary": "Budget guard rejecting requests",
+            "description": "Budget guard is rejecting {{ $value }} requests per minute, above 5/min threshold. System is under pressure.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/budget-guard-activation"
+          }
+        },
+        {
+          "alert": "HighMemoryPressure",
+          "expr": "process_memory_usage_percent > 85",
+          "for": "2m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "memory"
+          },
+          "annotations": {
+            "summary": "High memory pressure detected",
+            "description": "Memory usage is {{ $value }}%, above 85% threshold for 2 minutes. May trigger backpressure.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/high-memory-pressure"
+          }
+        },
+        {
+          "alert": "HighCPUPressure",
+          "expr": "process_cpu_usage_percent > 90",
+          "for": "2m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "cpu"
+          },
+          "annotations": {
+            "summary": "High CPU pressure detected",
+            "description": "CPU usage is {{ $value }}%, above 90% threshold for 2 minutes. May trigger backpressure.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/high-cpu-pressure"
+          }
+        },
+        {
+          "alert": "RequestQueueBacklog",
+          "expr": "request_queue_depth > 100",
+          "for": "30s",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "queue"
+          },
+          "annotations": {
+            "summary": "Request queue backlog detected",
+            "description": "Request queue depth is {{ $value }}, above 100 threshold. Processing may be lagging.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/request-queue-backlog"
+          }
+        },
+        {
+          "alert": "BackpressureCascadeEvent",
+          "expr": "increase(backpressure_cascade_events_total[5m]) > 0",
+          "for": "0m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "backpressure"
+          },
+          "annotations": {
+            "summary": "Backpressure cascade event detected",
+            "description": "Backpressure cascade event occurred {{ $value }} times in 5 minutes. System-wide pressure detected.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/backpressure-cascade"
+          }
+        },
+        {
+          "alert": "GracefulDegradationActive",
+          "expr": "graceful_degradation_mode_active == 1",
+          "for": "0m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "degradation"
+          },
+          "annotations": {
+            "summary": "Service operating in graceful degradation mode",
+            "description": "Signal service is operating in graceful degradation mode due to high load or resource pressure.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/graceful-degradation"
+          }
+        }
+      ]
+    }
+  ]
+}

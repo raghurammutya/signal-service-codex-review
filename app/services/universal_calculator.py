@@ -11,8 +11,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 from app.utils.logging_utils import log_info, log_error, log_exception
-from app.services.pandas_ta_executor import PandasTAExecutor
-from app.services.greeks_calculator import GreeksCalculator
 from app.services.moneyness_calculator_local import LocalMoneynessCalculator
 from app.services.custom_indicators import CustomIndicators
 from app.errors import CalculationError
@@ -824,6 +822,7 @@ class UniversalCalculator:
         context: Dict[str, Any]
     ) -> pd.DataFrame:
         """Fetch historical data for instrument"""
+<<<<<<< HEAD
         # Historical data must come from ticker_service - fail fast if unavailable
         try:
             from app.adapters import EnhancedTickerAdapter
@@ -848,3 +847,8 @@ class UniversalCalculator:
         except Exception as e:
             log_error(f"Failed to fetch historical data for {instrument_key}: {e}")
             raise ValueError(f"Historical data unavailable from ticker_service. No synthetic OHLCV allowed in production.")
+=======
+        # Production implementation requires TimescaleDB integration - no synthetic data
+        from app.errors import DataAccessError
+        raise DataAccessError(f"Historical data retrieval requires TimescaleDB integration - cannot provide synthetic data for {instrument_key}")
+>>>>>>> compliance-violations-fixed

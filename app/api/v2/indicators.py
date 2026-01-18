@@ -847,7 +847,7 @@ async def get_available_indicators():
     try:
         indicators = indicator_calculator.get_available_indicators()
         
-        # Format for API response
+        # Format for API response (exclude function objects for serialization)
         formatted_indicators = {}
         for name, info in indicators.items():
             formatted_indicators[name] = {

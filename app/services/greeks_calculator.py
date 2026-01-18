@@ -219,3 +219,62 @@ class GreeksCalculator:
                 strike_price=K,
                 option_type=option_type
             )
+    
+    def calculate_delta(self, option_type: str, spot_price: float, strike_price: float, 
+                       time_to_expiry: float, risk_free_rate: float, volatility: float, 
+                       dividend_yield: float = 0.0) -> float:
+        """Calculate option delta"""
+        result = self.calculate_greeks(
+            spot_price, strike_price, time_to_expiry, volatility, 
+            risk_free_rate, dividend_yield, option_type
+        )
+        return result.delta
+    
+    def calculate_gamma(self, option_type: str, spot_price: float, strike_price: float,
+                       time_to_expiry: float, risk_free_rate: float, volatility: float,
+                       dividend_yield: float = 0.0) -> float:
+        """Calculate option gamma"""
+        result = self.calculate_greeks(
+            spot_price, strike_price, time_to_expiry, volatility,
+            risk_free_rate, dividend_yield, option_type
+        )
+        return result.gamma
+    
+    def calculate_theta(self, option_type: str, spot_price: float, strike_price: float,
+                       time_to_expiry: float, risk_free_rate: float, volatility: float,
+                       dividend_yield: float = 0.0) -> float:
+        """Calculate option theta"""
+        result = self.calculate_greeks(
+            spot_price, strike_price, time_to_expiry, volatility,
+            risk_free_rate, dividend_yield, option_type
+        )
+        return result.theta
+    
+    def calculate_vega(self, option_type: str, spot_price: float, strike_price: float,
+                      time_to_expiry: float, risk_free_rate: float, volatility: float,
+                      dividend_yield: float = 0.0) -> float:
+        """Calculate option vega"""
+        result = self.calculate_greeks(
+            spot_price, strike_price, time_to_expiry, volatility,
+            risk_free_rate, dividend_yield, option_type
+        )
+        return result.vega
+    
+    def calculate_rho(self, option_type: str, spot_price: float, strike_price: float,
+                     time_to_expiry: float, risk_free_rate: float, volatility: float,
+                     dividend_yield: float = 0.0) -> float:
+        """Calculate option rho"""
+        result = self.calculate_greeks(
+            spot_price, strike_price, time_to_expiry, volatility,
+            risk_free_rate, dividend_yield, option_type
+        )
+        return result.rho
+        
+    def calculate_all_greeks(self, option_type: str, spot_price: float, strike_price: float,
+                            time_to_expiry: float, risk_free_rate: float, volatility: float,
+                            dividend_yield: float = 0.0) -> GreekResult:
+        """Calculate all Greeks at once"""
+        return self.calculate_greeks(
+            spot_price, strike_price, time_to_expiry, volatility,
+            risk_free_rate, dividend_yield, option_type
+        )

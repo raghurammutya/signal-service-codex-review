@@ -14,7 +14,8 @@ from app.services import (
     signal_processing_indicators,
     pattern_indicators,
     trendline_indicators,
-    clustering_indicators
+    clustering_indicators,
+    greeks_indicators
 )
 
 from app.services.indicator_registry import IndicatorRegistry

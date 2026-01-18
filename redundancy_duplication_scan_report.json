@@ -1,0 +1,321 @@
+{
+  "timestamp": "2026-01-18T07:59:32.363536",
+  "tests": {
+    "duplicate_historical_data_fetchers": {
+      "status": "tested",
+      "fetcher_files": 13,
+      "potential_duplicates": 7,
+      "duplicate_details": [
+        {
+          "file1": "app/services/moneyness_historical_processor.py",
+          "file2": "app/services/flexible_timeframe_manager.py",
+          "common_patterns": [
+            "historical_data",
+            "historical_client"
+          ]
+        },
+        {
+          "file1": "app/services/moneyness_calculator_strike_distance.py",
+          "file2": "app/services/historical_data_manager_production.py",
+          "common_patterns": [
+            "historical_data",
+            "HistoricalData"
+          ]
+        },
+        {
+          "file1": "app/services/moneyness_calculator_strike_distance.py",
+          "file2": "app/clients/client_factory.py",
+          "common_patterns": [
+            "historical_data",
+            "HistoricalData"
+          ]
+        },
+        {
+          "file1": "app/services/moneyness_calculator_strike_distance.py",
+          "file2": "app/clients/historical_data_client.py",
+          "common_patterns": [
+            "historical_data",
+            "HistoricalData"
+          ]
+        },
+        {
+          "file1": "app/services/historical_data_manager_production.py",
+          "file2": "app/clients/client_factory.py",
+          "common_patterns": [
+            "historical_data",
+            "HistoricalData"
+          ]
+        },
+        {
+          "file1": "app/services/historical_data_manager_production.py",
+          "file2": "app/clients/historical_data_client.py",
+          "common_patterns": [
+            "historical_data",
+            "HistoricalData"
+          ]
+        },
+        {
+          "file1": "app/clients/client_factory.py",
+          "file2": "app/clients/historical_data_client.py",
+          "common_patterns": [
+            "historical_data",
+            "HistoricalData"
+          ]
+        }
+      ]
+    },
+    "legacy_delivery_paths": {
+      "status": "tested",
+      "delivery_files": 3,
+      "legacy_delivery_paths": 0,
+      "delivery_analysis": [
+        {
+          "file": "app/services/signal_delivery_service.py",
+          "legacy_markers": [
+            "remove"
+          ],
+          "active_patterns": [
+            "async def",
+            "class",
+            "def deliver"
+          ],
+          "lines": 392,
+          "likely_legacy": false
+        },
+        {
+          "file": "app/services/enhanced_signal_delivery_service.py",
+          "legacy_markers": [
+            "old"
+          ],
+          "active_patterns": [
+            "async def",
+            "class",
+            "def deliver"
+          ],
+          "lines": 555,
+          "likely_legacy": false
+        },
+        {
+          "file": "app/clients/alert_service_client.py",
+          "legacy_markers": [],
+          "active_patterns": [
+            "async def",
+            "class",
+            "def send"
+          ],
+          "lines": 285,
+          "likely_legacy": false
+        }
+      ]
+    },
+    "dual_entitlement_checks": {
+      "status": "tested",
+      "entitlement_files": 2,
+      "potential_duplicate_checks": 0,
+      "entitlement_analysis": [
+        {
+          "file": "app/services/signal_stream_contract.py",
+          "check_functions": [
+            "check_entitlement"
+          ],
+          "check_count": 1
+        },
+        {
+          "file": "app/api/v2/sdk_signals.py",
+          "check_functions": [
+            "check_entitlement",
+            "check_entitlement"
+          ],
+          "check_count": 2
+        }
+      ]
+    },
+    "redundant_configuration_patterns": {
+      "status": "tested",
+      "config_files": 19,
+      "duplicate_keys": 252,
+      "duplicate_details": [
+        {
+          "key": "1hour",
+          "files": [
+            "./app/core/config_update.py",
+            "./app/schemas/config_schema.py"
+          ]
+        },
+        {
+          "key": "CORS_ALLOWED_ORIGINS",
+          "files": [
+            "./tests/unit/test_cors_environment_validation.py",
+            "./common/cors_config.py"
+          ]
+        },
+        {
+          "key": "target",
+          "files": [
+            "./conftest.py",
+            "./app/core/config_update.py"
+          ]
+        },
+        {
+          "key": "close",
+          "files": [
+            "./conftest.py",
+            "./test/conftest.py"
+          ]
+        },
+        {
+          "key": "signal_service_test",
+          "files": [
+            "./test/conftest.py",
+            "./test/core/test_configuration_management.py"
+          ]
+        },
+        {
+          "key": "instrument_key",
+          "files": [
+            "./conftest.py",
+            "./app/services/config_handler.py",
+            "./app/core/config.py",
+            "./app/schemas/config_schema.py",
+            "./test/conftest.py"
+          ]
+        },
+        {
+          "key": "600",
+          "files": [
+            "./tests/config/test_config_coverage_validation.py",
+            "./tests/config/test_config_bootstrap.py"
+          ]
+        },
+        {
+          "key": "mock_response",
+          "files": [
+            "./tests/config/test_config_coverage_validation.py",
+            "./tests/config/test_config_bootstrap.py"
+          ]
+        },
+        {
+          "key": "alert_service",
+          "files": [
+            "./app/core/config.py",
+            "./tests/config/test_config_coverage_validation.py",
+            "./tests/config/test_config_bootstrap.py"
+          ]
+        },
+        {
+          "key": "user_service",
+          "files": [
+            "./app/core/config.py",
+            "./tests/config/test_config_coverage_validation.py",
+            "./tests/config/test_config_bootstrap.py"
+          ]
+        }
+      ]
+    },
+    "unused_import_patterns": {
+      "status": "tested",
+      "files_analyzed": 125,
+      "files_with_unused": 50,
+      "total_unused_imports": 75,
+      "import_analysis": [
+        {
+          "file": "app/services/signal_processing_indicators.py",
+          "total_imports": 5,
+          "unused_imports": [
+            "Dict",
+            "pandas",
+            "numpy"
+          ],
+          "unused_count": 3
+        },
+        {
+          "file": "app/services/bulk_computation_engine.py",
+          "total_imports": 8,
+          "unused_imports": [
+            "numpy"
+          ],
+          "unused_count": 1
+        },
+        {
+          "file": "app/services/moneyness_historical_processor.py",
+          "total_imports": 6,
+          "unused_imports": [
+            "pandas",
+            "numpy",
+            "defaultdict"
+          ],
+          "unused_count": 3
+        },
+        {
+          "file": "app/services/signal_delivery_service.py",
+          "total_imports": 5,
+          "unused_imports": [
+            "asyncio"
+          ],
+          "unused_count": 1
+        },
+        {
+          "file": "app/services/pattern_indicators.py",
+          "total_imports": 4,
+          "unused_imports": [
+            "pandas",
+            "numpy"
+          ],
+          "unused_count": 2
+        },
+        {
+          "file": "app/services/flexible_timeframe_manager.py",
+          "total_imports": 10,
+          "unused_imports": [
+            "asyncio",
+            "pandas",
+            "numpy"
+          ],
+          "unused_count": 3
+        },
+        {
+          "file": "app/services/enhanced_signal_delivery_service.py",
+          "total_imports": 6,
+          "unused_imports": [
+            "asyncio"
+          ],
+          "unused_count": 1
+        },
+        {
+          "file": "app/services/enhanced_watermark_integration.py",
+          "total_imports": 8,
+          "unused_imports": [
+            "asyncio"
+          ],
+          "unused_count": 1
+        },
+        {
+          "file": "app/services/watermark_integration.py",
+          "total_imports": 10,
+          "unused_imports": [
+            "hashlib"
+          ],
+          "unused_count": 1
+        },
+        {
+          "file": "app/services/historical_data_manager_update.py",
+          "total_imports": 2,
+          "unused_imports": [
+            "List"
+          ],
+          "unused_count": 1
+        }
+      ]
+    }
+  },
+  "redundant_patterns": [],
+  "legacy_code_paths": [],
+  "duration_seconds": 0.15175652503967285,
+  "summary": {
+    "total_tests": 5,
+    "successfully_tested": 5,
+    "success_rate": 100.0,
+    "issues_found": 269,
+    "redundancy_score": 0
+  }
+}

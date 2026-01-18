@@ -1,0 +1,163 @@
+{
+  "timestamp": "2026-01-18T08:39:46.722235",
+  "git_tag": "v1.0.0-prod-20260118_083135",
+  "artifacts": {
+    "deployment_archive": {
+      "path": "production_artifacts/v1.0.0-prod-20260118_083135/production_deployment_v1.0.0_20260118_083135.tar.gz",
+      "size_mb": 0.00319671630859375,
+      "protected": true,
+      "git_tag": "v1.0.0-prod-20260118_083135"
+    }
+  },
+  "rollback_plan": {
+    "rollback_metadata": {
+      "from_version": "v1.0.0-prod-20260118_083135",
+      "to_version": "v0.9.x-stable",
+      "estimated_duration": "5-10 minutes",
+      "risk_level": "LOW"
+    },
+    "pre_rollback_checks": [
+      {
+        "step": 1,
+        "action": "Verify previous version availability",
+        "command": "git tag -l | grep v0.9",
+        "expected": "v0.9.x tags present",
+        "timeout": "30s"
+      },
+      {
+        "step": 2,
+        "action": "Check database state compatibility",
+        "command": "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 5",
+        "expected": "Reversible migrations only",
+        "timeout": "10s"
+      },
+      {
+        "step": 3,
+        "action": "Verify rollback artifacts exist",
+        "command": "ls -la production_artifacts/v0.9.*",
+        "expected": "Previous version artifacts present",
+        "timeout": "10s"
+      }
+    ],
+    "rollback_steps": [
+      {
+        "step": 1,
+        "phase": "Traffic Drain",
+        "action": "Stop new traffic routing to current version",
+        "command": "kubectl patch service signal-service -p '{\"spec\":{\"selector\":{\"version\":\"v0.9.x\"}}}'",
+        "duration": "30s",
+        "verification": "curl -f http://signal-service/health | jq .version"
+      },
+      {
+        "step": 2,
+        "phase": "Connection Drain",
+        "action": "Allow existing connections to complete",
+        "command": "kubectl scale deployment signal-service-v1.0.0 --replicas=0 --timeout=60s",
+        "duration": "60s",
+        "verification": "kubectl get pods | grep signal-service-v1.0.0 | wc -l"
+      },
+      {
+        "step": 3,
+        "phase": "Version Revert",
+        "action": "Deploy previous stable version",
+        "command": "kubectl apply -f k8s/signal-service-v0.9.x-stable.yaml",
+        "duration": "120s",
+        "verification": "kubectl rollout status deployment/signal-service-v0.9.x"
+      },
+      {
+        "step": 4,
+        "phase": "Configuration Restore",
+        "action": "Restore previous configuration",
+        "command": "kubectl apply -f config/signal-service-v0.9.x-config.yaml",
+        "duration": "30s",
+        "verification": "kubectl get configmap signal-service-config -o yaml | grep version"
+      },
+      {
+        "step": 5,
+        "phase": "Health Verification",
+        "action": "Verify rollback health",
+        "command": "python3 scripts/post_rollback_health_check.py",
+        "duration": "60s",
+        "verification": "All health checks pass"
+      }
+    ],
+    "post_rollback_verification": [
+      {
+        "check": "Service Health",
+        "endpoint": "/health",
+        "expected_status": 200,
+        "timeout": "10s"
+      },
+      {
+        "check": "Metrics Export",
+        "endpoint": "/api/v1/metrics",
+        "expected_format": "prometheus",
+        "timeout": "10s"
+      },
+      {
+        "check": "Database Connectivity",
+        "query": "SELECT 1",
+        "expected": "1 row returned",
+        "timeout": "5s"
+      },
+      {
+        "check": "Redis Connectivity",
+        "command": "redis-cli ping",
+        "expected": "PONG",
+        "timeout": "5s"
+      }
+    ],
+    "rollback_triggers": [
+      {
+        "condition": "Error rate > 5% for 2 minutes",
+        "severity": "critical",
+        "automatic": true
+      },
+      {
+        "condition": "P95 latency > 1000ms for 2 minutes",
+        "severity": "critical",
+        "automatic": true
+      },
+      {
+        "condition": "Circuit breakers open > 50% of services",
+        "severity": "critical",
+        "automatic": true
+      },
+      {
+        "condition": "Database connectivity < 80%",
+        "severity": "critical",
+        "automatic": true
+      },
+      {
+        "condition": "Memory usage > 95% for 1 minute",
+        "severity": "critical",
+        "automatic": false,
+        "reason": "Requires investigation first"
+      }
+    ],
+    "emergency_contacts": [
+      {
+        "role": "On-Call Engineer",
+        "escalation": "Immediate",
+        "contact": "pager_duty_integration"
+      },
+      {
+        "role": "Database Team",
+        "escalation": "For DB-related rollbacks",
+        "contact": "db_team_slack_channel"
+      },
+      {
+        "role": "Security Team",
+        "escalation": "For security-related rollbacks",
+        "contact": "security_team_slack_channel"
+      }
+    ]
+  },
+  "integrity_checksums": {
+    "production_deployment_v1.0.0_20260118_083135.tar.gz": "5109f05327aac2b12a8af0b14be38a29f79bb636e930ddaf442955c49a47287f",
+    "final_production_readiness_summary_20260118_081923.json": "5ea915455535bb3c682f0c52048d22cffb7a6b7db69b206ef09d603a1201782c",
+    "canary_smoke_test_results_20260118_083257.json": "f7327e1d8bec0ff74dd4b2fd397376da48bcca1b2f7a5897d1aceb44e42ddcde",
+    "production_monitoring_validation_20260118_083413.json": "f1c32805ba5ee4e48232791e782eebb07121cb56eadfcbd68cd4f9076e84e3d5",
+    "deployment_freeze_report_20260118_083135.json": "22b72f69414c57a314354c6395d5bf4017f471caacbd2abd72b41d804831966a"
+  }
+}
