@@ -60,6 +60,11 @@ class ComputationError(SignalServiceError):
     pass
 
 
+class CalculationError(ComputationError):
+    """General calculation errors (alias for ComputationError for backward compatibility)"""
+    pass
+
+
 class GreeksCalculationError(ComputationError):
     """Option Greeks calculation errors"""
     pass

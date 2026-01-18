@@ -255,6 +255,14 @@ try:
 except ImportError as exc:
     logger.warning("Could not import indicators router: %s", exc)
 
+# Include v2 universal computation router (unified computation API)
+try:
+    from app.api.v2.universal import router as universal_router
+    app.include_router(universal_router, prefix="/api/v2")
+    logger.info("✓ Universal computation router included")
+except ImportError as exc:
+    logger.warning("Could not import universal router: %s", exc)
+
 # Include v2 premium analysis router (Agent 2 implementation)
 try:
     from app.api.v2.premium_analysis import router as premium_router
