@@ -1,0 +1,300 @@
+{
+  "timestamp": "2026-01-18T08:34:13.569675",
+  "monitoring_hooks": {
+    "config_service": {
+      "monitoring_rules": {
+        "health_endpoint": {
+          "endpoint": "/health",
+          "check_interval": "30s",
+          "timeout": "5s",
+          "alert_threshold": "3 consecutive failures",
+          "configured": true
+        },
+        "config_fetch_latency": {
+          "metric": "config_service_fetch_duration_ms",
+          "threshold": "p95 > 500ms",
+          "alert_severity": "warning",
+          "configured": true
+        },
+        "config_cache_hit_rate": {
+          "metric": "config_service_cache_hit_rate",
+          "threshold": "< 80%",
+          "alert_severity": "warning",
+          "configured": true
+        },
+        "config_service_errors": {
+          "metric": "config_service_error_rate",
+          "threshold": "> 5%",
+          "alert_severity": "critical",
+          "configured": true
+        },
+        "bootstrap_failure": {
+          "metric": "service_bootstrap_failures",
+          "threshold": "> 0",
+          "alert_severity": "critical",
+          "runbook": "Check config service connectivity and required keys",
+          "configured": true
+        }
+      },
+      "configured_alerts": 5,
+      "config_score": 100.0,
+      "ready": true
+    },
+    "database_pools": {
+      "monitoring_rules": {
+        "connection_pool_exhaustion": {
+          "metric": "db_connection_pool_usage_percent",
+          "threshold": "> 90%",
+          "alert_severity": "critical",
+          "action": "Scale connections or reject requests",
+          "configured": true
+        },
+        "connection_pool_leaks": {
+          "metric": "db_connection_pool_leaks",
+          "threshold": "> 5 leaked connections",
+          "alert_severity": "warning",
+          "action": "Investigate connection management",
+          "configured": true
+        },
+        "query_latency_degradation": {
+          "metric": "db_query_latency_p95_ms",
+          "threshold": "> 100ms",
+          "alert_severity": "warning",
+          "action": "Check database performance",
+          "configured": true
+        },
+        "database_connectivity": {
+          "metric": "db_connection_failures_per_min",
+          "threshold": "> 5",
+          "alert_severity": "critical",
+          "action": "Check database availability",
+          "configured": true
+        },
+        "timescale_hypertable_health": {
+          "metric": "timescale_hypertable_health_score",
+          "threshold": "< 90%",
+          "alert_severity": "warning",
+          "action": "Check hypertable maintenance",
+          "configured": true
+        },
+        "transaction_deadlocks": {
+          "metric": "db_transaction_deadlocks_per_min",
+          "threshold": "> 2",
+          "alert_severity": "warning",
+          "action": "Review transaction patterns",
+          "configured": true
+        }
+      },
+      "configured_alerts": 6,
+      "db_score": 100.0,
+      "ready": true
+    },
+    "redis_pools": {
+      "monitoring_rules": {
+        "redis_connection_pool_usage": {
+          "metric": "redis_connection_pool_usage_percent",
+          "threshold": "> 85%",
+          "alert_severity": "warning",
+          "action": "Scale Redis connections",
+          "configured": true
+        },
+        "redis_cache_hit_rate": {
+          "metric": "redis_cache_hit_rate_percent",
+          "threshold": "< 70%",
+          "alert_severity": "warning",
+          "action": "Review caching strategy",
+          "configured": true
+        },
+        "redis_memory_usage": {
+          "metric": "redis_memory_usage_percent",
+          "threshold": "> 80%",
+          "alert_severity": "warning",
+          "action": "Scale Redis or implement eviction",
+          "configured": true
+        },
+        "redis_connection_failures": {
+          "metric": "redis_connection_failures_per_min",
+          "threshold": "> 3",
+          "alert_severity": "critical",
+          "action": "Check Redis cluster health",
+          "configured": true
+        },
+        "redis_latency_spikes": {
+          "metric": "redis_operation_latency_p95_ms",
+          "threshold": "> 50ms",
+          "alert_severity": "warning",
+          "action": "Investigate Redis performance",
+          "configured": true
+        },
+        "rate_limit_pool_exhaustion": {
+          "metric": "rate_limit_pool_rejections_per_min",
+          "threshold": "> 10",
+          "alert_severity": "warning",
+          "action": "Review rate limiting configuration",
+          "configured": true
+        }
+      },
+      "configured_alerts": 6,
+      "redis_score": 100.0,
+      "ready": true
+    }
+  },
+  "alerting_rules": {
+    "circuit_breakers": {
+      "monitoring_rules": {
+        "circuit_breaker_open": {
+          "metric": "circuit_breaker_state",
+          "threshold": "state == 'OPEN'",
+          "alert_severity": "critical",
+          "action": "Immediate investigation required",
+          "services": [
+            "ticker_service",
+            "user_service",
+            "metrics_service"
+          ],
+          "configured": true
+        },
+        "circuit_breaker_half_open_duration": {
+          "metric": "circuit_breaker_half_open_duration_s",
+          "threshold": "> 60s",
+          "alert_severity": "warning",
+          "action": "Check service recovery patterns",
+          "configured": true
+        },
+        "circuit_breaker_failure_rate": {
+          "metric": "circuit_breaker_failure_rate_percent",
+          "threshold": "> 20%",
+          "alert_severity": "warning",
+          "action": "Monitor for potential circuit breaker trigger",
+          "configured": true
+        },
+        "circuit_breaker_recovery_failures": {
+          "metric": "circuit_breaker_recovery_failures_count",
+          "threshold": "> 3 consecutive failures",
+          "alert_severity": "warning",
+          "action": "Service may need manual intervention",
+          "configured": true
+        },
+        "external_service_degradation": {
+          "metric": "external_service_response_time_p95_ms",
+          "threshold": "> 2000ms",
+          "alert_severity": "warning",
+          "action": "Potential circuit breaker trigger approaching",
+          "configured": true
+        }
+      },
+      "configured_alerts": 5,
+      "circuit_breaker_score": 100.0,
+      "ready": true
+    },
+    "backpressure": {
+      "monitoring_rules": {
+        "budget_guard_engagement": {
+          "metric": "budget_guard_rejections_per_min",
+          "threshold": "> 5",
+          "alert_severity": "warning",
+          "action": "Monitor system load and capacity",
+          "configured": true
+        },
+        "memory_pressure": {
+          "metric": "memory_usage_percent",
+          "threshold": "> 85%",
+          "alert_severity": "critical",
+          "action": "Immediate load shedding or scaling",
+          "configured": true
+        },
+        "cpu_pressure": {
+          "metric": "cpu_usage_percent",
+          "threshold": "> 90%",
+          "alert_severity": "critical",
+          "action": "Scale horizontally or shed load",
+          "configured": true
+        },
+        "request_queue_depth": {
+          "metric": "request_queue_depth",
+          "threshold": "> 100",
+          "alert_severity": "warning",
+          "action": "Check processing capacity",
+          "configured": true
+        },
+        "backpressure_cascade": {
+          "metric": "backpressure_cascade_events_count",
+          "threshold": "> 1",
+          "alert_severity": "critical",
+          "action": "System-wide backpressure - investigate immediately",
+          "configured": true
+        },
+        "graceful_degradation_active": {
+          "metric": "graceful_degradation_mode_active",
+          "threshold": "== true",
+          "alert_severity": "warning",
+          "action": "Service operating in degraded mode",
+          "configured": true
+        }
+      },
+      "configured_alerts": 6,
+      "backpressure_score": 100.0,
+      "ready": true
+    }
+  },
+  "observability_stack": {
+    "observability_components": {
+      "prometheus_metrics": {
+        "endpoint": "/api/v1/metrics",
+        "format": "prometheus",
+        "scrape_interval": "15s",
+        "retention": "30d",
+        "configured": true
+      },
+      "grafana_dashboards": {
+        "signal_service_overview": true,
+        "database_monitoring": true,
+        "circuit_breaker_status": true,
+        "backpressure_monitoring": true,
+        "configured": true
+      },
+      "alertmanager_integration": {
+        "webhook_configured": true,
+        "routing_rules": true,
+        "silencing_rules": true,
+        "escalation_policy": true,
+        "configured": true
+      },
+      "log_aggregation": {
+        "structured_logging": true,
+        "log_level": "INFO",
+        "redaction_active": true,
+        "retention_days": 14,
+        "configured": true
+      },
+      "distributed_tracing": {
+        "jaeger_integration": true,
+        "trace_sampling": "0.1%",
+        "span_attributes": true,
+        "configured": true
+      },
+      "health_check_endpoints": {
+        "liveness": "/health",
+        "readiness": "/ready",
+        "metrics": "/metrics",
+        "configured": true
+      }
+    },
+    "configured_components": 6,
+    "observability_score": 100.0,
+    "ready": true
+  },
+  "validation_summary": {
+    "overall_monitoring_score": 100.0,
+    "component_scores": [
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0
+    ],
+    "monitoring_ready": true
+  },
+  "validation_duration": 6.103515625e-05
+}

@@ -1,0 +1,22 @@
+{
+  "setup_timestamp": "2026-01-18T08:43:21.013359",
+  "alert_groups": 5,
+  "total_alert_rules": 25,
+  "alerting_directory": "alerting",
+  "prometheus_config": "alerting/prometheus.yml",
+  "alertmanager_config": "alerting/alertmanager.yml",
+  "deployment_script": "alerting/deploy_alerts.sh",
+  "notification_channels": {
+    "pagerduty": "Critical alerts",
+    "slack_critical": "#signal-service-alerts",
+    "slack_warning": "#signal-service-monitoring",
+    "email": "Warning alerts to on-call"
+  },
+  "alert_coverage": {
+    "config_service": "Reachability, latency, cache, errors, bootstrap",
+    "pool_exhaustion": "DB/Redis connection pools, leaks, latency",
+    "circuit_breaker": "Open states, failure rates, recovery",
+    "backpressure": "Budget guard, memory/CPU pressure, queue depth",
+    "slo_breach": "Latency SLO, error rate SLO, 5xx errors"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "groups": [
+    {
+      "name": "circuit-breakers",
+      "rules": [
+        {
+          "alert": "CircuitBreakerOpen",
+          "expr": "circuit_breaker_state == 2",
+          "for": "0m",
+          "labels": {
+            "severity": "critical",
+            "service": "signal-service",
+            "component": "circuit-breaker"
+          },
+          "annotations": {
+            "summary": "Circuit breaker is open for {{ $labels.service }}",
+            "description": "Circuit breaker for {{ $labels.service }} is open. External service calls are being blocked.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/circuit-breaker-open"
+          }
+        },
+        {
+          "alert": "CircuitBreakerHighFailureRate",
+          "expr": "rate(circuit_breaker_failures_total[5m]) / rate(circuit_breaker_requests_total[5m]) * 100 > 20",
+          "for": "2m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "circuit-breaker"
+          },
+          "annotations": {
+            "summary": "Circuit breaker high failure rate for {{ $labels.service }}",
+            "description": "Circuit breaker failure rate for {{ $labels.service }} is {{ $value }}%, above 20% threshold. May trigger circuit breaker open.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/circuit-breaker-failures"
+          }
+        },
+        {
+          "alert": "CircuitBreakerLongHalfOpen",
+          "expr": "circuit_breaker_half_open_duration_seconds > 60",
+          "for": "1m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "circuit-breaker"
+          },
+          "annotations": {
+            "summary": "Circuit breaker stuck in half-open state for {{ $labels.service }}",
+            "description": "Circuit breaker for {{ $labels.service }} has been in half-open state for {{ $value }}s, longer than 60s threshold.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/circuit-breaker-half-open"
+          }
+        },
+        {
+          "alert": "CircuitBreakerRecoveryFailures",
+          "expr": "increase(circuit_breaker_recovery_failures_total[10m]) > 3",
+          "for": "0m",
+          "labels": {
+            "severity": "warning",
+            "service": "signal-service",
+            "component": "circuit-breaker"
+          },
+          "annotations": {
+            "summary": "Circuit breaker recovery failures for {{ $labels.service }}",
+            "description": "Circuit breaker for {{ $labels.service }} has failed recovery {{ $value }} times in 10 minutes. May need manual intervention.",
+            "runbook_url": "https://docs.signal-service.com/runbooks/circuit-breaker-recovery"
+          }
+        }
+      ]
+    }
+  ]
+}

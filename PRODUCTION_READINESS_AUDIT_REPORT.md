@@ -19,7 +19,7 @@ A comprehensive audit identified **23 critical issues**, with **immediate securi
 - **Fix Applied**: 
   ```python
   # Before (DANGEROUS)
-  return getattr(settings, 'internal_api_key', 'AShhRzWhfXd6IomyzZnE3d-lCcAvT1L5GDCCZRSXZGsJq7_eAJGxeMi-4AlfTeOc')
+  return getattr(settings, 'internal_api_key', '[REDACTED-PRODUCTION-API-KEY]')
   
   # After (SECURE)
   api_key = getattr(settings, 'internal_api_key', None)

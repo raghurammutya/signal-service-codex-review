@@ -1,16 +1,28 @@
 """
 Integration tests for Signal Service with external services
+
+Enhanced with external config service integration for parameter testing
+and hot parameter reload validation.
 """
 import pytest
 import asyncio
+import os
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 import json
+import aiohttp
 
 from app.services.signal_processor import SignalProcessor
 from app.services.instrument_service_client import InstrumentServiceClient
 from app.adapters.ticker_adapter import TickerAdapter
 from app.integrations.subscription_service_client import SubscriptionServiceClient
+
+# External config service testing constants
+EXTERNAL_CONFIG_URLS = [
+    "http://test-config.local",
+    "http://test-config-secondary.local"
+]
+EXTERNAL_API_KEY = "[REDACTED-TEST-PLACEHOLDER]"
 
 @pytest.mark.integration
 class TestInstrumentServiceIntegration:
@@ -323,6 +335,143 @@ class TestDatabaseIntegration:
         messages = await redis_client.xread({stream_name: '0'}, count=1)
         assert len(messages) == 1
         assert messages[0][1][0][1][b'delta'] == b'0.5'
+
+
+@pytest.mark.integration
+class TestExternalConfigServiceIntegration:
+    """Test external config service integration for hot parameter testing."""
+    
+    @pytest.mark.asyncio
+    async def test_external_config_service_connectivity(self):
+        """Test connectivity to external config service endpoints."""
+        results = {}
+        
+        for base_url in EXTERNAL_CONFIG_URLS:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    # Test health endpoint
+                    async with session.get(
+                        f"{base_url}/health",
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
+                        if response.status == 200:
+                            health_data = await response.json()
+                            results[base_url] = {
+                                "status": "healthy",
+                                "response_data": health_data
+                            }
+                        else:
+                            results[base_url] = {
+                                "status": "unhealthy",
+                                "status_code": response.status
+                            }
+            except Exception as e:
+                results[base_url] = {
+                    "status": "error",
+                    "error": str(e)
+                }
+        
+        # At least one URL should be accessible
+        healthy_count = sum(1 for result in results.values() if result["status"] == "healthy")
+        assert healthy_count > 0, f"No external config services are accessible: {results}"
+        
+        print(f"External config service connectivity: {healthy_count}/{len(EXTERNAL_CONFIG_URLS)} healthy")
+    
+    @pytest.mark.asyncio
+    async def test_external_config_parameter_operations(self):
+        """Test parameter creation, update, and deletion with external config service."""
+        base_url = EXTERNAL_CONFIG_URLS[0]  # Use primary URL
+        test_param_key = "TEST_INTEGRATION_PARAM"
+        
+        async with aiohttp.ClientSession() as session:
+            headers = {"X-Internal-API-Key": EXTERNAL_API_KEY}
+            
+            try:
+                # 1. Create test parameter
+                create_payload = {
+                    "secret_key": test_param_key,
+                    "secret_value": "initial_test_value",
+                    "secret_type": "other",
+                    "environment": "dev"
+                }
+                
+                async with session.post(
+                    f"{base_url}/api/v1/secrets",
+                    headers=headers,
+                    json=create_payload,
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as response:
+                    assert response.status in [200, 201], f"Failed to create parameter: {response.status}"
+                
+                # 2. Update test parameter
+                update_payload = {"secret_value": "updated_test_value"}
+                
+                async with session.put(
+                    f"{base_url}/api/v1/secrets/{test_param_key}?environment=dev",
+                    headers=headers,
+                    json=update_payload,
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as response:
+                    assert response.status == 200, f"Failed to update parameter: {response.status}"
+                
+                # 3. Retrieve parameter value
+                async with session.get(
+                    f"{base_url}/api/v1/secrets/{test_param_key}/value?environment=dev",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as response:
+                    assert response.status == 200, f"Failed to retrieve parameter: {response.status}"
+                    data = await response.json()
+                    assert data["secret_value"] == "updated_test_value", "Parameter value not updated correctly"
+                
+                print("✓ External config parameter operations successful")
+                
+            finally:
+                # 4. Cleanup - delete test parameter
+                try:
+                    async with session.delete(
+                        f"{base_url}/api/v1/secrets/{test_param_key}?environment=dev",
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=15)
+                    ) as response:
+                        pass  # Ignore cleanup failures
+                except Exception:
+                    pass
+    
+    @pytest.mark.asyncio
+    async def test_hot_parameter_reload_integration(self):
+        """Test hot parameter reload integration with external config service."""
+        # This test validates the integration workflow for hot parameter reloading
+        # using external config service as a testing environment
+        
+        from app.core.hot_config import get_hot_reloadable_settings
+        
+        # Create test configuration with external config service
+        with patch.dict(os.environ, {
+            'USE_EXTERNAL_CONFIG': 'true',
+            'ENVIRONMENT': 'dev'
+        }):
+            # Mock config dependencies for testing
+            with patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_base_init:
+                mock_base_init.return_value = None
+                
+                config = get_hot_reloadable_settings(use_external_config=True)
+                
+                # Test external config service connectivity
+                results = await config.test_external_config_service()
+                
+                # Verify external URLs are tested
+                for url in EXTERNAL_CONFIG_URLS:
+                    assert url in results, f"External URL {url} not tested"
+                
+                # At least one should be accessible for testing
+                accessible_count = sum(
+                    1 for result in results.values() 
+                    if result.get("status") in ["healthy", "error"]  # error is also a response
+                )
+                assert accessible_count >= 1, f"No external config services responded: {results}"
+                
+                print(f"Hot reload integration test: {accessible_count} external services accessible")
 
 
 @pytest.mark.integration

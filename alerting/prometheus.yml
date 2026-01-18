@@ -1,0 +1,30 @@
+# Prometheus Alert Rules Configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alerting/config_service_alerts.yml"
+  - "alerting/pool_exhaustion_alerts.yml" 
+  - "alerting/circuit_breaker_alerts.yml"
+  - "alerting/backpressure_alerts.yml"
+  - "alerting/slo_breach_alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  - job_name: 'signal-service'
+    static_configs:
+      - targets: ['signal-service:8080']
+    metrics_path: '/api/v1/metrics'
+    scrape_interval: 15s
+    
+  - job_name: 'config-service'
+    static_configs:
+      - targets: ['config-service:8100']
+    metrics_path: '/metrics'
+    scrape_interval: 30s

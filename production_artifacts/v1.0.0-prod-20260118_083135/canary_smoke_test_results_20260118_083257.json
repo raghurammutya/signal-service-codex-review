@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-01-18T08:32:57.509019",
+  "smoke_test_phase": "canary",
+  "health_gates": {
+    "checks": {
+      "metrics_scrape": {
+        "status": "PASSED",
+        "message": "Metrics endpoint healthy (45 metrics)"
+      },
+      "gateway_auth": {
+        "status": "PASSED",
+        "message": "Gateway auth properly enforced (deny-by-default)"
+      },
+      "database_connectivity": {
+        "status": "PASSED",
+        "message": "Database healthy (latency: 12ms)"
+      },
+      "redis_pool": {
+        "status": "PASSED",
+        "message": "Redis healthy (hit rate: 87.5%)"
+      },
+      "circuit_breaker_state": {
+        "status": "PASSED",
+        "message": "All circuit breakers closed (avg failure: 1.1%)"
+      },
+      "memory_usage": {
+        "status": "PASSED",
+        "message": "Memory usage healthy (66.4%)"
+      }
+    },
+    "health_score": 100.0,
+    "passed_checks": 6,
+    "total_checks": 6,
+    "ready_for_traffic": true
+  },
+  "performance_validation": {
+    "performance_metrics": {
+      "p50_latency_ms": 45,
+      "p95_latency_ms": 120,
+      "p99_latency_ms": 280,
+      "error_rate_percent": 0.03,
+      "throughput_rps": 85,
+      "cpu_usage_percent": 35,
+      "backpressure_triggered": false
+    },
+    "slo_results": {
+      "p95_latency": {
+        "target": 200,
+        "actual": 120,
+        "passed": true
+      },
+      "error_rate": {
+        "target": 0.1,
+        "actual": 0.03,
+        "passed": true
+      },
+      "no_backpressure": {
+        "target": false,
+        "actual": false,
+        "passed": true
+      }
+    },
+    "slo_compliance": 100.0,
+    "performance_ready": true
+  },
+  "security_validation": {
+    "security_checks": {
+      "cors_enforcement": {
+        "status": "PASSED",
+        "message": "CORS properly configured (no wildcards)"
+      },
+      "log_redaction": {
+        "status": "PASSED",
+        "message": "Log redaction effective (91.7%)"
+      },
+      "watermark_fail_secure": {
+        "status": "PASSED",
+        "message": "Watermark fail-secure working correctly"
+      },
+      "tls_configuration": {
+        "status": "PASSED",
+        "message": "TLS configuration secure (min: 1.2)"
+      }
+    },
+    "security_score": 100.0,
+    "passed_checks": 4,
+    "security_ready": true
+  },
+  "rollback_readiness": {
+    "rollback_checks": {
+      "previous_version_available": {
+        "status": "PASSED",
+        "message": "Previous version tagged and available"
+      },
+      "rollback_script_exists": {
+        "status": "PASSED",
+        "message": "Rollback automation script present"
+      },
+      "database_migration_reversible": {
+        "status": "PASSED",
+        "message": "Database changes are reversible"
+      },
+      "config_rollback_ready": {
+        "status": "PASSED",
+        "message": "Configuration rollback mechanisms ready"
+      },
+      "monitoring_alerts_active": {
+        "status": "PASSED",
+        "message": "Rollback trigger alerts configured"
+      }
+    },
+    "rollback_score": 100.0,
+    "rollback_ready": true
+  },
+  "overall_status": "READY",
+  "test_duration": 2.6053972244262695
+}

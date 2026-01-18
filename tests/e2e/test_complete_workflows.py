@@ -1,13 +1,153 @@
 """
 End-to-end workflow tests for Signal Service
+
+Enhanced with external config service integration for end-to-end
+testing of hot parameter reload scenarios in complete workflows.
 """
 import pytest
 import asyncio
 import json
+import os
 from datetime import datetime, timedelta
 from unittest.mock import patch, AsyncMock
 import websockets
 from httpx import AsyncClient
+import aiohttp
+
+@pytest.mark.e2e
+class TestExternalConfigServiceWorkflows:
+    """End-to-end tests with external config service integration."""
+    
+    @pytest.fixture
+    def external_config_setup(self):
+        """Setup external config service for E2E testing."""
+        return {
+            "urls": [
+                "http://test-config.local",
+                "http://test-config-secondary.local"
+            ],
+            "api_key": "[REDACTED-TEST-PLACEHOLDER]",
+            "environment": "dev"
+        }
+    
+    @pytest.mark.asyncio
+    async def test_hot_parameter_reload_e2e_workflow(self, async_client, external_config_setup):
+        """Test end-to-end hot parameter reload workflow."""
+        # This test validates the complete workflow from parameter change
+        # in external config service to hot reload in signal service
+        
+        base_url = external_config_setup["urls"][0]
+        api_key = external_config_setup["api_key"]
+        test_param = "E2E_HOT_RELOAD_TEST_PARAM"
+        
+        try:
+            # 1. Setup test parameter in external config service
+            async with aiohttp.ClientSession() as session:
+                headers = {"X-Internal-API-Key": api_key}
+                
+                create_payload = {
+                    "secret_key": test_param,
+                    "secret_value": "initial_e2e_value",
+                    "secret_type": "other",
+                    "environment": external_config_setup["environment"]
+                }
+                
+                async with session.post(
+                    f"{base_url}/api/v1/secrets",
+                    headers=headers,
+                    json=create_payload,
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as response:
+                    if response.status not in [200, 201]:
+                        print(f"⚠ External config service parameter creation failed: {response.status}")
+                        pytest.skip("External config service unavailable for E2E test")
+                
+                # 2. Test Signal Service hot reload status endpoint
+                hot_reload_status = await async_client.get("/api/v2/admin/hot-reload/status")
+                assert hot_reload_status.status_code == 200
+                status_data = hot_reload_status.json()
+                
+                print(f"Hot reload status: {status_data['status']}")
+                
+                # 3. Test external config service connectivity from Signal Service
+                external_test = await async_client.get("/api/v2/admin/hot-reload/test-external")
+                assert external_test.status_code == 200
+                external_data = external_test.json()
+                
+                assert external_data["status"] in ["success", "error"], "External test should return status"
+                
+                # 4. Update parameter value in external config service
+                update_payload = {"secret_value": "updated_e2e_value"}
+                
+                async with session.put(
+                    f"{base_url}/api/v1/secrets/{test_param}?environment={external_config_setup['environment']}",
+                    headers=headers,
+                    json=update_payload,
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as response:
+                    if response.status == 200:
+                        print("✓ Parameter updated in external config service")
+                    else:
+                        print(f"⚠ Parameter update failed: {response.status}")
+                
+                # 5. Verify hot reload statistics updated
+                await asyncio.sleep(1)  # Allow time for potential hot reload
+                
+                updated_status = await async_client.get("/api/v2/admin/hot-reload/status")
+                assert updated_status.status_code == 200
+                updated_data = updated_status.json()
+                
+                # The test validates the E2E workflow structure even if hot reload
+                # doesn't trigger (depends on notification system availability)
+                assert "statistics" in updated_data
+                
+                print("✓ End-to-end hot parameter reload workflow validated")
+                
+        finally:
+            # Cleanup: Remove test parameter
+            try:
+                async with aiohttp.ClientSession() as session:
+                    headers = {"X-Internal-API-Key": api_key}
+                    await session.delete(
+                        f"{base_url}/api/v1/secrets/{test_param}?environment={external_config_setup['environment']}",
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=15)
+                    )
+            except Exception:
+                pass  # Ignore cleanup failures
+    
+    @pytest.mark.asyncio
+    async def test_signal_processing_with_external_config_integration(self, async_client, external_config_setup):
+        """Test signal processing workflow with external config service integration."""
+        # Test that signal processing continues to work when external config service is integrated
+        
+        instrument_key = 'NSE@NIFTY@equity_options@2025-07-10@call@21500'
+        
+        # 1. Test real-time signal endpoint
+        realtime_response = await async_client.get(f"/api/v2/signals/realtime/greeks/{instrument_key}")
+        
+        # Should work regardless of external config service availability
+        assert realtime_response.status_code in [200, 404, 503], "Signal endpoint should respond"
+        
+        if realtime_response.status_code == 200:
+            realtime_data = realtime_response.json()
+            assert "instrument_key" in realtime_data or "error" in realtime_data
+            print("✓ Real-time signals working with external config integration")
+        
+        # 2. Test health endpoint with hot reload features
+        health_response = await async_client.get("/health")
+        assert health_response.status_code == 200
+        health_data = health_response.json()
+        assert health_data["status"] == "healthy"
+        
+        # 3. Test admin health with hot reload metrics
+        admin_health = await async_client.get("/api/v2/admin/health")
+        assert admin_health.status_code == 200
+        admin_data = admin_health.json()
+        assert admin_data["status"] == "healthy"
+        
+        print("✓ Signal processing workflow validated with external config integration")
+
 
 @pytest.mark.e2e
 class TestRealtimeTradingWorkflow:

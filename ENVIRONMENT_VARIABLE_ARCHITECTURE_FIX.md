@@ -56,7 +56,7 @@ config_client.get_service_url("marketplace")       # Was: MARKETPLACE_SERVICE_UR
 # With proper bootstrap environment:
 export ENVIRONMENT=production
 export CONFIG_SERVICE_URL=http://config-service:8100
-export INTERNAL_API_KEY=AShhRzWhfXd6IomyzZnE3d-lCcAvT1L5GDCCZRSXZGsJq7_eAJGxeMi-4AlfTeOc
+export INTERNAL_API_KEY=[REDACTED-PRODUCTION-API-KEY]
 export SERVICE_NAME=signal_service
 
 # Results: 5/6 checks PASS (only config service connectivity fails as expected without live service)
@@ -130,7 +130,7 @@ services:
 # Set bootstrap environment variables
 export ENVIRONMENT=production
 export CONFIG_SERVICE_URL=http://config-service:8100  
-export INTERNAL_API_KEY=AShhRzWhfXd6IomyzZnE3d-lCcAvT1L5GDCCZRSXZGsJq7_eAJGxeMi-4AlfTeOc
+export INTERNAL_API_KEY=[REDACTED-PRODUCTION-API-KEY]
 export SERVICE_NAME=signal_service
 
 # Run validation
