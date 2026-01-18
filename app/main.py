@@ -184,34 +184,10 @@ async def lifespan(app: FastAPI):
         logger.error(f"CRITICAL: Failed to register indicators: {e}")
         raise RuntimeError(f"Indicator registration is required for service operation: {e}") from e
 
-<<<<<<< HEAD
-    # Initialize health checking
-    try:
-        from app.api.health import initialize_health_checker, initialize_distributed_health, start_health_monitoring
-        from app.core.redis_manager import get_redis_client
-        from common.storage.database import get_timescaledb_session
-        
-        # Initialize health dependencies
-        redis_client = await get_redis_client()
-        
-        # Pass the session factory function, not a session instance
-        initialize_health_checker(redis_client, get_timescaledb_session)
-        
-        initialize_distributed_health(redis_client)
-        await start_health_monitoring()
-        
-        logger.info("Health monitoring initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize health monitoring: {e}")
-        # Continue anyway - basic health endpoint will still work
-
-    logger.info("Signal Service startup complete")
-=======
     # Register hot reload handlers for application components
     await _register_application_hot_reload_handlers()
 
     logger.info("Signal Service startup complete with hot reloading support")
->>>>>>> compliance-violations-fixed
 
     yield
 
@@ -243,29 +219,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-<<<<<<< HEAD
-# Add CORS middleware using shared configuration (no wildcards in production)
-# Get environment from config_service (Architecture Principle #1: Config service exclusivity)
-try:
-    from app.core.config import settings
-    cors_environment = settings.environment
-except Exception as e:
-    # Fail-fast if config not available
-    raise RuntimeError(f"Failed to get environment from config_service for CORS: {e}. No environment fallbacks allowed per architecture.")
-
-add_cors_middleware(app, environment=cors_environment)
-=======
 # Add CORS middleware using shared configuration - get environment from config_service
 from app.core.config import settings
 add_cors_middleware(app, environment=settings.environment)
->>>>>>> compliance-violations-fixed
 
 # Include API routers (if they exist)
 try:
     from app.api.v1.router import api_router
     app.include_router(api_router, prefix="/api/v1")
 except ImportError:
-    logger.warning("V1 API router not available - skipping")
+    logger.warning("Could not import API router, skipping")
 
 # Include v2 production signal routers (database-backed)
 try:
@@ -280,28 +243,9 @@ try:
     
     logger.info("✓ Production signal routers included (database-backed)")
 except ImportError as exc:
-<<<<<<< HEAD
-    logger.error("Failed to import production signal routers: %s", exc)
-    
-    # In production, NEVER fall back to test routers
-    # Get environment from config_service (Architecture Principle #1: Config service exclusivity)
-    try:
-        from app.core.config import settings
-        environment = settings.environment
-    except Exception as e:
-        raise RuntimeError(f"Failed to get environment from config_service for router selection: {e}. No environment fallbacks allowed per architecture.")
-    
-    # No environment-based fallbacks allowed per architecture - fail fast in all environments
-    logger.critical("🚨 DEPLOYMENT BLOCKED: Critical import failure")
-    logger.critical("Cannot load production signal routers - this is a critical configuration issue")
-    logger.critical(f"Import error: {exc}")
-    logger.critical("No test router fallbacks allowed per Architecture Principle #1")
-    raise RuntimeError(f"Signal router deployment failed: {exc}. No fallbacks allowed per architecture.")
-=======
     logger.error("CRITICAL: Could not import production signal routers: %s", exc)
     logger.error("Service cannot start without production routers")
     raise RuntimeError("Production signal routers are required - cannot start service") from exc
->>>>>>> compliance-violations-fixed
 
 # Include v2 indicators router (real indicator calculations)
 try:
@@ -371,12 +315,7 @@ except ImportError as exc:
 # Production: Include monitoring router for observability and health checks
 try:
     from app.api.monitoring import router as monitoring_router
-<<<<<<< HEAD
-    app.include_router(monitoring_router, prefix="/api/v2")
-    logger.info("✓ Production monitoring router included with versioned API")
-=======
     app.include_router(monitoring_router, prefix="/monitoring")
->>>>>>> compliance-violations-fixed
 except ImportError as exc:
     logger.warning("Could not import monitoring router: %s", exc)
 
@@ -399,160 +338,46 @@ except ImportError as exc:
 # Production: Include enhanced monitoring router for operations management
 try:
     from app.api.enhanced_monitoring import router as enhanced_monitoring_router
-    app.include_router(enhanced_monitoring_router, prefix="/api/v2")
-    logger.info("✓ Enhanced monitoring router included with versioned API - production operations ready")
+    app.include_router(enhanced_monitoring_router)
+    logger.info("✓ Enhanced monitoring router included - production operations ready")
 except ImportError as exc:
-<<<<<<< HEAD
-    logger.warning("Could not import enhanced monitoring router: %s", exc)
-    # Fallback to simple monitoring router
-    try:
-        from app.api.simple_monitoring import router as simple_monitoring_router
-        app.include_router(simple_monitoring_router, prefix="/api/v2")
-        logger.info("✓ Simple monitoring router included as versioned fallback")
-    except ImportError as fallback_exc:
-        logger.warning("Could not import simple monitoring router: %s", fallback_exc)
-=======
     logger.error("CRITICAL: Could not import enhanced monitoring router: %s", exc)
     raise RuntimeError("Enhanced monitoring router is required for production operations") from exc
->>>>>>> compliance-violations-fixed
 
-@app.get("/api/v1")
+@app.get("/")
 async def root():
-    """Root endpoint - Architecture Principle #3: API versioning is mandatory"""
+    """Root endpoint"""
     return {
         "service": "signal_service",
         "version": "1.0.0",
         "status": "running"
     }
 
-# Removed duplicate health endpoint - use centralized health router only 
-# (Architecture compliance: single route per functionality)
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "signal_service",
+        "version": "1.0.0"
+    }
 
-<<<<<<< HEAD
-# Environment-based endpoint registration
-# Get environment from config_service (Architecture Principle #1: Config service exclusivity)
-try:
-    from app.core.config import settings
-    environment = settings.environment
-except Exception as e:
-    raise RuntimeError(f"Failed to get environment from config_service for endpoint registration: {e}. No environment fallbacks allowed per architecture.")
-
-if environment not in ['production', 'prod', 'staging']:
-    # Development/test endpoints only
-    @app.get("/api/v1/metrics")
-    async def metrics():
-        """Basic Prometheus-style metrics - development only."""
-        body = "\n".join([
-=======
 @app.get("/metrics")
 async def metrics():
     """Basic Prometheus-style metrics for monitoring."""
     body = "\n".join(
         [
->>>>>>> compliance-violations-fixed
             "# HELP signal_service_health Service health indicator",
             "# TYPE signal_service_health gauge",
             "signal_service_health 1",
             "# HELP signal_service_active_subscriptions Active subscription count",
             "# TYPE signal_service_active_subscriptions gauge",
             "signal_service_active_subscriptions 10",
-        ])
-        return Response(content=body, media_type="text/plain")
+        ]
+    )
+    return Response(content=body, media_type="text/plain")
 
-    @app.get("/api/v2/admin/health")
-    async def admin_health():
-        """Detailed health status - development only."""
-        # Get real health status from health checker if available
-        try:
-            from app.api.health import get_health_checker
-            checker = get_health_checker()
-            if checker:
-                detailed_health = await checker.check_health(detailed=True)
-                return {
-                    "status": detailed_health.get("status", "unknown"),
-                    "database": detailed_health.get("database", {}).get("status", "unknown"),
-                    "redis": detailed_health.get("redis", {}).get("status", "unknown"), 
-                    "signal_processor": detailed_health.get("signal_processor", {}).get("status", "unknown"),
-                    "details": detailed_health
-                }
-        except Exception as e:
-            logger.warning(f"Could not get detailed health: {e}")
-        
-        # Fallback for development
-        return {
-            "status": "healthy",
-            "database": "healthy", 
-            "redis": "healthy",
-            "signal_processor": "healthy",
-            "note": "Development fallback - real health checking unavailable"
-        }
 
-<<<<<<< HEAD
-    @app.get("/api/v2/admin/metrics")
-    async def admin_metrics():
-        """Return metrics snapshot - development only."""
-        # Try to get real metrics
-        try:
-            # Get basic system metrics
-            import psutil
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            memory = psutil.virtual_memory()
-            
-            # Try to get Redis-based metrics if available
-            active_subscriptions = 0
-            processed_signals = 0
-            try:
-                from app.utils.redis import get_redis_client
-                redis_client = await get_redis_client()
-                
-                # Get subscription count if keys exist
-                sub_keys = await redis_client.keys("subscription:*")
-                active_subscriptions = len(sub_keys) if sub_keys else 0
-                
-                # Get signal count if available
-                signal_count = await redis_client.get("metrics:signals_processed")
-                processed_signals = int(signal_count) if signal_count else 0
-                
-            except Exception as e:
-                # Redis unavailable, log warning but continue with defaults
-                logger.warning(f"Redis metrics unavailable: {e}")
-                processed_signals = 0
-            
-            # Determine backpressure based on system load
-            backpressure_level = "LOW"
-            if cpu_percent > 80 or memory.percent > 90:
-                backpressure_level = "HIGH"
-            elif cpu_percent > 60 or memory.percent > 75:
-                backpressure_level = "MEDIUM"
-                
-            return {
-                "backpressure_level": backpressure_level,
-                "active_subscriptions": active_subscriptions,
-                "processed_signals": processed_signals,
-                "cpu_percent": round(cpu_percent, 1),
-                "memory_percent": round(memory.percent, 1),
-                "note": "Development metrics with real system data"
-            }
-            
-        except Exception as e:
-            logger.warning(f"Could not get real metrics: {e}")
-            # Fallback to static values with clear indication
-            return {
-                "backpressure_level": "LOW",
-                "active_subscriptions": 0,
-                "processed_signals": 0,
-                "note": "Development fallback - real metrics unavailable"
-            }
-
-    @app.get("/api/v2/admin/audit-trail")
-    async def admin_audit_trail(user_id: str = None, limit: int = 10):
-        """Audit trail endpoint - development only."""
-        entries = [{"user_id": user_id or "test", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
-        return {"entries": entries[:limit]}
-else:
-    # Production: Admin endpoints are completely disabled
-    logger.info("Admin endpoints disabled in production environment")
-=======
 @app.get("/api/v2/admin/health")
 async def admin_health():
     """Detailed health status for operational monitoring."""
@@ -579,7 +404,6 @@ async def admin_audit_trail(user_id: str = None, limit: int = 10):
     """Stub audit trail endpoint."""
     entries = [{"user_id": user_id or "anonymous", "action": "access", "timestamp": "2024-01-01T00:00:00Z"}]
     return {"entries": entries[:limit]}
->>>>>>> compliance-violations-fixed
 
 
 @app.get("/api/v2/admin/hot-reload/status")

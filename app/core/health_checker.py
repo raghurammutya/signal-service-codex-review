@@ -444,35 +444,21 @@ class HealthChecker:
     async def _check_external_services_health(self) -> Dict[str, Any]:
         """Check connectivity to external services"""
         try:
-<<<<<<< HEAD
-            # Get external service URLs from config_service exclusively (Architecture Principle #1: Config service exclusivity)
-            try:
-                from common.config_service.client import ConfigServiceClient
-                from app.core.config import settings
-                
-                config_client = ConfigServiceClient(
-                    service_name="signal_service",
-                    environment=settings.environment,
-                    timeout=5
-                )
-                
-                # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
-                external_services = {
-                    'instrument_service': f"{config_client.get_service_url('instrument_service')}/api/v1/health",
-                    'ticker_service': f"{config_client.get_service_url('ticker_service')}/api/v1/health", 
-                    'subscription_service': f"{config_client.get_service_url('subscription_service')}/api/v1/health"
-                }
-                
-            except Exception as e:
-                raise RuntimeError(f"Failed to get service URLs from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
-=======
             from app.core.config import settings
+            # Use URLs from settings with Docker network alias fallbacks
             external_services = {
-                'instrument_service': f"{settings.INSTRUMENT_SERVICE_URL}/health",
-                'ticker_service': f"{settings.TICKER_SERVICE_URL}/health", 
-                'subscription_service': f"{settings.SUBSCRIPTION_SERVICE_URL}/health"
+                'instrument_service': f"{getattr(settings, 'INSTRUMENT_SERVICE_URL', 'http://ticker-service:8089')}/health",
+                'ticker_service': f"{getattr(settings, 'TICKER_SERVICE_URL', 'http://ticker-service:8089')}/health", 
+                'subscription_service': f"{getattr(settings, 'SUBSCRIPTION_SERVICE_URL', 'http://subscription-service:8098')}/health"
             }
->>>>>>> compliance-violations-fixed
+        except Exception as e:
+            logger.warning(f"Failed to load external services for health check: {e}")
+            # Use Docker network alias fallbacks  
+            external_services = {
+                'instrument_service': "http://ticker-service:8089/health",
+                'ticker_service': "http://ticker-service:8089/health", 
+                'subscription_service': "http://subscription-service:8098/health"
+            }
             
             service_statuses = {}
             all_healthy = True

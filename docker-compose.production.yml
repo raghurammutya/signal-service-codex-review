@@ -6,7 +6,8 @@ services:
     container_name: signal-service-prod
     environment:
       # MINIMAL ENVIRONMENT VARIABLES - All other config from config_service
-      - CONFIG_SERVICE_URL=http://config-service:8100
+      - CONFIG_SERVICE_URL=http://172.18.0.16:8100
+      - CONFIG_SERVICE_API_KEY=${CONFIG_SERVICE_API_KEY:-dev-config-api-key-123}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-signal-internal-key-123}
       - SERVICE_NAME=signal_service
       - ENVIRONMENT=production

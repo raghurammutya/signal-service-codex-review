@@ -34,29 +34,14 @@ class DashboardRegistrar:
         
         if service_url is None:
             try:
-                from common.config_service.client import ConfigServiceClient
                 from app.core.config import settings
-                
-                config_client = ConfigServiceClient(
-                    service_name="signal_service",
-                    environment=settings.environment,
-                    timeout=5
-                )
-                service_url = config_client.get_config("SIGNAL_SERVICE_URL")
-                if not service_url:
-                    raise ValueError("SIGNAL_SERVICE_URL not found in config_service")
+                service_url = getattr(settings, 'SIGNAL_SERVICE_URL', 'http://signal-service:8003')
             except Exception as e:
-                raise RuntimeError(f"Failed to get service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+                logger.warning(f"Failed to get service URL from config: {e}")
+                service_url = 'http://signal-service:8003'  # Docker network fallback
                 
         self.dashboard_url = dashboard_url
         self.service_url = service_url
-=======
-    def __init__(self, dashboard_url: str = None):
-        if dashboard_url is None:
-            from app.core.config import settings
-            if not hasattr(settings, 'DASHBOARD_URL'):
-                raise RuntimeError("DASHBOARD_URL not configured in config_service - cannot register with dashboard")
-            dashboard_url = settings.DASHBOARD_URL
         self.dashboard_url = dashboard_url
         
         # Get service configuration from config service
