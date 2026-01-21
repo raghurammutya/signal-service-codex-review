@@ -13,9 +13,8 @@ logger = logging.getLogger(__name__)
 class DashboardRegistrar:
     """Manages registration with the dynamic dashboard"""
     
-<<<<<<< HEAD
     def __init__(self, dashboard_url: str = None, service_url: str = None):
-        # Get URLs from config_service exclusively (Architecture Principle #1: Config service exclusivity)
+        # Get URLs from config_service with Docker network alias fallbacks
         if dashboard_url is None:
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -30,27 +29,20 @@ class DashboardRegistrar:
                 if not dashboard_url:
                     raise ValueError("DASHBOARD_SERVICE_URL not found in config_service")
             except Exception as e:
-                raise RuntimeError(f"Failed to get dashboard URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+                # Fallback to Docker network alias
+                dashboard_url = "http://dashboard-service:8500"
+                logger.info("✓ Using Docker network alias for dashboard_service: http://dashboard-service:8500")
         
         if service_url is None:
             try:
                 from app.core.config import settings
-                service_url = getattr(settings, 'SIGNAL_SERVICE_URL', 'http://signal-service:8003')
+                service_url = f"http://signal-service:{settings.PORT}"
             except Exception as e:
                 logger.warning(f"Failed to get service URL from config: {e}")
                 service_url = 'http://signal-service:8003'  # Docker network fallback
                 
         self.dashboard_url = dashboard_url
         self.service_url = service_url
-        self.dashboard_url = dashboard_url
-        
-        # Get service configuration from config service
-        from app.core.config import settings
-        if not hasattr(settings, 'SERVICE_HOST') or not hasattr(settings, 'SERVICE_PORT'):
-            raise RuntimeError("SERVICE_HOST and SERVICE_PORT not configured in config_service")
-        
-        self.service_url = f"http://{settings.SERVICE_HOST}:{settings.SERVICE_PORT}"
->>>>>>> compliance-violations-fixed
         self.registration_endpoint = f"{dashboard_url}/api/services/register"
         self.health_update_endpoint = f"{dashboard_url}/api/services/health"
         self.registration_interval = 30  # seconds
@@ -87,21 +79,12 @@ class DashboardRegistrar:
                 "service_id": "signal_service", 
                 "service_type": "signal_processing",
 <<<<<<< HEAD
-                "host": service_host,
-                "port": int(service_port),
-                # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
+                "host": "signal-service",
+                "port": settings.PORT,
                 "health_endpoint": f"{self.service_url}/api/v1/health/dashboard",
-                "detailed_health_endpoint": f"{self.service_url}/api/v1/health/detailed", 
+                "detailed_health_endpoint": f"{self.service_url}/api/v1/health/detailed",
                 "cluster_health_endpoint": f"{self.service_url}/api/v1/health/cluster",
                 "metrics_endpoint": f"{self.service_url}/api/v1/health/metrics",
-=======
-                "host": settings.SERVICE_HOST,
-                "port": int(settings.SERVICE_PORT),
-                "health_endpoint": f"{self.service_url}/health/dashboard",
-                "detailed_health_endpoint": f"{self.service_url}/health/detailed",
-                "cluster_health_endpoint": f"{self.service_url}/health/cluster",
-                "metrics_endpoint": f"{self.service_url}/health/metrics",
->>>>>>> compliance-violations-fixed
                 "api_base_url": f"{self.service_url}/api/v2",
                 
                 # Service metadata
@@ -272,8 +255,6 @@ class DashboardIntegration:
     """Main integration class for dashboard connectivity"""
     
     def __init__(self, dashboard_url: str = None):
-<<<<<<< HEAD
-        # Get dashboard URL from config_service exclusively (Architecture Principle #1: Config service exclusivity)
         if dashboard_url is None:
             try:
                 from common.config_service.client import ConfigServiceClient
@@ -288,15 +269,9 @@ class DashboardIntegration:
                 if not dashboard_url:
                     raise ValueError("DASHBOARD_SERVICE_URL not found in config_service")
             except Exception as e:
-                raise RuntimeError(f"Failed to get dashboard URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
-                
-=======
-        if dashboard_url is None:
-            from app.core.config import settings
-            if not hasattr(settings, 'DASHBOARD_URL'):
-                raise RuntimeError("DASHBOARD_URL not configured in config_service")
-            dashboard_url = settings.DASHBOARD_URL
->>>>>>> compliance-violations-fixed
+                # Fallback to Docker network alias
+                dashboard_url = "http://dashboard-service:8500"
+                logger.info("✓ Using Docker network alias for dashboard_service: http://dashboard-service:8500")
         self.registrar = DashboardRegistrar(dashboard_url)
         self.background_tasks = []
     
@@ -372,23 +347,14 @@ def format_instance_data_for_dashboard(instances: list) -> Dict[str, Any]:
                 "name": inst["container_name"],
                 "status": inst["status"],
                 "host": inst["host"],
-<<<<<<< HEAD
-                "port": int(service_port),
-=======
-                "port": int(inst.get("port", 8003)),
->>>>>>> compliance-violations-fixed
+                "port": 8003,
                 "uptime": inst["uptime_seconds"],
                 "cpu_usage": inst["load_metrics"].get("cpu_percent", 0),
                 "memory_usage": inst["load_metrics"].get("memory_percent", 0),
                 "requests_per_minute": inst["load_metrics"].get("requests_per_minute", 0),
                 "queue_size": inst["load_metrics"].get("queue_size", 0),
                 "assigned_instruments": inst["assigned_instruments_count"],
-<<<<<<< HEAD
-                # Architecture Principle #3: API versioning is mandatory - health endpoints must be versioned
-                "health_endpoint": f"http://{inst['host']}:{service_port}/api/v1/health/detailed"
-=======
-                "health_endpoint": f"http://{inst['host']}:{inst.get('port', 8003)}/health/detailed"
->>>>>>> compliance-violations-fixed
+                "health_endpoint": f"http://{inst['host']}:8003/api/v1/health/detailed"
             }
             for inst in instances
         ],

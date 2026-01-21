@@ -176,10 +176,7 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
             "service_name": service_name,
             "service_type": "signal_processing",
 <<<<<<< HEAD
-            "port": int(service_port),
-=======
-            "port": settings.SERVICE_PORT,
->>>>>>> compliance-violations-fixed
+            "port": settings.PORT,
             "status": cluster_data['status'],
             "timestamp": cluster_data['timestamp'],
             # Architecture Principle #3: API versioning is mandatory - all health endpoints must be versioned
