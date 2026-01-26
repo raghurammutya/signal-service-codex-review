@@ -1,0 +1,238 @@
+# Registry Integration Alerting Rules
+# Prometheus alerting for Signal Service registry integration
+# Aligned with Phase 3 SLA requirements
+
+groups:
+  - name: registry_integration_sla
+    rules:
+      # Critical SLA Violations
+      - alert: RegistryAPILatencyP95High
+        expr: signal_registry_sla_latency_p95_seconds > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: registry_integration
+          sla_type: latency
+        annotations:
+          summary: "Registry API P95 latency exceeds SLA threshold"
+          description: "Registry API P95 latency is {{ $value }}ms, exceeding 100ms SLA threshold for {{ $labels.endpoint }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#latency-sla-violation"
+
+      - alert: RegistryServiceAvailabilityLow
+        expr: signal_registry_sla_availability_percentage < 99.9
+        for: 1m
+        labels:
+          severity: critical
+          component: registry_integration
+          sla_type: availability
+        annotations:
+          summary: "Registry service availability below SLA"
+          description: "Registry service availability is {{ $value }}%, below 99.9% SLA requirement"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#availability-sla-violation"
+
+      - alert: RegistryEventProcessingLagHigh
+        expr: histogram_quantile(0.95, rate(signal_registry_event_processing_seconds_bucket[5m])) > 1.0
+        for: 1m
+        labels:
+          severity: critical
+          component: registry_integration
+          sla_type: event_lag
+        annotations:
+          summary: "Registry event processing lag exceeds SLA"
+          description: "Registry event processing P95 latency is {{ $value }}s, exceeding 1s SLA threshold"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#event-lag-sla-violation"
+
+      - alert: RegistryCacheHitRateLow
+        expr: signal_registry_cache_hit_rate < 0.95
+        for: 5m
+        labels:
+          severity: warning
+          component: registry_integration
+          sla_type: cache_performance
+        annotations:
+          summary: "Registry cache hit rate below SLA threshold"
+          description: "Registry cache hit rate is {{ $value | humanizePercentage }}, below 95% SLA requirement for {{ $labels.cache_type }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#cache-performance-degradation"
+
+  - name: registry_integration_circuit_breaker
+    rules:
+      - alert: RegistryCircuitBreakerOpen
+        expr: signal_registry_circuit_breaker_state == 2  # 2 = open state
+        for: 0m
+        labels:
+          severity: critical
+          component: registry_integration
+          alert_type: circuit_breaker
+        annotations:
+          summary: "Registry circuit breaker is OPEN"
+          description: "Registry circuit breaker is open for service {{ $labels.service }}, indicating persistent failures"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#circuit-breaker-open"
+
+      - alert: RegistryCircuitBreakerTripsHigh
+        expr: rate(signal_registry_circuit_breaker_trips_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: circuit_breaker
+        annotations:
+          summary: "High rate of registry circuit breaker trips"
+          description: "Registry circuit breaker is tripping at {{ $value }} trips/sec, indicating instability"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#circuit-breaker-instability"
+
+      - alert: RegistryFallbackActivationsHigh
+        expr: rate(signal_registry_fallback_activations_total[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: major
+          component: registry_integration
+          alert_type: fallback
+        annotations:
+          summary: "High rate of registry fallback activations"
+          description: "Registry fallbacks activating at {{ $value }} activations/sec for {{ $labels.fallback_type }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#fallback-activations"
+
+  - name: registry_integration_data_quality
+    rules:
+      - alert: RegistryDataStalenessHigh
+        expr: signal_registry_data_freshness_seconds > 300
+        for: 2m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: data_quality
+        annotations:
+          summary: "Registry data staleness exceeds threshold"
+          description: "{{ $labels.data_type }} data for {{ $labels.instrument }} is {{ $value }}s old, exceeding staleness threshold"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#data-staleness"
+
+      - alert: RegistryGreeksCalculationFailures
+        expr: rate(signal_registry_greeks_recalculations_total{status="error"}[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: calculation_error
+        annotations:
+          summary: "High rate of Greeks calculation failures"
+          description: "Greeks calculations failing at {{ $value }} failures/sec"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#greeks-calculation-failures"
+
+      - alert: RegistryCacheInvalidationFailures
+        expr: rate(signal_registry_cache_invalidations_total{status="error"}[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: cache_error
+        annotations:
+          summary: "High rate of cache invalidation failures"
+          description: "Cache invalidations failing at {{ $value }} failures/sec for {{ $labels.cache_type }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#cache-invalidation-failures"
+
+  - name: registry_integration_shadow_mode
+    rules:
+      - alert: RegistryShadowModeMatchRateLow
+        expr: signal_registry_shadow_match_rate < 90
+        for: 5m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: shadow_mode
+        annotations:
+          summary: "Registry shadow mode match rate is low"
+          description: "Shadow mode match rate is {{ $value }}%, indicating potential registry/legacy divergence"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#shadow-mode-divergence"
+
+      - alert: RegistryShadowModeLatencyRegression
+        expr: histogram_quantile(0.95, rate(signal_registry_shadow_latency_difference_seconds_bucket[5m])) > 0.5
+        for: 3m
+        labels:
+          severity: info
+          component: registry_integration
+          alert_type: performance
+        annotations:
+          summary: "Registry performance regression detected in shadow mode"
+          description: "Registry is {{ $value }}s slower than legacy system (P95), indicating performance regression"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#performance-regression"
+
+  - name: registry_integration_errors
+    rules:
+      - alert: RegistryIntegrationErrorRateHigh
+        expr: rate(signal_registry_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: error_rate
+        annotations:
+          summary: "High registry integration error rate"
+          description: "Registry integration errors occurring at {{ $value }} errors/sec for {{ $labels.error_type }} in {{ $labels.component }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#high-error-rate"
+
+      - alert: RegistryIntegrationCriticalErrors
+        expr: rate(signal_registry_errors_total{severity="critical"}[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: registry_integration
+          alert_type: critical_error
+        annotations:
+          summary: "Critical registry integration errors detected"
+          description: "Critical errors in {{ $labels.component }}: {{ $labels.error_type }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#critical-errors"
+
+      - alert: RegistryIntegrationHealthDegraded
+        expr: signal_registry_integration_health == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: registry_integration
+          alert_type: health
+        annotations:
+          summary: "Registry integration health is degraded"
+          description: "Registry integration health check is failing, indicating service degradation"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#health-degraded"
+
+  - name: registry_integration_sla_compliance
+    rules:
+      - alert: RegistrySLAViolationsCritical
+        expr: rate(signal_registry_sla_violations_total{severity="critical"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: registry_integration
+          alert_type: sla_violation
+        annotations:
+          summary: "Critical SLA violations detected in registry integration"
+          description: "Critical SLA violations for {{ $labels.sla_type }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#critical-sla-violations"
+
+      - alert: RegistrySLAViolationsMajor
+        expr: rate(signal_registry_sla_violations_total{severity="major"}[10m]) > 0.01
+        for: 2m
+        labels:
+          severity: major
+          component: registry_integration
+          alert_type: sla_violation
+        annotations:
+          summary: "Major SLA violations detected in registry integration"
+          description: "Major SLA violations occurring at {{ $value }} violations/sec for {{ $labels.sla_type }}"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#major-sla-violations"
+
+      - alert: RegistrySLAComplianceOverall
+        expr: |
+          (
+            signal_registry_sla_latency_p95_seconds < 0.1 and
+            signal_registry_sla_availability_percentage >= 99.9 and
+            signal_registry_cache_hit_rate >= 0.95
+          ) == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: registry_integration
+          alert_type: sla_compliance
+        annotations:
+          summary: "Overall SLA compliance failing for registry integration"
+          description: "Registry integration is not meeting overall SLA compliance requirements"
+          runbook_url: "https://docs.stocksblitz.com/runbooks/registry-integration#overall-sla-compliance"

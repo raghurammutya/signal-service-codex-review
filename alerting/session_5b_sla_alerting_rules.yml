@@ -1,0 +1,252 @@
+# Session 5B SLA Alerting Rules
+# Prometheus alerting rules tied to Phase 3 SLA monitoring matrix
+# for selective cache invalidation and stale data recovery
+
+groups:
+  - name: session_5b_sla_compliance
+    rules:
+      
+      # Critical SLA Violations - Page immediately
+      
+      - alert: Session5BCacheInvalidationCompletionSLAViolation
+        expr: histogram_quantile(0.95, rate(session_5b_sla_cache_invalidation_completion_seconds_bucket[5m])) > 30
+        for: 2m
+        labels:
+          severity: critical
+          service: session_5b
+          sla_type: cache_invalidation_completion
+        annotations:
+          summary: "Session 5B cache invalidation completion exceeds 30s SLA"
+          description: "Cache invalidation P95 completion time is {{ $value }}s, exceeding the 30s SLA threshold for {{ $labels.service }}"
+          dashboard: "https://grafana.company.com/d/session-5b-sla-compliance"
+          runbook_url: "https://github.com/company/signal-service/blob/main/runbooks/session_5b_operational_runbooks.md#session_5b_cache_invalidation_sla_violation"
+      
+      - alert: Session5BStaleDataRecoverySLAViolation  
+        expr: histogram_quantile(0.95, rate(session_5b_cache_recovery_latency_seconds_bucket{recovery_type="stale_data_recovery"}[5m])) > 5
+        for: 1m
+        labels:
+          severity: critical
+          service: session_5b
+          sla_type: stale_data_recovery
+        annotations:
+          summary: "Session 5B stale data recovery exceeds 5s SLA"
+          description: "Stale data recovery P95 latency is {{ $value }}s, exceeding the 5s SLA threshold"
+          dashboard: "https://grafana.company.com/d/session-5b-cache-recovery"
+          runbook_url: "https://github.com/company/signal-service/blob/main/runbooks/session_5b_operational_runbooks.md#session_5b_stale_data_recovery_sla_violation"
+      
+      - alert: Session5BCoordinationLatencyP95SLAViolation
+        expr: histogram_quantile(0.95, rate(session_5b_coordination_latency_seconds_bucket[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          service: session_5b
+          sla_type: coordination_latency_p95
+        annotations:
+          summary: "Session 5B coordination latency P95 exceeds 100ms SLA"
+          description: "Coordination P95 latency is {{ $value * 1000 }}ms, exceeding the 100ms SLA threshold"
+          dashboard: "https://grafana.company.com/d/session-5b-coordination-performance"
+          runbook_url: "https://github.com/company/signal-service/blob/main/runbooks/session_5b_operational_runbooks.md#session_5b_coordination_latency_sla_violation"
+      
+      - alert: Session5BCacheHitRateSLAViolation
+        expr: session_5b_cache_hit_rate < 95
+        for: 3m
+        labels:
+          severity: critical
+          service: session_5b
+          sla_type: cache_hit_rate
+        annotations:
+          summary: "Session 5B cache hit rate below 95% SLA"
+          description: "Cache hit rate for {{ $labels.service }}:{{ $labels.cache_type }} is {{ $value }}%, below the 95% SLA threshold"
+          dashboard: "https://grafana.company.com/d/session-5b-cache-performance"
+          runbook_url: "https://github.com/company/signal-service/blob/main/runbooks/session_5b_operational_runbooks.md#session_5b_cache_hit_rate_sla_violation"
+      
+      # Major SLA Violations - Slack notification
+      
+      - alert: Session5BSelectiveInvalidationEfficiencyLow
+        expr: session_5b_selective_invalidation_efficiency < 80
+        for: 5m
+        labels:
+          severity: major
+          service: session_5b
+          sla_type: selective_invalidation_efficiency
+        annotations:
+          summary: "Session 5B selective invalidation efficiency below 80% SLA"
+          description: "Selective invalidation efficiency for {{ $labels.service }}:{{ $labels.trigger_type }} is {{ $value }}%, below the 80% SLA threshold"
+          dashboard: "session-5b-invalidation-efficiency"
+          
+      - alert: Session5BCacheInvalidationVolumeHigh
+        expr: increase(session_5b_cache_invalidation_volume_total[5m]) > 1000
+        for: 3m
+        labels:
+          severity: major
+          service: session_5b
+        annotations:
+          summary: "Session 5B cache invalidation volume unusually high"
+          description: "Cache invalidation volume is {{ $value }} operations in 5 minutes, indicating potential cache thrashing"
+          dashboard: "session-5b-invalidation-volume"
+      
+      - alert: Session5BStaleDataDetectionFrequencyHigh
+        expr: increase(session_5b_stale_data_detection_total[10m]) > 50
+        for: 5m
+        labels:
+          severity: major
+          service: session_5b
+        annotations:
+          summary: "Session 5B stale data detection frequency unusually high"
+          description: "{{ $value }} stale data instances detected in 10 minutes for {{ $labels.service }}:{{ $labels.data_type }}"
+          dashboard: "session-5b-stale-data-monitoring"
+      
+      - alert: Session5BSLAViolationRateHigh
+        expr: increase(session_5b_sla_violations_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: major
+          service: session_5b
+        annotations:
+          summary: "Session 5B SLA violation rate is high"
+          description: "{{ $value }} SLA violations in 5 minutes for {{ $labels.violation_type }}, severity {{ $labels.severity }}"
+          dashboard: "session-5b-sla-overview"
+      
+      # Warning Alerts - Info notification
+      
+      - alert: Session5BCacheMissRatioElevated
+        expr: session_5b_cache_miss_ratio > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: session_5b
+        annotations:
+          summary: "Session 5B cache miss ratio elevated"
+          description: "Cache miss ratio for {{ $labels.service }}:{{ $labels.cache_type }} is {{ $value }}%, above normal threshold"
+          dashboard: "session-5b-cache-performance"
+      
+      - alert: Session5BCoordinationSuccessRateLow
+        expr: (increase(session_5b_coordination_latency_seconds_count[5m]) - increase(session_5b_sla_violations_total{violation_type="coordination_latency_extreme"}[5m])) / increase(session_5b_coordination_latency_seconds_count[5m]) * 100 < 99
+        for: 5m
+        labels:
+          severity: warning
+          service: session_5b
+        annotations:
+          summary: "Session 5B coordination success rate below 99%"
+          description: "Coordination success rate is {{ $value }}%, below the expected 99% threshold"
+          dashboard: "session-5b-coordination-performance"
+      
+      - alert: Session5BCachePatternEffectivenessLow
+        expr: session_5b_cache_pattern_effectiveness < 90
+        for: 10m
+        labels:
+          severity: warning
+          service: session_5b
+        annotations:
+          summary: "Session 5B cache pattern effectiveness below optimal"
+          description: "Cache pattern effectiveness for {{ $labels.service }}:{{ $labels.pattern_type }} is {{ $value }}%, below 90% optimal threshold"
+          dashboard: "session-5b-cache-patterns"
+      
+      # Performance Degradation Detection
+      
+      - alert: Session5BCoordinationLatencyTrendIncreasing
+        expr: (rate(session_5b_coordination_latency_seconds_sum[5m]) / rate(session_5b_coordination_latency_seconds_count[5m])) > 1.5 * (rate(session_5b_coordination_latency_seconds_sum[1h] offset 1h) / rate(session_5b_coordination_latency_seconds_count[1h] offset 1h))
+        for: 10m
+        labels:
+          severity: warning
+          service: session_5b
+        annotations:
+          summary: "Session 5B coordination latency trending upward"
+          description: "Average coordination latency has increased by 50% compared to 1 hour ago"
+          dashboard: "session-5b-performance-trends"
+      
+      - alert: Session5BCacheInvalidationKeyVolumeAnomaly
+        expr: increase(session_5b_cache_invalidation_keys_total[5m]) > 2 * avg_over_time(increase(session_5b_cache_invalidation_keys_total[5m])[1h:5m])
+        for: 3m
+        labels:
+          severity: warning
+          service: session_5b
+        annotations:
+          summary: "Session 5B cache invalidation key volume anomaly"
+          description: "Cache invalidation key volume is {{ $value }}, more than 2x the hourly average"
+          dashboard: "session-5b-invalidation-volume"
+
+  - name: session_5b_sla_recovery_rules
+    rules:
+      
+      # Recording rules for SLA compliance calculations
+      
+      - record: session_5b:cache_invalidation_completion_sla_compliance_rate
+        expr: (rate(session_5b_sla_cache_invalidation_completion_seconds_count{sla_met="true"}[5m]) / rate(session_5b_sla_cache_invalidation_completion_seconds_count[5m])) * 100
+        
+      - record: session_5b:stale_data_recovery_sla_compliance_rate  
+        expr: (rate(session_5b_cache_recovery_latency_seconds_count{recovery_type="stale_data_recovery"}[5m]) - rate(session_5b_sla_violations_total{violation_type="stale_data_recovery"}[5m])) / rate(session_5b_cache_recovery_latency_seconds_count{recovery_type="stale_data_recovery"}[5m]) * 100
+        
+      - record: session_5b:coordination_latency_p95_5m
+        expr: histogram_quantile(0.95, rate(session_5b_coordination_latency_seconds_bucket[5m]))
+        
+      - record: session_5b:cache_hit_rate_average_5m
+        expr: avg(session_5b_cache_hit_rate)
+        
+      - record: session_5b:selective_invalidation_efficiency_average_5m
+        expr: avg(session_5b_selective_invalidation_efficiency)
+        
+      # SLA compliance summary score (0-100)
+      - record: session_5b:sla_compliance_score
+        expr: (
+          (session_5b:cache_invalidation_completion_sla_compliance_rate > bool 95) * 20 +
+          (session_5b:stale_data_recovery_sla_compliance_rate > bool 95) * 20 +  
+          (session_5b:coordination_latency_p95_5m < bool 0.1) * 20 +
+          (session_5b:cache_hit_rate_average_5m > bool 95) * 20 +
+          (session_5b:selective_invalidation_efficiency_average_5m > bool 80) * 20
+        )
+      
+      # Stale data detection rate per minute
+      - record: session_5b:stale_data_detection_rate_5m
+        expr: rate(session_5b_stale_data_detection_total[5m]) * 60
+      
+      # Cache invalidation efficiency (keys invalidated per operation)
+      - record: session_5b:cache_invalidation_efficiency_5m
+        expr: rate(session_5b_cache_invalidation_keys_total[5m]) / rate(session_5b_cache_invalidation_volume_total[5m])
+
+  - name: session_5b_capacity_planning
+    rules:
+      
+      # Capacity planning metrics
+      
+      - record: session_5b:coordination_throughput_5m
+        expr: rate(session_5b_coordination_latency_seconds_count[5m]) * 60
+        
+      - record: session_5b:cache_invalidation_throughput_5m  
+        expr: rate(session_5b_cache_invalidation_volume_total[5m]) * 60
+        
+      - record: session_5b:stale_data_recovery_throughput_5m
+        expr: rate(session_5b_stale_data_detection_total[5m]) * 60
+      
+      # Peak hour usage patterns (recording for capacity planning)
+      - record: session_5b:peak_coordination_latency_1h
+        expr: max_over_time(session_5b:coordination_latency_p95_5m[1h])
+        
+      - record: session_5b:peak_cache_invalidation_volume_1h
+        expr: max_over_time(session_5b:cache_invalidation_throughput_5m[1h])
+
+# Additional runbook references for SLA violations:
+# 
+# session_5b_cache_invalidation_sla_violation:
+#   1. Check cache invalidation patterns - are they too broad?
+#   2. Verify Redis cluster health and performance
+#   3. Review batch sizes in enhanced_cache_invalidation_service
+#   4. Consider scaling Redis instances
+#
+# session_5b_stale_data_recovery_sla_violation:
+#   1. Check if stale data detection logic is working correctly
+#   2. Verify calculation engines (Greeks, indicators, moneyness) performance
+#   3. Review cache TTL configurations
+#   4. Consider pre-warming critical cache entries
+#
+# session_5b_coordination_latency_sla_violation:
+#   1. Check if all 4 cache services are healthy
+#   2. Verify semaphore limits and concurrent execution settings
+#   3. Review network latency between services
+#   4. Consider reducing coordination scope for high-frequency events
+#
+# session_5b_cache_hit_rate_sla_violation:
+#   1. Review cache TTL settings - are they too aggressive?
+#   2. Check if cache invalidation is too frequent or broad
+#   3. Verify cache warming strategies
+#   4. Consider increasing cache memory allocation

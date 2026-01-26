@@ -1,0 +1,250 @@
+# Session 5B Phase 3 Dashboard Integration
+# Connects Session 5B SLA metrics to broader Phase 3 rollout gates and monitoring
+
+# Phase 3 Rollout Gate Integration
+rollout_gates:
+  session_5b_cache_invalidation:
+    # Rollout Gate: Cache invalidation SLA compliance
+    gate_name: "session_5b_cache_sla_compliance"
+    description: "Session 5B cache invalidation meets Phase 3 SLA requirements"
+    
+    success_criteria:
+      - metric: "session_5b:cache_invalidation_completion_sla_compliance_rate"
+        threshold: ">= 95"
+        duration: "5m"
+        description: "Cache invalidation completion rate above 95%"
+      
+      - metric: "session_5b:stale_data_recovery_sla_compliance_rate"
+        threshold: ">= 95" 
+        duration: "5m"
+        description: "Stale data recovery rate above 95%"
+      
+      - metric: "session_5b:coordination_latency_p95_5m"
+        threshold: "< 0.1"
+        duration: "5m"
+        description: "Coordination latency P95 under 100ms"
+      
+      - metric: "session_5b:cache_hit_rate_average_5m"
+        threshold: ">= 95"
+        duration: "5m"
+        description: "Average cache hit rate above 95%"
+      
+      - metric: "session_5b:selective_invalidation_efficiency_average_5m"
+        threshold: ">= 80"
+        duration: "5m"
+        description: "Selective invalidation efficiency above 80%"
+    
+    rollback_triggers:
+      - metric: "session_5b_sla_violations_total"
+        threshold: "> 10"
+        duration: "5m"
+        severity: "critical"
+        action: "immediate_rollback"
+      
+      - metric: "session_5b:sla_compliance_score"
+        threshold: "< 60"
+        duration: "10m"
+        severity: "major"
+        action: "pause_rollout"
+
+  session_5b_performance_baseline:
+    # Rollout Gate: Performance baseline establishment
+    gate_name: "session_5b_performance_baseline"
+    description: "Session 5B performance baselines for shadow mode validation"
+    
+    baseline_metrics:
+      - metric: "session_5b:coordination_throughput_5m"
+        baseline_query: "avg_over_time(session_5b:coordination_throughput_5m[1h])"
+        variance_threshold: "20%"
+        description: "Coordination throughput baseline"
+      
+      - metric: "session_5b:cache_invalidation_throughput_5m"
+        baseline_query: "avg_over_time(session_5b:cache_invalidation_throughput_5m[1h])"
+        variance_threshold: "25%"
+        description: "Cache invalidation throughput baseline"
+      
+      - metric: "session_5b:stale_data_recovery_throughput_5m"
+        baseline_query: "avg_over_time(session_5b:stale_data_recovery_throughput_5m[1h])"
+        variance_threshold: "15%"
+        description: "Stale data recovery throughput baseline"
+
+# Phase 3 Dashboard Panel Definitions
+dashboard_panels:
+  session_5b_sla_overview:
+    title: "Session 5B SLA Compliance Overview"
+    type: "stat"
+    targets:
+      - expr: "session_5b:sla_compliance_score"
+        legendFormat: "Overall SLA Score"
+        color_mode: "thresholds"
+        thresholds:
+          - value: 80
+            color: "red"
+          - value: 95
+            color: "yellow"
+          - value: 100
+            color: "green"
+    
+    grid_pos:
+      x: 0
+      y: 0
+      w: 6
+      h: 4
+
+  session_5b_cache_invalidation_metrics:
+    title: "Cache Invalidation Performance"
+    type: "timeseries"
+    targets:
+      - expr: "session_5b:cache_invalidation_completion_sla_compliance_rate"
+        legendFormat: "Completion SLA Compliance %"
+      - expr: "histogram_quantile(0.95, rate(session_5b_sla_cache_invalidation_completion_seconds_bucket[5m]))"
+        legendFormat: "P95 Completion Time (s)"
+      - expr: "rate(session_5b_cache_invalidation_volume_total[5m]) * 60"
+        legendFormat: "Invalidation Rate (/min)"
+    
+    thresholds:
+      - value: 30
+        color: "red"
+        label: "30s SLA Threshold"
+    
+    grid_pos:
+      x: 6
+      y: 0
+      w: 12
+      h: 8
+
+  session_5b_cache_hit_rates:
+    title: "Cache Hit Rates by Service"
+    type: "timeseries"
+    targets:
+      - expr: "session_5b_cache_hit_rate"
+        legendFormat: "{{ service }}:{{ cache_type }}"
+    
+    thresholds:
+      - value: 95
+        color: "red"
+        label: "95% SLA Threshold"
+    
+    grid_pos:
+      x: 0
+      y: 8
+      w: 12
+      h: 6
+
+  session_5b_stale_data_recovery:
+    title: "Stale Data Recovery Performance"
+    type: "timeseries"
+    targets:
+      - expr: "histogram_quantile(0.95, rate(session_5b_cache_recovery_latency_seconds_bucket{recovery_type=\"stale_data_recovery\"}[5m]))"
+        legendFormat: "P95 Recovery Time (s)"
+      - expr: "rate(session_5b_stale_data_detection_total[5m]) * 60"
+        legendFormat: "Stale Data Detection Rate (/min)"
+      - expr: "session_5b:stale_data_recovery_sla_compliance_rate"
+        legendFormat: "Recovery SLA Compliance %"
+    
+    thresholds:
+      - value: 5
+        color: "red"
+        label: "5s Recovery SLA"
+    
+    grid_pos:
+      x: 12
+      y: 8
+      w: 12
+      h: 6
+
+  session_5b_selective_invalidation:
+    title: "Selective Invalidation Efficiency"
+    type: "bargauge"
+    targets:
+      - expr: "session_5b_selective_invalidation_efficiency"
+        legendFormat: "{{ service }}:{{ trigger_type }}"
+    
+    thresholds:
+      - value: 80
+        color: "red"
+      - value: 90
+        color: "yellow"
+      - value: 95
+        color: "green"
+    
+    grid_pos:
+      x: 0
+      y: 14
+      w: 8
+      h: 6
+
+  session_5b_coordination_latency:
+    title: "Coordination Latency Distribution"
+    type: "heatmap"
+    targets:
+      - expr: "increase(session_5b_coordination_latency_seconds_bucket[5m])"
+        format: "heatmap"
+        legendFormat: "{{ le }}"
+    
+    grid_pos:
+      x: 8
+      y: 14
+      w: 16
+      h: 6
+
+# Integration with existing Phase 3 dashboards
+phase3_dashboard_integration:
+  signal_service_dashboard:
+    panels:
+      - ref: "session_5b_sla_overview"
+        position: "top_right"
+      - ref: "session_5b_cache_hit_rates"
+        position: "cache_performance_section"
+  
+  registry_integration_dashboard:
+    panels:
+      - ref: "session_5b_coordination_latency"
+        position: "coordination_section"
+      - ref: "session_5b_stale_data_recovery"
+        position: "data_freshness_section"
+
+# Staged Rollout Integration
+staged_rollout_integration:
+  week1_signal_service_10pct:
+    required_gates:
+      - "session_5b_cache_sla_compliance"
+      - "session_5b_performance_baseline"
+    
+    monitoring_focus:
+      - "session_5b_cache_invalidation_metrics"
+      - "session_5b_cache_hit_rates"
+      - "session_5b_coordination_latency"
+    
+    success_criteria_overrides:
+      session_5b_cache_hit_rate:
+        threshold: ">= 93"  # Slightly relaxed for 10% rollout
+        reason: "Initial rollout may have cache warming period"
+  
+  week2_pythonsdk_25pct:
+    required_gates:
+      - "session_5b_cache_sla_compliance"
+    
+    additional_validation:
+      - metric: "session_5b:coordination_throughput_5m"
+        baseline_deviation: "< 30%"
+        description: "Coordination throughput within acceptable variance"
+  
+  week3_downstream_50pct:
+    required_gates:
+      - "session_5b_cache_sla_compliance"
+      - "session_5b_performance_baseline"
+    
+    stress_test_requirements:
+      - "cascading_stale_data_recovery_test"
+      - "high_volume_invalidation_test"
+      - "coordination_latency_stress_test"
+  
+  week4_production_100pct:
+    required_gates:
+      - "session_5b_cache_sla_compliance"
+    
+    final_validation:
+      - all_sla_metrics_green: "24h"
+      - zero_critical_violations: "72h"
+      - performance_baseline_stable: "48h"
