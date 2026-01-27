@@ -1,12 +1,13 @@
 """Configuration schemas for Signal Service"""
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field, validator
+
 
 class BaseSchema(BaseModel):
     """Base schema class"""
-    pass
 
 
 class FrequencyType(str, Enum):
@@ -34,9 +35,9 @@ class IntervalType(str, Enum):
 class TechnicalIndicatorConfig(BaseModel):
     """Configuration for a technical indicator"""
     name: str = Field(..., description="Indicator name (e.g., sma, ema, rsi)")
-    parameters: Dict[str, Any] = Field(..., description="Indicator parameters")
+    parameters: dict[str, Any] = Field(..., description="Indicator parameters")
     output_key: str = Field(..., description="Key to store output in results")
-    
+
     @validator('name')
     def validate_indicator_name(cls, v):
         """Validate indicator name"""
@@ -53,14 +54,14 @@ class TechnicalIndicatorConfig(BaseModel):
 class OptionGreeksConfig(BaseModel):
     """Configuration for option Greeks calculation"""
     enabled: bool = Field(False, description="Enable Greeks calculation")
-    underlying_symbol: Optional[str] = Field(None, description="Underlying symbol for options")
+    underlying_symbol: str | None = Field(None, description="Underlying symbol for options")
     risk_free_rate: float = Field(0.06, description="Risk-free rate for calculations", ge=0, le=1)
-    calculate: List[str] = Field(
-        ['delta', 'gamma', 'theta', 'vega'], 
+    calculate: list[str] = Field(
+        ['delta', 'gamma', 'theta', 'vega'],
         description="Greeks to calculate"
     )
     use_indvix: bool = Field(True, description="Use INDVIX for volatility")
-    
+
     @validator('calculate')
     def validate_greeks(cls, v):
         """Validate Greek names"""
@@ -75,7 +76,7 @@ class InternalFunctionConfig(BaseModel):
     """Configuration for internal Python functions"""
     name: str = Field(..., description="Function name")
     function_type: str = Field('builtin', description="Function type")
-    parameters: Dict[str, Any] = Field({}, description="Function parameters")
+    parameters: dict[str, Any] = Field({}, description="Function parameters")
     timeout: int = Field(5, description="Timeout in seconds", ge=1, le=30)
 
 
@@ -84,7 +85,7 @@ class ExternalFunctionConfig(BaseModel):
     name: str = Field(..., description="Function name")
     file_path: str = Field(..., description="Path to Python file")
     function_name: str = Field(..., description="Function name in file")
-    parameters: Dict[str, Any] = Field({}, description="Function parameters")
+    parameters: dict[str, Any] = Field({}, description="Function parameters")
     timeout: int = Field(5, description="Timeout in seconds", ge=1, le=30)
     memory_limit_mb: int = Field(50, description="Memory limit in MB", ge=10, le=200)
 
@@ -92,10 +93,10 @@ class ExternalFunctionConfig(BaseModel):
 class OutputConfig(BaseModel):
     """Configuration for output settings"""
     publish_to_redis: bool = Field(True, description="Publish results to Redis")
-    redis_stream: Optional[str] = Field(None, description="Redis stream for output")
-    redis_list: Optional[str] = Field(None, description="Redis list for output")
+    redis_stream: str | None = Field(None, description="Redis stream for output")
+    redis_list: str | None = Field(None, description="Redis list for output")
     store_to_database: bool = Field(False, description="Store results to TimescaleDB")
-    webhook_urls: List[str] = Field([], description="Webhook URLs for notifications")
+    webhook_urls: list[str] = Field([], description="Webhook URLs for notifications")
     cache_results: bool = Field(True, description="Cache computation results")
     cache_ttl_seconds: int = Field(300, description="Cache TTL in seconds", ge=60, le=3600)
 
@@ -106,45 +107,45 @@ class SignalConfigData(BaseModel):
     instrument_key: str = Field(..., description="Instrument key")
     interval: IntervalType = Field(..., description="Time interval")
     frequency: FrequencyType = Field(..., description="Calculation frequency")
-    
+
     # Computation configurations
-    technical_indicators: List[TechnicalIndicatorConfig] = Field(
+    technical_indicators: list[TechnicalIndicatorConfig] = Field(
         [], description="Technical indicators to compute"
     )
-    option_greeks: Optional[OptionGreeksConfig] = Field(
+    option_greeks: OptionGreeksConfig | None = Field(
         None, description="Option Greeks configuration"
     )
-    internal_functions: List[InternalFunctionConfig] = Field(
+    internal_functions: list[InternalFunctionConfig] = Field(
         [], description="Internal functions to execute"
     )
-    external_functions: List[ExternalFunctionConfig] = Field(
+    external_functions: list[ExternalFunctionConfig] = Field(
         [], description="External functions to execute"
     )
-    
+
     # Output configuration
     output: OutputConfig = Field(OutputConfig(), description="Output configuration")
-    
+
     # Processing options
     parallel_execution: bool = Field(True, description="Execute computations in parallel")
     max_concurrent: int = Field(5, description="Maximum concurrent computations", ge=1, le=20)
-    
+
     @validator('instrument_key')
     def validate_instrument_key(cls, v):
         """Validate instrument key format - must use ExchangeCode as standard"""
         if not v or len(v) < 3:
             raise ValueError('Instrument key must be at least 3 characters')
-        
+
         # Validate instrument key format: exchange@symbol@product_type[@expiry][@option_type][@strike]
         parts = v.split('@')
         if len(parts) < 3:
             raise ValueError('Instrument key must have at least exchange@symbol@product_type format')
-        
+
         # First part should be exchange
         exchange = parts[0].upper()
         valid_exchanges = ['NSE', 'BSE', 'NFO', 'MCX', 'CDS', 'NYSE', 'NASDAQ', 'BINANCE']
         if exchange not in valid_exchanges:
             raise ValueError(f'Invalid exchange: {exchange}. Must be one of {valid_exchanges}')
-        
+
         return v.upper()
 
 
@@ -154,7 +155,7 @@ class ConfigurationMessage(BaseModel):
     action: str = Field(..., description="Action type (create/update/delete)")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     source: str = Field('subscription_manager', description="Source of the configuration")
-    
+
     @validator('action')
     def validate_action(cls, v):
         """Validate action type"""
@@ -169,20 +170,20 @@ class ComputationResult(BaseModel):
     computation_type: str = Field(..., description="Type of computation")
     instrument_key: str = Field(..., description="Instrument key")
     timestamp: datetime = Field(..., description="Computation timestamp")
-    results: Dict[str, Any] = Field(..., description="Computation results")
+    results: dict[str, Any] = Field(..., description="Computation results")
     execution_time_ms: float = Field(..., description="Execution time in milliseconds")
     success: bool = Field(..., description="Whether computation succeeded")
-    error: Optional[str] = Field(None, description="Error message if failed")
+    error: str | None = Field(None, description="Error message if failed")
 
 
 class TickProcessingContext(BaseModel):
     """Context for tick processing"""
-    tick_data: Dict[str, Any] = Field(..., description="Original tick data")
+    tick_data: dict[str, Any] = Field(..., description="Original tick data")
     instrument_key: str = Field(..., description="Instrument key")
     timestamp: datetime = Field(..., description="Tick timestamp")
-    configurations: List[SignalConfigData] = Field([], description="Active configurations")
-    aggregated_data: Optional[Dict[str, Any]] = Field(None, description="Aggregated historical data")
-    computation_results: List[ComputationResult] = Field([], description="Computation results")
+    configurations: list[SignalConfigData] = Field([], description="Active configurations")
+    aggregated_data: dict[str, Any] | None = Field(None, description="Aggregated historical data")
+    computation_results: list[ComputationResult] = Field([], description="Computation results")
 
 
 class HealthStatus(BaseModel):
@@ -191,5 +192,5 @@ class HealthStatus(BaseModel):
     service: str = Field("signal_service", description="Service name")
     version: str = Field(..., description="Service version")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    checks: Dict[str, Any] = Field({}, description="Individual health checks")
-    metrics: Dict[str, Any] = Field({}, description="Service metrics")
+    checks: dict[str, Any] = Field({}, description="Individual health checks")
+    metrics: dict[str, Any] = Field({}, description="Service metrics")

@@ -12,14 +12,11 @@ Classic trading patterns and algorithms including:
 Library: Custom implementation (no external dependencies)
 """
 import logging
-from typing import Dict, Any, List, Tuple, Optional
-import pandas as pd
-import numpy as np
 
-from app.services.indicator_registry import (
-    register_indicator,
-    IndicatorCategory
-)
+import numpy as np
+import pandas as pd
+
+from app.services.indicator_registry import IndicatorCategory, register_indicator
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +114,7 @@ def pivot_points(
     df: pd.DataFrame,
     method: str = "standard",
     **kwargs
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Calculate pivot points for intraday trading.
 
@@ -212,7 +209,7 @@ def fibonacci_retracement(
     df: pd.DataFrame,
     lookback: int = 50,
     **kwargs
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Calculate Fibonacci retracement levels.
 
@@ -264,7 +261,7 @@ def fibonacci_extension(
     df: pd.DataFrame,
     lookback: int = 50,
     **kwargs
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Calculate Fibonacci extension levels for profit targets.
 
@@ -333,7 +330,6 @@ def zigzag(
         # Initialize
         result.iloc[0] = prices[0]
         last_pivot = prices[0]
-        last_pivot_idx = 0
         direction = 0  # 1 for up, -1 for down
 
         for i in range(1, len(prices)):
@@ -345,12 +341,10 @@ def zigzag(
                     direction = 1
                     result.iloc[i] = price
                     last_pivot = price
-                    last_pivot_idx = i
                 elif price < last_pivot * (1 - deviation):
                     direction = -1
                     result.iloc[i] = price
                     last_pivot = price
-                    last_pivot_idx = i
 
             elif direction == 1:
                 # Uptrend
@@ -358,13 +352,11 @@ def zigzag(
                     # Update high
                     result.iloc[i] = price
                     last_pivot = price
-                    last_pivot_idx = i
                 elif price < last_pivot * (1 - deviation):
                     # Reversal to downtrend
                     direction = -1
                     result.iloc[i] = price
                     last_pivot = price
-                    last_pivot_idx = i
 
             else:  # direction == -1
                 # Downtrend
@@ -372,13 +364,11 @@ def zigzag(
                     # Update low
                     result.iloc[i] = price
                     last_pivot = price
-                    last_pivot_idx = i
                 elif price > last_pivot * (1 + deviation):
                     # Reversal to uptrend
                     direction = 1
                     result.iloc[i] = price
                     last_pivot = price
-                    last_pivot_idx = i
 
         # Forward fill zigzag line
         result = result.ffill()
@@ -537,7 +527,7 @@ def market_profile(
 )
 def anchored_vwap(
     df: pd.DataFrame,
-    anchor_datetime: Optional[str] = None,
+    anchor_datetime: str | None = None,
     **kwargs
 ) -> pd.Series:
     """

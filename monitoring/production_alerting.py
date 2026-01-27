@@ -4,9 +4,8 @@ Production Alerting Rules for Signal Service
 Critical alerts for production operations management based on enhanced metrics.
 Focuses on business impact and operational excellence.
 """
-import json
-from typing import Dict, List, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from typing import Any
 
 
 @dataclass
@@ -15,28 +14,28 @@ class AlertRule:
     alert: str
     expr: str
     for_duration: str
-    labels: Dict[str, str]
-    annotations: Dict[str, str]
+    labels: dict[str, str]
+    annotations: dict[str, str]
 
 
 class ProductionAlertingRules:
     """
     Production-ready alerting rules for signal_service.
-    
+
     Categorized by:
     - Critical Business Impact (immediate response)
     - Performance Degradation (tuning required)
     - Capacity Planning (scaling needed)
     - External Dependencies (service health)
     """
-    
+
     def __init__(self):
         self.critical_alerts = self._define_critical_alerts()
         self.performance_alerts = self._define_performance_alerts()
         self.capacity_alerts = self._define_capacity_alerts()
         self.dependency_alerts = self._define_dependency_alerts()
-    
-    def _define_critical_alerts(self) -> List[AlertRule]:
+
+    def _define_critical_alerts(self) -> list[AlertRule]:
         """Critical business impact alerts - immediate response required"""
         return [
             # Signal Generation Failure
@@ -56,14 +55,14 @@ class ProductionAlertingRules:
                     "impact": "Complete signal generation outage"
                 }
             ),
-            
+
             # High Error Rate
             AlertRule(
                 alert="SignalServiceHighErrorRate",
                 expr='(rate(signal_service_api_requests_total{status_code!~"2.."}[5m]) / rate(signal_service_api_requests_total[5m])) > 0.1',
                 for_duration="2m",
                 labels={
-                    "severity": "critical", 
+                    "severity": "critical",
                     "team": "trading",
                     "impact": "user_experience"
                 },
@@ -74,10 +73,10 @@ class ProductionAlertingRules:
                     "impact": "Users experiencing frequent failures"
                 }
             ),
-            
+
             # Greeks Calculation Failure
             AlertRule(
-                alert="GreeksCalculationSystemFailure", 
+                alert="GreeksCalculationSystemFailure",
                 expr='rate(signal_service_greeks_calculation_seconds_count[5m]) == 0 and rate(signal_service_api_requests_total{endpoint=~".*greeks.*"}[5m]) > 0',
                 for_duration="1m",
                 labels={
@@ -92,7 +91,7 @@ class ProductionAlertingRules:
                     "impact": "Options trading signals unavailable"
                 }
             ),
-            
+
             # Circuit Breaker Open Critical Services
             AlertRule(
                 alert="CriticalServiceCircuitBreakerOpen",
@@ -106,13 +105,13 @@ class ProductionAlertingRules:
                 annotations={
                     "summary": "Critical service circuit breaker is open",
                     "description": "Circuit breaker for {{ $labels.service_name }} is open, blocking {{ $labels.operation }}",
-                    "runbook": "Check external service health and network connectivity", 
+                    "runbook": "Check external service health and network connectivity",
                     "impact": "Reduced signal generation capabilities"
                 }
             )
         ]
-    
-    def _define_performance_alerts(self) -> List[AlertRule]:
+
+    def _define_performance_alerts(self) -> list[AlertRule]:
         """Performance degradation alerts - tuning required"""
         return [
             # High API Latency
@@ -132,7 +131,7 @@ class ProductionAlertingRules:
                     "impact": "Degraded user experience"
                 }
             ),
-            
+
             # Slow Greeks Calculations
             AlertRule(
                 alert="SlowGreeksCalculations",
@@ -150,7 +149,7 @@ class ProductionAlertingRules:
                     "impact": "Delayed signal generation"
                 }
             ),
-            
+
             # Low Cache Hit Rate
             AlertRule(
                 alert="LowCacheHitRate",
@@ -158,7 +157,7 @@ class ProductionAlertingRules:
                 for_duration="10m",
                 labels={
                     "severity": "warning",
-                    "team": "platform", 
+                    "team": "platform",
                     "impact": "efficiency"
                 },
                 annotations={
@@ -168,7 +167,7 @@ class ProductionAlertingRules:
                     "impact": "Increased computational cost and latency"
                 }
             ),
-            
+
             # High Queue Backlog
             AlertRule(
                 alert="HighQueueBacklog",
@@ -187,8 +186,8 @@ class ProductionAlertingRules:
                 }
             )
         ]
-    
-    def _define_capacity_alerts(self) -> List[AlertRule]:
+
+    def _define_capacity_alerts(self) -> list[AlertRule]:
         """Capacity planning alerts - scaling decisions needed"""
         return [
             # High CPU Usage
@@ -208,12 +207,12 @@ class ProductionAlertingRules:
                     "impact": "Performance degradation risk"
                 }
             ),
-            
+
             # High Memory Usage
             AlertRule(
                 alert="SignalServiceHighMemoryUsage",
                 expr='process_resident_memory_bytes{job="signal-service"} / 1024/1024/1024 > 4',
-                for_duration="5m", 
+                for_duration="5m",
                 labels={
                     "severity": "warning",
                     "team": "platform",
@@ -226,10 +225,10 @@ class ProductionAlertingRules:
                     "impact": "Risk of OOM and service restart"
                 }
             ),
-            
+
             # High Request Rate
             AlertRule(
-                alert="SignalServiceHighRequestRate", 
+                alert="SignalServiceHighRequestRate",
                 expr='rate(signal_service_api_requests_total[5m]) > 1000',
                 for_duration="10m",
                 labels={
@@ -244,7 +243,7 @@ class ProductionAlertingRules:
                     "impact": "Approaching capacity limits"
                 }
             ),
-            
+
             # Growing Subscription Count
             AlertRule(
                 alert="HighActiveSubscriptions",
@@ -263,8 +262,8 @@ class ProductionAlertingRules:
                 }
             )
         ]
-    
-    def _define_dependency_alerts(self) -> List[AlertRule]:
+
+    def _define_dependency_alerts(self) -> list[AlertRule]:
         """External service dependency alerts"""
         return [
             # External Service Down
@@ -284,7 +283,7 @@ class ProductionAlertingRules:
                     "impact": "Reduced signal service capabilities"
                 }
             ),
-            
+
             # High External Service Latency
             AlertRule(
                 alert="ExternalServiceHighLatency",
@@ -292,7 +291,7 @@ class ProductionAlertingRules:
                 for_duration="5m",
                 labels={
                     "severity": "warning",
-                    "team": "platform", 
+                    "team": "platform",
                     "impact": "dependency"
                 },
                 annotations={
@@ -302,7 +301,7 @@ class ProductionAlertingRules:
                     "impact": "Degraded signal generation performance"
                 }
             ),
-            
+
             # Dependency Error Rate
             AlertRule(
                 alert="HighDependencyErrorRate",
@@ -320,7 +319,7 @@ class ProductionAlertingRules:
                     "impact": "Increased failure rate in signal generation"
                 }
             ),
-            
+
             # Config Service Unavailable (Critical)
             AlertRule(
                 alert="ConfigServiceUnavailable",
@@ -339,17 +338,17 @@ class ProductionAlertingRules:
                 }
             )
         ]
-    
-    def generate_prometheus_rules(self) -> Dict[str, Any]:
+
+    def generate_prometheus_rules(self) -> dict[str, Any]:
         """Generate Prometheus alerting rules configuration"""
-        
-        all_alerts = (
-            self.critical_alerts + 
-            self.performance_alerts + 
-            self.capacity_alerts + 
+
+        (
+            self.critical_alerts +
+            self.performance_alerts +
+            self.capacity_alerts +
             self.dependency_alerts
         )
-        
+
         return {
             "groups": [
                 {
@@ -357,7 +356,7 @@ class ProductionAlertingRules:
                     "rules": [asdict(alert) for alert in self.critical_alerts]
                 },
                 {
-                    "name": "signal-service.performance", 
+                    "name": "signal-service.performance",
                     "rules": [asdict(alert) for alert in self.performance_alerts]
                 },
                 {
@@ -370,12 +369,12 @@ class ProductionAlertingRules:
                 }
             ]
         }
-    
-    def generate_grafana_alerts(self) -> List[Dict[str, Any]]:
+
+    def generate_grafana_alerts(self) -> list[dict[str, Any]]:
         """Generate Grafana alert definitions"""
-        
+
         grafana_alerts = []
-        
+
         for alert in self.critical_alerts + self.performance_alerts:
             grafana_alerts.append({
                 "uid": f"signal-service-{alert.alert.lower()}",
@@ -398,5 +397,5 @@ class ProductionAlertingRules:
                 "labels": alert.labels,
                 "frequency": "10s"
             })
-        
+
         return grafana_alerts

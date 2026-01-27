@@ -2,17 +2,16 @@
 Universal Computation API
 Provides a unified interface for all computation types across all asset classes
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import Dict, List, Optional, Any, Union
-from datetime import datetime
 import asyncio
+from datetime import datetime
+from typing import Any
 
-from app.utils.logging_utils import log_info, log_error, log_exception
-from app.services.universal_calculator import UniversalCalculator, AssetType, ComputationType
-from app.services.computation_registry import computation_registry
-from app.schemas.signal_schemas import BaseResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from app.dependencies import get_universal_calculator
-
+from app.services.computation_registry import computation_registry
+from app.services.universal_calculator import AssetType, ComputationType, UniversalCalculator
+from app.utils.logging_utils import log_exception, log_info
 
 router = APIRouter(prefix="/universal", tags=["universal-computation"])
 
@@ -24,19 +23,19 @@ from pydantic import BaseModel, Field
 class ComputationRequest(BaseModel):
     """Single computation request"""
     type: str = Field(..., description="Type of computation (indicator, greeks, moneyness, etc.)")
-    name: Optional[str] = Field(None, description="Optional name for the result")
-    params: Dict[str, Any] = Field(default_factory=dict, description="Computation parameters")
+    name: str | None = Field(None, description="Optional name for the result")
+    params: dict[str, Any] = Field(default_factory=dict, description="Computation parameters")
 
 
 class UniversalComputeRequest(BaseModel):
     """Universal computation request"""
     asset_type: str = Field(..., description="Asset type (equity, futures, options, etc.)")
     instrument_key: str = Field(..., description="Universal instrument key")
-    computations: List[ComputationRequest] = Field(..., description="List of computations to perform")
-    timeframe: Optional[str] = Field("5m", description="Timeframe for data")
-    mode: Optional[str] = Field("realtime", description="Computation mode (realtime, historical, batch)")
-    context: Optional[Dict[str, Any]] = Field(
-        default_factory=dict, 
+    computations: list[ComputationRequest] = Field(..., description="List of computations to perform")
+    timeframe: str | None = Field("5m", description="Timeframe for data")
+    mode: str | None = Field("realtime", description="Computation mode (realtime, historical, batch)")
+    context: dict[str, Any] | None = Field(
+        default_factory=dict,
         description="Additional context (spot price, risk-free rate, etc.)"
     )
 
@@ -44,10 +43,10 @@ class UniversalComputeRequest(BaseModel):
 class ComputationResult(BaseModel):
     """Result of a single computation"""
     name: str
-    value: Optional[Any] = None
-    error: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-    timestamp: Optional[datetime] = None
+    value: Any | None = None
+    error: str | None = None
+    metadata: dict[str, Any] | None = None
+    timestamp: datetime | None = None
 
 
 class UniversalComputeResponse(BaseModel):
@@ -55,8 +54,8 @@ class UniversalComputeResponse(BaseModel):
     instrument_key: str
     asset_type: str
     timestamp: datetime
-    computations: Dict[str, Any]
-    metadata: Dict[str, Any]
+    computations: dict[str, Any]
+    metadata: dict[str, Any]
     execution_time_ms: float
 
 
@@ -67,7 +66,7 @@ async def universal_compute(
 ) -> UniversalComputeResponse:
     """
     Universal computation endpoint for all asset types and calculations
-    
+
     This endpoint provides a unified interface for:
     - Technical indicators (SMA, RSI, MACD, etc.)
     - Option Greeks (Delta, Gamma, Theta, Vega, Rho)
@@ -76,7 +75,7 @@ async def universal_compute(
     - Risk metrics
     - Custom formulas
     - And more...
-    
+
     Supports all asset types:
     - Equities
     - Futures
@@ -88,12 +87,12 @@ async def universal_compute(
     """
     try:
         start_time = datetime.utcnow()
-        
+
         log_info(
             f"Universal compute request: {request.asset_type} - {request.instrument_key} - "
             f"{len(request.computations)} computations"
         )
-        
+
         # Validate asset type
         try:
             asset_type = AssetType(request.asset_type.lower())
@@ -103,7 +102,7 @@ async def universal_compute(
                 detail=f"Invalid asset type: {request.asset_type}. "
                 f"Valid types: {[t.value for t in AssetType]}"
             )
-        
+
         # Prepare computation list
         computation_list = []
         for comp in request.computations:
@@ -112,7 +111,7 @@ async def universal_compute(
                 "name": comp.name or comp.type,
                 "params": comp.params
             })
-        
+
         # Execute computations
         result = await calculator.compute(
             asset_type=asset_type,
@@ -121,10 +120,10 @@ async def universal_compute(
             data=None,  # Let calculator fetch data as needed
             context=request.context
         )
-        
+
         # Calculate execution time
         execution_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
-        
+
         # Format response
         response = UniversalComputeResponse(
             instrument_key=result["instrument_key"],
@@ -139,14 +138,14 @@ async def universal_compute(
             },
             execution_time_ms=execution_time_ms
         )
-        
+
         log_info(
             f"Universal compute completed: {result['metadata']['successful_computations']} successful, "
             f"{result['metadata']['failed_computations']} failed, {execution_time_ms:.2f}ms"
         )
-        
+
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -156,20 +155,20 @@ async def universal_compute(
 
 @router.post("/compute/batch")
 async def universal_compute_batch(
-    instruments: List[str],
-    computations: List[ComputationRequest],
+    instruments: list[str],
+    computations: list[ComputationRequest],
     asset_type: str,
-    context: Optional[Dict[str, Any]] = None,
+    context: dict[str, Any] | None = None,
     calculator: UniversalCalculator = Depends(get_universal_calculator)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Batch computation for multiple instruments
-    
+
     Process the same set of computations for multiple instruments in parallel
     """
     try:
         start_time = datetime.utcnow()
-        
+
         # Validate asset type
         try:
             asset_type_enum = AssetType(asset_type.lower())
@@ -178,7 +177,7 @@ async def universal_compute_batch(
                 status_code=400,
                 detail=f"Invalid asset type: {asset_type}"
             )
-        
+
         # Prepare computation list
         computation_list = []
         for comp in computations:
@@ -187,7 +186,7 @@ async def universal_compute_batch(
                 "name": comp.name or comp.type,
                 "params": comp.params
             })
-        
+
         # Process instruments in parallel
         tasks = []
         for instrument in instruments:
@@ -198,22 +197,22 @@ async def universal_compute_batch(
                 context=context
             )
             tasks.append(task)
-        
+
         # Wait for all computations
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Format results
         batch_results = {}
         errors = {}
-        
-        for instrument, result in zip(instruments, results):
+
+        for instrument, result in zip(instruments, results, strict=False):
             if isinstance(result, Exception):
                 errors[instrument] = str(result)
             else:
                 batch_results[instrument] = result["computations"]
-        
+
         execution_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
-        
+
         return {
             "asset_type": asset_type,
             "instruments_processed": len(instruments),
@@ -223,7 +222,7 @@ async def universal_compute_batch(
             "errors": errors if errors else None,
             "execution_time_ms": execution_time_ms
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -233,12 +232,12 @@ async def universal_compute_batch(
 
 @router.get("/computations")
 async def list_computations(
-    asset_type: Optional[str] = Query(None, description="Filter by asset type"),
-    tags: Optional[List[str]] = Query(None, description="Filter by tags")
-) -> Dict[str, Any]:
+    asset_type: str | None = Query(None, description="Filter by asset type"),
+    tags: list[str] | None = Query(None, description="Filter by tags")
+) -> dict[str, Any]:
     """
     List available computations with optional filtering
-    
+
     Returns all registered computations that can be used with the /compute endpoint
     """
     try:
@@ -247,7 +246,7 @@ async def list_computations(
             asset_type=asset_type,
             tags=tags
         )
-        
+
         # Format response
         formatted_computations = []
         for comp in computations:
@@ -261,7 +260,7 @@ async def list_computations(
                 "version": comp.version,
                 "examples": comp.examples
             })
-        
+
         return {
             "total": len(formatted_computations),
             "filters": {
@@ -270,28 +269,28 @@ async def list_computations(
             },
             "computations": formatted_computations
         }
-        
+
     except Exception as e:
         log_exception(f"Error listing computations: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/computations/{computation_name}")
-async def get_computation_details(computation_name: str) -> Dict[str, Any]:
+async def get_computation_details(computation_name: str) -> dict[str, Any]:
     """
     Get detailed information about a specific computation
-    
+
     Returns complete documentation including parameters, examples, and supported assets
     """
     try:
         computation = computation_registry.get_computation(computation_name)
-        
+
         if not computation:
             raise HTTPException(
                 status_code=404,
                 detail=f"Computation '{computation_name}' not found"
             )
-        
+
         return {
             "name": computation.name,
             "description": computation.description,
@@ -304,7 +303,7 @@ async def get_computation_details(computation_name: str) -> Dict[str, Any]:
             "created_at": computation.created_at.isoformat(),
             "last_updated": computation.last_updated.isoformat()
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -315,56 +314,56 @@ async def get_computation_details(computation_name: str) -> Dict[str, Any]:
 @router.post("/validate")
 async def validate_computation_request(
     request: UniversalComputeRequest
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Validate a computation request without executing it
-    
+
     Useful for checking if a computation is valid before execution
     """
     try:
         # Validate asset type
         try:
-            asset_type = AssetType(request.asset_type.lower())
+            AssetType(request.asset_type.lower())
         except ValueError:
             return {
                 "valid": False,
                 "errors": [f"Invalid asset type: {request.asset_type}"]
             }
-        
+
         errors = []
         warnings = []
-        
+
         # Validate each computation
         for comp in request.computations:
             computation = computation_registry.get_computation(comp.type)
-            
+
             if not computation:
                 errors.append(f"Unknown computation type: {comp.type}")
                 continue
-            
+
             # Check if computation supports asset type
             if request.asset_type not in computation.asset_types:
                 errors.append(
                     f"Computation '{comp.type}' not supported for asset type '{request.asset_type}'"
                 )
                 continue
-            
+
             # Validate parameters
             try:
-                validated_params = computation_registry.validate_parameters(
-                    comp.type, 
+                computation_registry.validate_parameters(
+                    comp.type,
                     comp.params
                 )
             except Exception as e:
                 errors.append(f"Parameter validation failed for '{comp.type}': {str(e)}")
-        
+
         return {
             "valid": len(errors) == 0,
             "errors": errors if errors else None,
             "warnings": warnings if warnings else None,
             "computations_validated": len(request.computations)
         }
-        
+
     except Exception as e:
         log_exception(f"Error validating request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -373,11 +372,11 @@ async def validate_computation_request(
 @router.get("/examples/{asset_type}")
 async def get_computation_examples(
     asset_type: str,
-    computation_type: Optional[str] = None
-) -> Dict[str, Any]:
+    computation_type: str | None = None
+) -> dict[str, Any]:
     """
     Get example computation requests for a specific asset type
-    
+
     Helpful for understanding how to use the universal compute endpoint
     """
     try:
@@ -389,9 +388,9 @@ async def get_computation_examples(
                 status_code=400,
                 detail=f"Invalid asset type: {asset_type}"
             )
-        
+
         examples = []
-        
+
         # Equity example
         if asset_type_enum == AssetType.EQUITY:
             examples.append({
@@ -407,7 +406,7 @@ async def get_computation_examples(
                     ]
                 }
             })
-        
+
         # Options example
         elif asset_type_enum == AssetType.OPTIONS:
             examples.append({
@@ -429,7 +428,7 @@ async def get_computation_examples(
                     }
                 }
             })
-        
+
         # Futures example
         elif asset_type_enum == AssetType.FUTURES:
             examples.append({
@@ -449,7 +448,7 @@ async def get_computation_examples(
                     }
                 }
             })
-        
+
         # Custom formula example (works for all assets)
         examples.append({
             "name": "Custom Formula Example",
@@ -470,20 +469,20 @@ async def get_computation_examples(
                 ]
             }
         })
-        
+
         # Filter by computation type if specified
         if computation_type:
             examples = [
-                ex for ex in examples 
+                ex for ex in examples
                 if any(comp["type"] == computation_type for comp in ex["request"]["computations"])
             ]
-        
+
         return {
             "asset_type": asset_type,
             "computation_type": computation_type,
             "examples": examples
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -492,12 +491,12 @@ async def get_computation_examples(
 
 
 @router.get("/health")
-async def universal_health_check() -> Dict[str, Any]:
+async def universal_health_check() -> dict[str, Any]:
     """Health check for universal computation engine"""
     try:
         # Get registry info
         registry_info = computation_registry.get_computation_info()
-        
+
         return {
             "status": "healthy",
             "service": "universal_computation_engine",
@@ -509,7 +508,7 @@ async def universal_health_check() -> Dict[str, Any]:
                 "computation_types": [t.value for t in ComputationType]
             }
         }
-        
+
     except Exception as e:
         log_exception(f"Error in health check: {str(e)}")
         return {

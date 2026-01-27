@@ -2,7 +2,7 @@
 Unified Entitlement Service
 
 Consolidates all entitlement checks into a single decision path, replacing:
-1. EntitlementMiddleware (HTTP middleware for API access) 
+1. EntitlementMiddleware (HTTP middleware for API access)
 2. SignalStreamContract (Stream subscription entitlements)
 3. StreamAbuseProtectionService (Rate limiting and abuse prevention)
 
@@ -12,18 +12,16 @@ ARCHITECTURE COMPLIANCE:
 - Implements unified caching and rate limiting
 - Fail-secure by default when external services unavailable
 """
-import asyncio
 import json
-import time
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Set, Optional, Any, List, Tuple, Union
-from dataclasses import dataclass, asdict
+import time
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
 from uuid import uuid4
 
 import httpx
-from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.utils.redis import get_redis_client
@@ -41,7 +39,7 @@ class AccessType(Enum):
 class FeatureType(Enum):
     """Features that require entitlements."""
     FO_GREEKS_ACCESS = "fo_greeks_access"
-    PREMIUM_ANALYSIS = "premium_analysis"  
+    PREMIUM_ANALYSIS = "premium_analysis"
     MARKETPLACE_SIGNALS = "marketplace_signals"
     PERSONAL_SIGNALS = "personal_signals"
     PUBLIC_SIGNALS = "public_signals"
@@ -51,7 +49,7 @@ class FeatureType(Enum):
 class EntitlementTier(Enum):
     """User subscription tiers."""
     FREE = "free"
-    STANDARD = "standard" 
+    STANDARD = "standard"
     PREMIUM = "premium"
     ENTERPRISE = "enterprise"
 
@@ -71,35 +69,35 @@ class AccessLimits:
 class EntitlementResult:
     """Result of entitlement check."""
     is_allowed: bool
-    reason: Optional[str] = None
-    user_tier: Optional[str] = None
-    limits: Optional[AccessLimits] = None
-    subscription_id: Optional[str] = None
-    product_id: Optional[str] = None
-    execution_token: Optional[str] = None
+    reason: str | None = None
+    user_tier: str | None = None
+    limits: AccessLimits | None = None
+    subscription_id: str | None = None
+    product_id: str | None = None
+    execution_token: str | None = None
 
 
 @dataclass
 class AbuseEvent:
     """Abuse event for audit logging."""
     event_id: str
-    user_id: Optional[str]
+    user_id: str | None
     client_id: str
     event_type: str
     severity: str
     timestamp: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
     action_taken: str
 
 
 class UnifiedEntitlementService:
     """
     Unified service for all entitlement checks and rate limiting.
-    
+
     Replaces EntitlementMiddleware, SignalStreamContract, and StreamAbuseProtectionService
     with a single, consistent entitlement decision path.
     """
-    
+
     # Default limits for each tier
     DEFAULT_LIMITS = {
         EntitlementTier.FREE: AccessLimits(
@@ -135,7 +133,7 @@ class UnifiedEntitlementService:
             burst_message_threshold=500
         )
     }
-    
+
     # F&O routes that require entitlement checking
     PROTECTED_FO_ROUTES = {
         "/api/v2/signals/fo/greeks/",
@@ -143,44 +141,44 @@ class UnifiedEntitlementService:
         "/api/v2/signals/fo/option-chain/",
         "/api/v2/signals/fo/",
     }
-    
+
     # Premium analysis routes
     PREMIUM_ANALYSIS_ROUTES = {
         "/premium-analysis/expiry",
-        "/premium-analysis/strike-range", 
+        "/premium-analysis/strike-range",
         "/premium-analysis/term-structure",
         "/premium-analysis/arbitrage-opportunities/",
     }
-    
+
     def __init__(self):
         self.redis_client = None
         self.marketplace_client = None
-        
+
         # Cache settings
         self._entitlement_cache = {}
         self._limits_cache = {}
         self._cache_ttl = 300  # 5 minutes
-        
+
         # Redis key prefixes
         self.connection_key_prefix = "entitlement:connections:"
         self.rate_limit_key_prefix = "entitlement:rate_limit:"
         self.abuse_log_key = "entitlement:abuse_events"
         self.ban_key_prefix = "entitlement:ban:"
-        
+
         # Time windows
         self.rate_limit_window = 60      # 1 minute
         self.rapid_subscription_window = 10  # 10 seconds
         self.burst_message_window = 5    # 5 seconds
-    
+
     async def initialize(self):
         """Initialize the service."""
         self.redis_client = await get_redis_client()
-        
+
         # Get internal API key for marketplace authentication
         internal_api_key = getattr(settings, 'internal_api_key', None)
         if not internal_api_key:
             raise ValueError("INTERNAL_API_KEY not configured - required for marketplace authentication")
-        
+
         # Initialize marketplace HTTP client with auth headers
         self.marketplace_client = httpx.AsyncClient(
             base_url=settings.MARKETPLACE_SERVICE_URL.rstrip("/"),
@@ -191,53 +189,53 @@ class UnifiedEntitlementService:
                 "Content-Type": "application/json"
             }
         )
-        
+
         logger.info("Unified entitlement service initialized")
-    
+
     async def close(self):
         """Clean up resources."""
         if self.marketplace_client:
             await self.marketplace_client.aclose()
-    
+
     async def check_http_access(
         self,
         user_id: str,
         request_path: str,
-        client_id: Optional[str] = None
+        client_id: str | None = None
     ) -> EntitlementResult:
         """
         Check HTTP API access entitlement.
-        
+
         Replaces EntitlementMiddleware functionality.
-        
+
         Args:
             user_id: User ID from gateway headers
             request_path: Request path being accessed
             client_id: Optional client identifier
-            
+
         Returns:
             EntitlementResult with access decision
         """
         try:
             if not self.redis_client:
                 await self.initialize()
-            
+
             # Skip entitlement check for non-protected routes
             if not self._is_protected_route(request_path):
                 return EntitlementResult(is_allowed=True)
-            
+
             # Skip for health/admin endpoints
             if any(endpoint in request_path for endpoint in ["/health", "/admin", "/docs", "/openapi"]):
                 return EntitlementResult(is_allowed=True)
-            
+
             # Get user entitlements and tier
             user_data = await self._get_user_entitlements(user_id)
             if not user_data:
                 return EntitlementResult(
-                    is_allowed=False, 
+                    is_allowed=False,
                     reason="Unable to verify user entitlements"
                 )
-            
+
             # Check specific feature access
             if self._requires_premium_analysis(request_path):
                 required_feature = FeatureType.PREMIUM_ANALYSIS
@@ -246,10 +244,10 @@ class UnifiedEntitlementService:
             else:
                 # Default to allowing if not specifically protected
                 return EntitlementResult(is_allowed=True, user_tier=user_data.get("tier"))
-            
+
             # Check feature entitlement
             has_access = await self._check_feature_access(user_id, required_feature, user_data)
-            
+
             if not has_access:
                 await self._log_access_denied(
                     user_id=user_id,
@@ -263,7 +261,7 @@ class UnifiedEntitlementService:
                     reason=f"Access denied. {required_feature.value} requires premium subscription.",
                     user_tier=user_data.get("tier")
                 )
-            
+
             # Check rate limiting
             rate_check = await self._check_api_rate_limit(user_id, user_data.get("tier"))
             if not rate_check[0]:
@@ -272,13 +270,13 @@ class UnifiedEntitlementService:
                     reason=rate_check[1],
                     user_tier=user_data.get("tier")
                 )
-            
+
             return EntitlementResult(
                 is_allowed=True,
                 user_tier=user_data.get("tier"),
                 limits=self._get_tier_limits(user_data.get("tier"))
             )
-            
+
         except Exception as e:
             logger.error(f"Error checking HTTP access: {e}")
             # Fail secure - deny access on error
@@ -286,32 +284,32 @@ class UnifiedEntitlementService:
                 is_allowed=False,
                 reason="Entitlement service error"
             )
-    
+
     async def check_stream_access(
         self,
         user_id: str,
         stream_key: str,
         client_id: str,
-        execution_token: Optional[str] = None
+        execution_token: str | None = None
     ) -> EntitlementResult:
         """
         Check stream subscription entitlement.
-        
+
         Replaces SignalStreamContract functionality.
-        
+
         Args:
             user_id: User ID
             stream_key: Stream key being accessed
             client_id: Client identifier
             execution_token: Optional marketplace execution token
-            
+
         Returns:
             EntitlementResult with access decision
         """
         try:
             if not self.redis_client:
                 await self.initialize()
-            
+
             # Parse stream key to determine type and requirements
             stream_info = self._parse_stream_key(stream_key)
             if not stream_info:
@@ -319,7 +317,7 @@ class UnifiedEntitlementService:
                     is_allowed=False,
                     reason="Invalid stream key format"
                 )
-            
+
             # Get user entitlements
             user_data = await self._get_user_entitlements(user_id)
             if not user_data:
@@ -327,17 +325,17 @@ class UnifiedEntitlementService:
                     is_allowed=False,
                     reason="Unable to verify user entitlements"
                 )
-            
+
             # Check specific stream type access
             stream_type = stream_info["type"]
-            
+
             if stream_type == "public":
                 # Public streams - always allowed but with rate limits
                 required_feature = FeatureType.PUBLIC_SIGNALS
                 has_access = True
             elif stream_type == "common":
                 # Common indicators - allowed for all tiers
-                required_feature = FeatureType.COMMON_INDICATORS  
+                required_feature = FeatureType.COMMON_INDICATORS
                 has_access = True
             elif stream_type == "marketplace":
                 # Marketplace signals - require subscription
@@ -354,7 +352,7 @@ class UnifiedEntitlementService:
                     is_allowed=False,
                     reason=f"Unknown stream type: {stream_type}"
                 )
-            
+
             if not has_access:
                 await self._log_access_denied(
                     user_id=user_id,
@@ -368,7 +366,7 @@ class UnifiedEntitlementService:
                     reason=f"No access to {stream_type} streams",
                     user_tier=user_data.get("tier")
                 )
-            
+
             # Check stream abuse protection
             abuse_check = await self._check_stream_abuse_protection(
                 user_id, client_id, stream_key, user_data.get("tier")
@@ -379,7 +377,7 @@ class UnifiedEntitlementService:
                     reason=abuse_check[1],
                     user_tier=user_data.get("tier")
                 )
-            
+
             return EntitlementResult(
                 is_allowed=True,
                 user_tier=user_data.get("tier"),
@@ -388,32 +386,32 @@ class UnifiedEntitlementService:
                 product_id=stream_info.get("product_id"),
                 execution_token=execution_token
             )
-            
+
         except Exception as e:
             logger.error(f"Error checking stream access: {e}")
             return EntitlementResult(
                 is_allowed=False,
                 reason="Stream entitlement service error"
             )
-    
+
     async def check_delivery_access(
         self,
         user_id: str,
         signal_type: str,
-        product_id: Optional[str] = None,
-        subscription_id: Optional[str] = None
+        product_id: str | None = None,
+        subscription_id: str | None = None
     ) -> EntitlementResult:
         """
         Check signal delivery entitlement.
-        
+
         Used by SignalDeliveryService for final access validation before delivery.
-        
+
         Args:
             user_id: User ID
             signal_type: Type of signal being delivered
             product_id: Optional marketplace product ID
             subscription_id: Optional subscription ID
-            
+
         Returns:
             EntitlementResult with delivery decision
         """
@@ -426,7 +424,7 @@ class UnifiedEntitlementService:
                     user_tier="system",
                     reason="System alert - no user entitlement required"
                 )
-            
+
             # Get user entitlements
             user_data = await self._get_user_entitlements(user_id)
             if not user_data:
@@ -434,7 +432,7 @@ class UnifiedEntitlementService:
                     is_allowed=False,
                     reason="Unable to verify user entitlements for delivery"
                 )
-            
+
             # Map signal type to feature
             feature_mapping = {
                 "public": FeatureType.PUBLIC_SIGNALS,
@@ -449,24 +447,24 @@ class UnifiedEntitlementService:
                 "computation_complete": FeatureType.PUBLIC_SIGNALS,  # Computation status notifications
                 "system_alert": FeatureType.PUBLIC_SIGNALS  # System-level alerts
             }
-            
+
             required_feature = feature_mapping.get(signal_type)
             if not required_feature:
                 return EntitlementResult(
                     is_allowed=False,
                     reason=f"Unknown signal type for delivery: {signal_type}"
                 )
-            
+
             # Check feature access
             has_access = await self._check_feature_access(user_id, required_feature, user_data)
-            
+
             # For marketplace signals, also verify specific product access
             if signal_type == "marketplace" and product_id:
                 has_product_access = await self._check_marketplace_product_access(
                     user_id, product_id, user_data
                 )
                 has_access = has_access and has_product_access
-            
+
             if not has_access:
                 await self._log_access_denied(
                     user_id=user_id,
@@ -480,67 +478,66 @@ class UnifiedEntitlementService:
                     reason=f"No delivery access for {signal_type} signals",
                     user_tier=user_data.get("tier")
                 )
-            
+
             return EntitlementResult(
                 is_allowed=True,
                 user_tier=user_data.get("tier"),
                 subscription_id=subscription_id,
                 product_id=product_id
             )
-            
+
         except Exception as e:
             logger.error(f"Error checking delivery access: {e}")
             return EntitlementResult(
                 is_allowed=False,
                 reason="Signal delivery entitlement error"
             )
-    
-    async def _get_user_entitlements(self, user_id: str) -> Optional[Dict[str, Any]]:
+
+    async def _get_user_entitlements(self, user_id: str) -> dict[str, Any] | None:
         """
         Get user entitlements and subscription data from marketplace.
-        
+
         Caches results to avoid repeated API calls.
         """
         cache_key = f"user_entitlements:{user_id}"
-        
+
         # Check cache first
         if cache_key in self._entitlement_cache:
             cached_data, cached_time = self._entitlement_cache[cache_key]
             if time.time() - cached_time < self._cache_ttl:
                 return cached_data
-        
+
         try:
             # Get user subscriptions from marketplace
             response = await self.marketplace_client.get(
                 f"/api/v1/entitlements/user/{user_id}"
             )
-            
+
             if response.status_code == 200:
                 user_data = response.json()
-                
+
                 # Cache the result
                 self._entitlement_cache[cache_key] = (user_data, time.time())
-                
+
                 return user_data
-            else:
-                logger.warning(f"Failed to get user entitlements: {response.status_code}")
-                return None
-                
+            logger.warning(f"Failed to get user entitlements: {response.status_code}")
+            return None
+
         except Exception as e:
             logger.error(f"Error fetching user entitlements: {e}")
             return None
-    
+
     async def _check_feature_access(
-        self, 
-        user_id: str, 
-        feature: FeatureType, 
-        user_data: Dict[str, Any]
+        self,
+        user_id: str,
+        feature: FeatureType,
+        user_data: dict[str, Any]
     ) -> bool:
         """Check if user has access to specific feature."""
         try:
             # Get user's subscription tier
             user_tier = user_data.get("tier", "free")
-            
+
             # Define feature access matrix
             feature_access = {
                 FeatureType.PUBLIC_SIGNALS: ["free", "standard", "premium", "enterprise"],
@@ -550,26 +547,26 @@ class UnifiedEntitlementService:
                 FeatureType.MARKETPLACE_SIGNALS: ["standard", "premium", "enterprise"],
                 FeatureType.PERSONAL_SIGNALS: ["premium", "enterprise"]
             }
-            
+
             allowed_tiers = feature_access.get(feature, [])
-            
+
             return user_tier in allowed_tiers
-            
+
         except Exception as e:
             logger.error(f"Error checking feature access: {e}")
             return False
-    
+
     async def _check_marketplace_access(
         self,
         user_id: str,
-        product_id: Optional[str],
-        execution_token: Optional[str],
-        user_data: Dict[str, Any]
+        product_id: str | None,
+        execution_token: str | None,
+        user_data: dict[str, Any]
     ) -> bool:
         """Check marketplace signal access with token validation."""
         if not product_id:
             return False
-        
+
         try:
             # Verify execution token if provided
             if execution_token:
@@ -582,62 +579,62 @@ class UnifiedEntitlementService:
                         "user_id": user_id
                     }
                 )
-                
+
                 if token_response.status_code == 200:
                     token_data = token_response.json()
                     return token_data.get("is_valid", False)
-            
+
             # Check user subscriptions for product access
             user_subscriptions = user_data.get("subscriptions", [])
             for subscription in user_subscriptions:
-                if (subscription.get("product_id") == product_id and 
+                if (subscription.get("product_id") == product_id and
                     subscription.get("status") == "active"):
                     return True
-            
+
             return False
-            
+
         except Exception as e:
             logger.error(f"Error checking marketplace access: {e}")
             return False
-    
+
     async def _check_marketplace_product_access(
-        self, 
-        user_id: str, 
-        product_id: str, 
-        user_data: Dict[str, Any]
+        self,
+        user_id: str,
+        product_id: str,
+        user_data: dict[str, Any]
     ) -> bool:
         """Check if user has active subscription to specific marketplace product."""
         user_subscriptions = user_data.get("subscriptions", [])
-        
+
         for subscription in user_subscriptions:
-            if (subscription.get("product_id") == product_id and 
+            if (subscription.get("product_id") == product_id and
                 subscription.get("status") == "active"):
                 return True
-        
+
         return False
-    
+
     def _is_protected_route(self, path: str) -> bool:
         """Check if route requires entitlement checking."""
         return any(
-            path.startswith(protected_route) 
+            path.startswith(protected_route)
             for protected_route in self.PROTECTED_FO_ROUTES
         )
-    
+
     def _is_fo_route(self, path: str) -> bool:
         """Check if route is F&O related."""
         return any(
             protected_route in path
             for protected_route in self.PROTECTED_FO_ROUTES
         )
-    
+
     def _requires_premium_analysis(self, path: str) -> bool:
         """Check if route requires premium analysis entitlement."""
         return any(
             premium_route in path
             for premium_route in self.PREMIUM_ANALYSIS_ROUTES
         )
-    
-    def _parse_stream_key(self, stream_key: str) -> Optional[Dict[str, Any]]:
+
+    def _parse_stream_key(self, stream_key: str) -> dict[str, Any] | None:
         """Parse stream key to extract type and metadata."""
         try:
             # Handle different stream key formats:
@@ -645,62 +642,62 @@ class UnifiedEntitlementService:
             # common:SYMBOL:sma
             # marketplace:PRODUCT_ID:SYMBOL:SIGNAL
             # personal:USER_ID:SIGNAL_ID:SYMBOL
-            
+
             parts = stream_key.split(":")
-            
+
             if len(parts) >= 3:
                 stream_type = parts[0]
-                
+
                 if stream_type == "public":
                     return {
                         "type": "public",
                         "instrument": parts[1],
                         "indicator": parts[2]
                     }
-                elif stream_type == "common":
+                if stream_type == "common":
                     return {
                         "type": "common",
-                        "instrument": parts[1], 
+                        "instrument": parts[1],
                         "indicator": parts[2]
                     }
-                elif stream_type == "marketplace" and len(parts) >= 4:
+                if stream_type == "marketplace" and len(parts) >= 4:
                     return {
                         "type": "marketplace",
                         "product_id": parts[1],
                         "instrument": parts[2],
                         "signal": parts[3]
                     }
-                elif stream_type == "personal" and len(parts) >= 4:
+                if stream_type == "personal" and len(parts) >= 4:
                     return {
                         "type": "personal",
                         "user_id": parts[1],
                         "signal_id": parts[2],
                         "instrument": parts[3]
                     }
-            
+
             return None
-            
+
         except Exception as e:
             logger.error(f"Error parsing stream key: {e}")
             return None
-    
-    def _get_tier_limits(self, tier: Optional[str]) -> AccessLimits:
+
+    def _get_tier_limits(self, tier: str | None) -> AccessLimits:
         """Get access limits for user tier."""
         try:
             tier_enum = EntitlementTier(tier) if tier else EntitlementTier.FREE
             return self.DEFAULT_LIMITS[tier_enum]
         except (ValueError, KeyError):
             return self.DEFAULT_LIMITS[EntitlementTier.FREE]
-    
-    async def _check_api_rate_limit(self, user_id: str, tier: Optional[str]) -> Tuple[bool, Optional[str]]:
+
+    async def _check_api_rate_limit(self, user_id: str, tier: str | None) -> tuple[bool, str | None]:
         """Check API rate limiting."""
         try:
             limits = self._get_tier_limits(tier)
-            
+
             # Check API request rate
             rate_key = f"{self.rate_limit_key_prefix}api:{user_id}"
             current_requests = await self.redis_client.get(rate_key)
-            
+
             if current_requests:
                 current_count = int(current_requests)
                 if current_count >= limits.max_api_requests_per_minute:
@@ -716,41 +713,41 @@ class UnifiedEntitlementService:
                         }
                     )
                     return False, "API rate limit exceeded"
-                
+
                 # Increment counter
                 await self.redis_client.incr(rate_key)
             else:
                 # First request in window
                 await self.redis_client.setex(rate_key, self.rate_limit_window, 1)
-            
+
             return True, None
-            
+
         except Exception as e:
             logger.error(f"Error checking API rate limit: {e}")
             return True, None  # Be permissive on error
-    
+
     async def _check_stream_abuse_protection(
-        self, 
-        user_id: str, 
-        client_id: str, 
-        stream_key: str, 
-        tier: Optional[str]
-    ) -> Tuple[bool, Optional[str]]:
+        self,
+        user_id: str,
+        client_id: str,
+        stream_key: str,
+        tier: str | None
+    ) -> tuple[bool, str | None]:
         """Check stream abuse protection (consolidated from StreamAbuseProtectionService)."""
         try:
             limits = self._get_tier_limits(tier)
-            
+
             # Check connection count
             connection_key = f"{self.connection_key_prefix}{user_id}"
             connection_count = await self.redis_client.scard(connection_key)
-            
+
             if connection_count >= limits.max_concurrent_connections:
                 return False, f"Maximum concurrent connections exceeded ({connection_count}/{limits.max_concurrent_connections})"
-            
+
             # Check rapid subscription rate
             rapid_key = f"{self.rate_limit_key_prefix}rapid_sub:{user_id}"
             rapid_count = await self.redis_client.get(rapid_key)
-            
+
             if rapid_count:
                 rapid_int = int(rapid_count)
                 if rapid_int >= limits.rapid_subscription_threshold:
@@ -766,25 +763,25 @@ class UnifiedEntitlementService:
                         }
                     )
                     return False, "Rapid subscription threshold exceeded"
-                
+
                 await self.redis_client.incr(rapid_key)
             else:
                 await self.redis_client.setex(rapid_key, self.rapid_subscription_window, 1)
-            
+
             # Record connection
             await self.redis_client.sadd(connection_key, client_id)
             await self.redis_client.expire(connection_key, 3600)  # 1 hour expiry
-            
+
             return True, None
-            
+
         except Exception as e:
             logger.error(f"Error checking stream abuse protection: {e}")
             return True, None
-    
+
     async def _log_access_denied(
         self,
         user_id: str,
-        client_id: Optional[str],
+        client_id: str | None,
         access_type: AccessType,
         feature: str,
         **kwargs
@@ -801,14 +798,14 @@ class UnifiedEntitlementService:
                 **kwargs
             }
         )
-    
+
     async def _log_abuse_event(
         self,
         user_id: str,
         client_id: str,
         event_type: str,
         severity: str,
-        details: Dict[str, Any]
+        details: dict[str, Any]
     ):
         """Log abuse/security events for monitoring."""
         try:
@@ -818,22 +815,22 @@ class UnifiedEntitlementService:
                 client_id=client_id,
                 event_type=event_type,
                 severity=severity,
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 details=details,
                 action_taken="access_denied"
             )
-            
+
             # Log to structured audit logger
             audit_logger = logging.getLogger("audit.entitlement")
             audit_logger.warning(json.dumps(asdict(event)))
-            
+
             # Store in Redis for monitoring
             await self.redis_client.lpush(self.abuse_log_key, json.dumps(asdict(event)))
             await self.redis_client.ltrim(self.abuse_log_key, 0, 1000)
-            
+
         except Exception as e:
             logger.error(f"Error logging abuse event: {e}")
-    
+
     async def cleanup_connection(self, user_id: str, client_id: str):
         """Clean up connection tracking."""
         try:
@@ -841,19 +838,19 @@ class UnifiedEntitlementService:
             await self.redis_client.srem(connection_key, client_id)
         except Exception as e:
             logger.error(f"Error cleaning up connection: {e}")
-    
-    async def get_entitlement_stats(self) -> Dict[str, Any]:
+
+    async def get_entitlement_stats(self) -> dict[str, Any]:
         """Get entitlement service statistics."""
         try:
             stats = {
                 "cache_entries": len(self._entitlement_cache),
                 "limits_cache_entries": len(self._limits_cache)
             }
-            
+
             # Get abuse events count
             abuse_count = await self.redis_client.llen(self.abuse_log_key)
             stats["recent_abuse_events"] = abuse_count
-            
+
             # Get active connections count
             connection_keys = await self.redis_client.keys(f"{self.connection_key_prefix}*")
             total_connections = 0
@@ -861,9 +858,9 @@ class UnifiedEntitlementService:
                 count = await self.redis_client.scard(key)
                 total_connections += count
             stats["total_active_connections"] = total_connections
-            
+
             return stats
-            
+
         except Exception as e:
             logger.error(f"Error getting entitlement stats: {e}")
             return {}

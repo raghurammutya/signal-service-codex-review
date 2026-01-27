@@ -2,30 +2,30 @@
 """
 Day-0/1 Monitoring Dashboards Setup
 
-Sets up comprehensive monitoring dashboards for config service, DB/Redis pools, 
+Sets up comprehensive monitoring dashboards for config service, DB/Redis pools,
 circuit breakers, backpressure events, error rate/latency SLOs, and metrics scrape health.
 """
 import json
 import os
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 class Day01MonitoringSetup:
     """Day-0/1 monitoring dashboards and alerting setup."""
-    
+
     def __init__(self):
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.monitoring_dir = "monitoring"
         os.makedirs(self.monitoring_dir, exist_ok=True)
-        
+
         self.dashboards = {}
         self.alert_rules = {}
-    
-    def create_config_service_dashboard(self) -> Dict[str, Any]:
+
+    def create_config_service_dashboard(self) -> dict[str, Any]:
         """Create config service monitoring dashboard."""
         print("⚙️ Creating Config Service Dashboard...")
-        
+
         dashboard = {
             "dashboard": {
                 "id": None,
@@ -77,7 +77,7 @@ class Day01MonitoringSetup:
                             },
                             {
                                 "expr": "histogram_quantile(0.50, rate(config_service_fetch_duration_seconds_bucket[5m]))",
-                                "legendFormat": "P50 Latency", 
+                                "legendFormat": "P50 Latency",
                                 "refId": "B"
                             }
                         ],
@@ -185,20 +185,20 @@ class Day01MonitoringSetup:
                 ]
             }
         }
-        
+
         dashboard_file = os.path.join(self.monitoring_dir, "config_service_dashboard.json")
         with open(dashboard_file, 'w') as f:
             json.dump(dashboard, f, indent=2)
-        
+
         print(f"    ✅ Dashboard created: {dashboard_file}")
         print(f"    📊 Panels: {len(dashboard['dashboard']['panels'])}")
-        
+
         return dashboard
-    
-    def create_database_pools_dashboard(self) -> Dict[str, Any]:
+
+    def create_database_pools_dashboard(self) -> dict[str, Any]:
         """Create database and Redis pools monitoring dashboard."""
         print("🗄️ Creating Database & Redis Pools Dashboard...")
-        
+
         dashboard = {
             "dashboard": {
                 "id": None,
@@ -413,20 +413,20 @@ class Day01MonitoringSetup:
                 ]
             }
         }
-        
+
         dashboard_file = os.path.join(self.monitoring_dir, "database_redis_pools_dashboard.json")
         with open(dashboard_file, 'w') as f:
             json.dump(dashboard, f, indent=2)
-        
+
         print(f"    ✅ Dashboard created: {dashboard_file}")
         print(f"    📊 Panels: {len(dashboard['dashboard']['panels'])}")
-        
+
         return dashboard
-    
-    def create_circuit_breaker_dashboard(self) -> Dict[str, Any]:
+
+    def create_circuit_breaker_dashboard(self) -> dict[str, Any]:
         """Create circuit breaker monitoring dashboard."""
         print("🔌 Creating Circuit Breaker Dashboard...")
-        
+
         dashboard = {
             "dashboard": {
                 "id": None,
@@ -472,13 +472,13 @@ class Day01MonitoringSetup:
                                         "text": "CLOSED"
                                     },
                                     {
-                                        "type": "value", 
+                                        "type": "value",
                                         "value": "1",
                                         "text": "HALF-OPEN"
                                     },
                                     {
                                         "type": "value",
-                                        "value": "2", 
+                                        "value": "2",
                                         "text": "OPEN"
                                     }
                                 ],
@@ -596,20 +596,20 @@ class Day01MonitoringSetup:
                 ]
             }
         }
-        
+
         dashboard_file = os.path.join(self.monitoring_dir, "circuit_breaker_dashboard.json")
         with open(dashboard_file, 'w') as f:
             json.dump(dashboard, f, indent=2)
-        
+
         print(f"    ✅ Dashboard created: {dashboard_file}")
         print(f"    📊 Panels: {len(dashboard['dashboard']['panels'])}")
-        
+
         return dashboard
-    
-    def create_slo_performance_dashboard(self) -> Dict[str, Any]:
+
+    def create_slo_performance_dashboard(self) -> dict[str, Any]:
         """Create SLO and performance monitoring dashboard."""
         print("⚡ Creating SLO & Performance Dashboard...")
-        
+
         dashboard = {
             "dashboard": {
                 "id": None,
@@ -657,7 +657,7 @@ class Day01MonitoringSetup:
                     {
                         "id": 2,
                         "title": "Error Rate SLO",
-                        "type": "graph", 
+                        "type": "graph",
                         "targets": [
                             {
                                 "expr": "rate(http_requests_total{status=~\"4..|5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
@@ -797,20 +797,20 @@ class Day01MonitoringSetup:
                 ]
             }
         }
-        
+
         dashboard_file = os.path.join(self.monitoring_dir, "slo_performance_dashboard.json")
         with open(dashboard_file, 'w') as f:
             json.dump(dashboard, f, indent=2)
-        
+
         print(f"    ✅ Dashboard created: {dashboard_file}")
         print(f"    📊 Panels: {len(dashboard['dashboard']['panels'])}")
-        
+
         return dashboard
-    
+
     def create_grafana_import_script(self) -> str:
         """Create script to import all dashboards into Grafana."""
         print("📊 Creating Grafana Import Script...")
-        
+
         import_script = '''#!/bin/bash
 """
 Grafana Dashboard Import Script
@@ -833,7 +833,7 @@ curl -X POST \\
   -d @$MONITORING_DIR/config_service_dashboard.json \\
   $GRAFANA_URL/api/dashboards/db
 
-# Import Database & Redis Pools Dashboard  
+# Import Database & Redis Pools Dashboard
 echo "🗄️ Importing Database & Redis Pools Dashboard..."
 curl -X POST \\
   -H "Authorization: Bearer $GRAFANA_API_KEY" \\
@@ -860,39 +860,39 @@ curl -X POST \\
 echo "✅ All dashboards imported successfully!"
 echo "🌐 Access dashboards at: $GRAFANA_URL"
 '''
-        
+
         script_path = os.path.join(self.monitoring_dir, "import_dashboards.sh")
         with open(script_path, 'w') as f:
             f.write(import_script)
-        
+
         os.chmod(script_path, 0o755)
-        
+
         print(f"    🔧 Import script: {script_path}")
-        
+
         return script_path
-    
-    def run_day01_monitoring_setup(self) -> Dict[str, Any]:
+
+    def run_day01_monitoring_setup(self) -> dict[str, Any]:
         """Execute complete day-0/1 monitoring setup."""
         print("📊 Day-0/1 Monitoring Setup")
         print("=" * 60)
-        
+
         # Create all dashboards
         self.dashboards["config_service"] = self.create_config_service_dashboard()
         print()
-        
+
         self.dashboards["database_redis"] = self.create_database_pools_dashboard()
         print()
-        
+
         self.dashboards["circuit_breaker"] = self.create_circuit_breaker_dashboard()
         print()
-        
+
         self.dashboards["slo_performance"] = self.create_slo_performance_dashboard()
         print()
-        
+
         # Create import script
         import_script = self.create_grafana_import_script()
         print()
-        
+
         # Create monitoring summary
         summary = {
             "setup_timestamp": datetime.now().isoformat(),
@@ -906,18 +906,18 @@ echo "🌐 Access dashboards at: $GRAFANA_URL"
                 "slo_performance": "Request latency SLOs, error rates, throughput, backpressure"
             }
         }
-        
+
         summary_file = os.path.join(self.monitoring_dir, f"monitoring_setup_summary_{self.timestamp}.json")
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2)
-        
+
         print("=" * 60)
         print("🎯 Day-0/1 Monitoring Setup Complete")
         print(f"📊 Dashboards: {len(self.dashboards)} created")
         print(f"📁 Directory: {self.monitoring_dir}")
         print(f"🔧 Import script: {import_script}")
         print(f"📄 Summary: {summary_file}")
-        
+
         return summary
 
 
@@ -926,17 +926,17 @@ def main():
     try:
         setup = Day01MonitoringSetup()
         results = setup.run_day01_monitoring_setup()
-        
-        print(f"\\n🎉 DAY-0/1 MONITORING SETUP COMPLETE")
+
+        print("\\n🎉 DAY-0/1 MONITORING SETUP COMPLETE")
         print(f"📊 {results['dashboards_created']} dashboards created")
         print(f"📁 All files in: {results['monitoring_directory']}")
-        print(f"\\n🚀 Next steps:")
-        print(f"   1. Set GRAFANA_URL and GRAFANA_API_KEY environment variables")
+        print("\\n🚀 Next steps:")
+        print("   1. Set GRAFANA_URL and GRAFANA_API_KEY environment variables")
         print(f"   2. Run: ./{results['import_script']}")
-        print(f"   3. Access dashboards in Grafana")
-        
+        print("   3. Access dashboards in Grafana")
+
         return 0
-        
+
     except Exception as e:
         print(f"💥 Day-0/1 monitoring setup failed: {e}")
         return 1

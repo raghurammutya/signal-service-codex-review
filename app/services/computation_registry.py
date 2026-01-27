@@ -2,11 +2,12 @@
 Dynamic Computation Registry
 Manages registration and discovery of computation capabilities
 """
-from typing import Dict, List, Optional, Callable, Any, Set
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
-from app.utils.logging_utils import log_info, log_error
+from app.utils.logging_utils import log_error, log_info
 
 
 @dataclass
@@ -14,11 +15,11 @@ class ComputationMetadata:
     """Metadata for a registered computation"""
     name: str
     description: str
-    asset_types: Set[str]
-    parameters: Dict[str, Any]
-    returns: Dict[str, Any]
-    examples: List[Dict[str, Any]]
-    tags: List[str]
+    asset_types: set[str]
+    parameters: dict[str, Any]
+    returns: dict[str, Any]
+    examples: list[dict[str, Any]]
+    tags: list[str]
     version: str
     created_at: datetime
     last_updated: datetime
@@ -29,29 +30,29 @@ class ComputationRegistry:
     Central registry for all available computations
     Enables dynamic discovery and validation of computation capabilities
     """
-    
+
     def __init__(self):
-        self._computations: Dict[str, ComputationMetadata] = {}
-        self._handlers: Dict[str, Callable] = {}
-        self._asset_computations: Dict[str, Set[str]] = {}
-        self._tag_index: Dict[str, Set[str]] = {}
+        self._computations: dict[str, ComputationMetadata] = {}
+        self._handlers: dict[str, Callable] = {}
+        self._asset_computations: dict[str, set[str]] = {}
+        self._tag_index: dict[str, set[str]] = {}
         self._initialize_builtin_computations()
-    
+
     def register(
         self,
         name: str,
         handler: Callable,
         description: str,
-        asset_types: List[str],
-        parameters: Dict[str, Any],
-        returns: Dict[str, Any],
-        examples: Optional[List[Dict[str, Any]]] = None,
-        tags: Optional[List[str]] = None,
+        asset_types: list[str],
+        parameters: dict[str, Any],
+        returns: dict[str, Any],
+        examples: list[dict[str, Any]] | None = None,
+        tags: list[str] | None = None,
         version: str = "1.0.0"
     ):
         """
         Register a new computation
-        
+
         Args:
             name: Unique computation name
             handler: Function to handle the computation
@@ -66,7 +67,7 @@ class ComputationRegistry:
         if name in self._computations:
             log_error(f"Computation '{name}' already registered")
             raise ValueError(f"Computation '{name}' already registered")
-        
+
         # Create metadata
         metadata = ComputationMetadata(
             name=name,
@@ -80,123 +81,123 @@ class ComputationRegistry:
             created_at=datetime.utcnow(),
             last_updated=datetime.utcnow()
         )
-        
+
         # Store computation
         self._computations[name] = metadata
         self._handlers[name] = handler
-        
+
         # Update indices
         for asset_type in asset_types:
             if asset_type not in self._asset_computations:
                 self._asset_computations[asset_type] = set()
             self._asset_computations[asset_type].add(name)
-        
+
         for tag in (tags or []):
             if tag not in self._tag_index:
                 self._tag_index[tag] = set()
             self._tag_index[tag].add(name)
-        
+
         log_info(f"Registered computation: {name} for assets: {asset_types}")
-    
-    def get_computation(self, name: str) -> Optional[ComputationMetadata]:
+
+    def get_computation(self, name: str) -> ComputationMetadata | None:
         """Get computation metadata by name"""
         return self._computations.get(name)
-    
-    def get_handler(self, name: str) -> Optional[Callable]:
+
+    def get_handler(self, name: str) -> Callable | None:
         """Get computation handler by name"""
         return self._handlers.get(name)
-    
+
     def list_computations(
         self,
-        asset_type: Optional[str] = None,
-        tags: Optional[List[str]] = None
-    ) -> List[ComputationMetadata]:
+        asset_type: str | None = None,
+        tags: list[str] | None = None
+    ) -> list[ComputationMetadata]:
         """
         List available computations with optional filtering
-        
+
         Args:
             asset_type: Filter by asset type
             tags: Filter by tags
-            
+
         Returns:
             List of computation metadata
         """
         computations = set(self._computations.keys())
-        
+
         # Filter by asset type
         if asset_type:
             asset_computations = self._asset_computations.get(asset_type, set())
             computations &= asset_computations
-        
+
         # Filter by tags
         if tags:
             tag_computations = set()
             for tag in tags:
                 tag_computations |= self._tag_index.get(tag, set())
             computations &= tag_computations
-        
+
         return [self._computations[name] for name in computations]
-    
+
     def validate_parameters(
         self,
         computation_name: str,
-        parameters: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        parameters: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Validate parameters for a computation
-        
+
         Args:
             computation_name: Name of computation
             parameters: Parameters to validate
-            
+
         Returns:
             Validated parameters with defaults applied
         """
         metadata = self.get_computation(computation_name)
         if not metadata:
             raise ValueError(f"Unknown computation: {computation_name}")
-        
+
         validated = {}
         param_schema = metadata.parameters
-        
+
         for param_name, param_def in param_schema.items():
             if param_def.get("required", False) and param_name not in parameters:
                 raise ValueError(f"Required parameter '{param_name}' missing for {computation_name}")
-            
+
             if param_name in parameters:
                 # Validate type
                 expected_type = param_def.get("type")
                 value = parameters[param_name]
-                
+
                 if expected_type and not self._check_type(value, expected_type):
                     raise TypeError(
                         f"Parameter '{param_name}' expected type {expected_type}, "
                         f"got {type(value).__name__}"
                     )
-                
+
                 # Validate constraints
                 if "min" in param_def and value < param_def["min"]:
                     raise ValueError(
                         f"Parameter '{param_name}' value {value} below minimum {param_def['min']}"
                     )
-                
+
                 if "max" in param_def and value > param_def["max"]:
                     raise ValueError(
                         f"Parameter '{param_name}' value {value} above maximum {param_def['max']}"
                     )
-                
+
                 if "enum" in param_def and value not in param_def["enum"]:
                     raise ValueError(
                         f"Parameter '{param_name}' value {value} not in allowed values: {param_def['enum']}"
                     )
-                
+
                 validated[param_name] = value
-            
+
             elif "default" in param_def:
                 validated[param_name] = param_def["default"]
-        
+
         return validated
-    
+
     def _check_type(self, value: Any, expected_type: str) -> bool:
         """Check if value matches expected type"""
         type_map = {
@@ -207,13 +208,13 @@ class ComputationRegistry:
             "list": list,
             "dict": dict
         }
-        
+
         expected = type_map.get(expected_type)
         if expected:
             return isinstance(value, expected)
-        
+
         return True  # Unknown type, allow
-    
+
     def _initialize_builtin_computations(self):
         """Initialize built-in computations"""
         # Technical Indicators
@@ -244,7 +245,7 @@ class ComputationRegistry:
             ],
             tags=["indicator", "trend", "overlay"]
         )
-        
+
         self.register(
             name="rsi",
             handler=None,
@@ -266,7 +267,7 @@ class ComputationRegistry:
             },
             tags=["indicator", "momentum", "oscillator"]
         )
-        
+
         # Options Greeks
         self.register(
             name="greeks",
@@ -299,7 +300,7 @@ class ComputationRegistry:
             },
             tags=["greeks", "options", "risk"]
         )
-        
+
         # Moneyness
         self.register(
             name="moneyness",
@@ -322,7 +323,7 @@ class ComputationRegistry:
             },
             tags=["moneyness", "options", "futures"]
         )
-        
+
         # Volatility
         self.register(
             name="volatility",
@@ -359,7 +360,7 @@ class ComputationRegistry:
             },
             tags=["volatility", "risk", "statistics"]
         )
-        
+
         # Risk Metrics
         self.register(
             name="risk_metrics",
@@ -395,7 +396,7 @@ class ComputationRegistry:
             },
             tags=["risk", "portfolio", "statistics"]
         )
-        
+
         # Custom Formula
         self.register(
             name="custom",
@@ -430,15 +431,15 @@ class ComputationRegistry:
             ],
             tags=["custom", "formula", "flexible"]
         )
-        
+
         log_info(f"Initialized {len(self._computations)} built-in computations")
-    
-    def get_computation_info(self) -> Dict[str, Any]:
+
+    def get_computation_info(self) -> dict[str, Any]:
         """Get comprehensive information about all registered computations"""
         return {
             "total_computations": len(self._computations),
             "asset_coverage": {
-                asset: len(comps) 
+                asset: len(comps)
                 for asset, comps in self._asset_computations.items()
             },
             "tags": list(self._tag_index.keys()),

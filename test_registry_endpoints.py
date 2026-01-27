@@ -4,21 +4,20 @@ Quick test of indicator registry endpoints to verify 277 indicators without tick
 """
 
 import asyncio
+
 import httpx
-import json
-from datetime import datetime
 
 
 async def test_endpoints():
     """Test the specific endpoints that can show indicator registry status"""
-    
+
     base_url = "http://localhost:8003"
-    
+
     print("🔍 Testing Signal Service Indicator Registry Endpoints")
     print("=" * 60)
-    
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        
+
         # 1. Test service health
         print("1. Testing service health...")
         try:
@@ -31,7 +30,7 @@ async def test_endpoints():
         except Exception as e:
             print(f"   ❌ Service not accessible: {e}")
             return
-        
+
         # 2. Test available pandas_ta indicators
         print("\n2. Testing available pandas_ta indicators endpoint...")
         try:
@@ -48,7 +47,7 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-        
+
         # 3. Test universal computations
         print("\n3. Testing universal computations endpoint...")
         try:
@@ -64,8 +63,8 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-        
-        # 4. Test universal health endpoint for registry info  
+
+        # 4. Test universal health endpoint for registry info
         print("\n4. Testing universal computation engine health...")
         try:
             response = await client.get(f"{base_url}/api/v2/universal/health")
@@ -73,7 +72,7 @@ async def test_endpoints():
                 data = response.json()
                 if data.get("status") == "healthy":
                     capabilities = data.get("capabilities", {})
-                    print(f"   ✅ Universal engine is healthy")
+                    print("   ✅ Universal engine is healthy")
                     print(f"   📋 Total computations: {capabilities.get('total_computations')}")
                     print(f"   📋 Asset coverage: {capabilities.get('asset_coverage')}")
                     print(f"   📋 Supported assets: {capabilities.get('supported_assets', [])}")
@@ -83,7 +82,7 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-        
+
         # 5. Test cache stats
         print("\n5. Testing indicator cache statistics...")
         try:
@@ -99,7 +98,7 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-        
+
         # 6. Test worker affinity status
         print("\n6. Testing worker affinity status...")
         try:
@@ -115,7 +114,7 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-        
+
         # 7. Test validation endpoint (without execution)
         print("\n7. Testing computation validation (no execution)...")
         try:
@@ -142,7 +141,7 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-        
+
         # 8. Test examples endpoint
         print("\n8. Testing computation examples...")
         try:
@@ -157,12 +156,12 @@ async def test_endpoints():
                 print(f"   ❌ HTTP error: {response.status_code}")
         except Exception as e:
             print(f"   ❌ Error: {e}")
-    
+
     print("\n" + "=" * 60)
     print("🎯 SUMMARY:")
     print("These endpoints can verify indicator registry status WITHOUT requiring ticker service:")
     print("  • /api/v2/indicators/available-indicators - Shows pandas_ta indicators")
-    print("  • /api/v2/universal/computations - Shows all registered computations")  
+    print("  • /api/v2/universal/computations - Shows all registered computations")
     print("  • /api/v2/universal/health - Shows registry health and counts")
     print("  • /api/v2/universal/validate - Validates computations without execution")
     print("  • /api/v2/universal/examples/{asset_type} - Shows example requests")

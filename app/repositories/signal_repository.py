@@ -5,26 +5,20 @@ Handles all database interactions for signal data
 Updated for consolidation: Historical data queries now route through ticker_service
 for consistent data sourcing. Only current/live signal data is stored locally.
 """
-import asyncio
-from typing import List, Dict, Optional, Any, Tuple
-from datetime import datetime, timedelta
 import json
-from decimal import Decimal
-
 import logging
+from datetime import datetime, timedelta
+from typing import Any
+
 logger = logging.getLogger(__name__)
-from common.storage.database import get_timescaledb_session
 from app.services.historical_data_manager import get_historical_data_manager
+from common.storage.database import get_timescaledb_session
+
 # from app.models.signal_models import SignalGreeks, SignalIndicators
-<<<<<<< HEAD
-# Signal models would be imported here when signal schema is finalized
-=======
->>>>>>> compliance-violations-fixed
 
 
 class DatabaseError(Exception):
     """Custom exception for database operation failures"""
-    pass
 
 
 class DatabaseConnectionWrapper:
@@ -32,7 +26,7 @@ class DatabaseConnectionWrapper:
     Compatibility wrapper to adapt SQLAlchemy sessions to asyncpg-style API
     This allows existing repository code to work without major refactoring
     """
-    
+
     def acquire(self):
         """Return a context manager for database operations"""
         return DatabaseSessionContext()
@@ -40,103 +34,106 @@ class DatabaseConnectionWrapper:
 
 class DatabaseSessionContext:
     """Context manager that provides asyncpg-like interface over SQLAlchemy"""
-    
+
     def __init__(self):
         self.session = None
-    
+
     async def __aenter__(self):
-        from common.storage.database import get_timescaledb_session
         self.session_cm = get_timescaledb_session()
         self.session = await self.session_cm.__aenter__()
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session_cm:
             return await self.session_cm.__aexit__(exc_type, exc_val, exc_tb)
-    
+
     async def fetchrow(self, query, *params):
         """Execute query and return single row (asyncpg compatibility)"""
-        from sqlalchemy import text
         import re
+
+        from sqlalchemy import text
         # Convert positional params to named params for SQLAlchemy
         param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-        
+
         # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
         # Use regex to properly handle multi-digit parameters
         def replace_param(match):
             param_num = int(match.group(1)) - 1  # Convert to 0-based index
             return f':param_{param_num}'
-        
+
         converted_query = re.sub(r'\$(\d+)', replace_param, query)
-        
+
         result = await self.session.execute(text(converted_query), param_dict)
-        
+
         # Fetch the row first (especially important for RETURNING clauses)
         row = result.fetchone()
-        
+
         # Commit after fetching to avoid ResourceClosedError
         query_upper = query.strip().upper()
         if query_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
             await self.session.commit()
-        
+
         return dict(row._mapping) if row else None
-    
+
     async def fetch(self, query, *params):
         """Execute query and return all rows (asyncpg compatibility)"""
-        from sqlalchemy import text
         import re
-        # Convert positional params to named params  
+
+        from sqlalchemy import text
+        # Convert positional params to named params
         param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-        
+
         # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
         def replace_param(match):
             param_num = int(match.group(1)) - 1  # Convert to 0-based index
             return f':param_{param_num}'
-        
+
         converted_query = re.sub(r'\$(\d+)', replace_param, query)
-            
+
         result = await self.session.execute(text(converted_query), param_dict)
-        
+
         # Fetch all rows first (especially important for RETURNING clauses)
         rows = [dict(row._mapping) for row in result]
-        
+
         # Commit after fetching to avoid ResourceClosedError
         query_upper = query.strip().upper()
         if query_upper.startswith(('INSERT', 'UPDATE', 'DELETE')):
             await self.session.commit()
-            
+
         return rows
-    
+
     async def execute(self, query, *params):
         """Execute query (asyncpg compatibility)"""
-        from sqlalchemy import text
         import re
+
+        from sqlalchemy import text
         # Convert positional params to named params
         param_dict = {f'param_{i}': p for i, p in enumerate(params)}
-        
+
         # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
         def replace_param(match):
             param_num = int(match.group(1)) - 1  # Convert to 0-based index
             return f':param_{param_num}'
-        
+
         converted_query = re.sub(r'\$(\d+)', replace_param, query)
-            
+
         result = await self.session.execute(text(converted_query), param_dict)
         await self.session.commit()
         return result.rowcount
-    
+
     async def executemany(self, query, param_list):
         """Execute query with multiple parameter sets (asyncpg compatibility)"""
-        from sqlalchemy import text
         import re
-        
+
+        from sqlalchemy import text
+
         # Convert $1, $2, $10, etc. style to :param_0, :param_1, :param_9 etc.
         def replace_param(match):
             param_num = int(match.group(1)) - 1  # Convert to 0-based index
             return f':param_{param_num}'
-        
+
         converted_query = re.sub(r'\$(\d+)', replace_param, query)
-        
+
         for params in param_list:
             # Convert positional params to named params
             param_dict = {f'param_{i}': p for i, p in enumerate(params)}
@@ -149,11 +146,11 @@ class SignalRepository:
     Repository for signal data persistence and retrieval
     Uses TimescaleDB for time-series optimization
     """
-    
+
     def __init__(self):
         self.db_connection = None
         self._initialized = False
-        
+
     async def initialize(self):
         """Initialize database connection"""
         if not self._initialized:
@@ -161,31 +158,30 @@ class SignalRepository:
             self.db_connection = DatabaseConnectionWrapper()
             self._initialized = True
             logger.info("SignalRepository initialized")
-            
+
     async def ensure_initialized(self):
         """Ensure repository is initialized"""
         if not self._initialized:
             await self.initialize()
-    
+
     def _get_session(self):
         """Get database session context manager"""
-        from common.storage.database import get_timescaledb_session
         return get_timescaledb_session()
-            
+
     # Greeks Operations
-    
+
     async def save_greeks(self, greeks: Any) -> int:  # SignalGreeks model not yet available
         """
         Save Greeks calculation to database
-        
+
         Args:
             greeks: SignalGreeks model instance
-            
+
         Returns:
             Record ID
         """
         await self.ensure_initialized()
-        
+
         try:
             # Use compatibility wrapper for asyncpg-style API
             async with self.db_connection.acquire() as conn:
@@ -198,32 +194,32 @@ class SignalRepository:
                         created_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     RETURNING id
-                """, 
+                """,
                 greeks.signal_id, greeks.instrument_key, greeks.timestamp,
                 greeks.delta, greeks.gamma, greeks.theta, greeks.vega, greeks.rho,
                 greeks.implied_volatility, greeks.theoretical_value,
                 greeks.underlying_price, greeks.strike_price, greeks.time_to_expiry,
                 datetime.utcnow()
                 )
-                
+
                 return result['id'] if result else None
-                
+
         except Exception as e:
             logger.exception(f"Error saving Greeks: {e}")
             raise
-            
-    async def get_latest_greeks(self, instrument_key: str) -> Optional[Dict[str, Any]]:
+
+    async def get_latest_greeks(self, instrument_key: str) -> dict[str, Any] | None:
         """
         Get latest Greeks for an instrument
-        
+
         Args:
             instrument_key: Instrument identifier
-            
+
         Returns:
             Latest Greeks data or None
         """
         await self.ensure_initialized()
-        
+
         try:
             async with self.db_connection.acquire() as conn:
                 result = await conn.fetchrow(
@@ -250,29 +246,29 @@ class SignalRepository:
                     """,
                     instrument_key,
                 )
-                
+
                 return dict(result) if result else None
-                
+
         except Exception as e:
             logger.exception(f"Error getting latest Greeks: {e}")
             raise DatabaseError(f"Failed to fetch latest Greeks for {instrument_key}: {e}") from e
-            
+
     async def get_historical_greeks(
         self,
         instrument_key: str,
         start_time: datetime,
         end_time: datetime,
         interval_minutes: int = 1
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get historical Greeks data - routes through ticker_service (CONSOLIDATED)
-        
+
         Args:
             instrument_key: Instrument identifier
             start_time: Start of time range
             end_time: End of time range
             interval_minutes: Aggregation interval in minutes
-            
+
         Returns:
             List of Greeks data points from ticker_service
         """
@@ -282,21 +278,21 @@ class SignalRepository:
             if not historical_manager:
                 logger.error("Historical data manager not available for Greeks data")
                 return []
-            
+
             # Calculate timeframe from interval
             timeframe_map = {
                 1: "1minute",
-                5: "5minute", 
+                5: "5minute",
                 15: "15minute",
                 30: "30minute",
                 60: "1hour"
             }
             timeframe = timeframe_map.get(interval_minutes, "5minute")
-            
+
             # Calculate periods needed
             time_diff = end_time - start_time
             periods_needed = max(int(time_diff.total_seconds() / (interval_minutes * 60)), 1)
-            
+
             # Request from ticker_service
             result = await historical_manager.get_historical_data_for_indicator(
                 symbol=instrument_key,
@@ -304,7 +300,7 @@ class SignalRepository:
                 periods_required=periods_needed,
                 indicator_name="greeks"
             )
-            
+
             if result.get("success") and result.get("data"):
                 # Transform ticker_service data to expected format
                 historical_data = []
@@ -327,32 +323,32 @@ class SignalRepository:
                         "time_to_expiry": data_point.get("time_to_expiry", 0.0),
                         "source": "ticker_service"
                     })
-                
+
                 # Filter to exact time range
                 filtered_data = [
-                    item for item in historical_data 
+                    item for item in historical_data
                     if start_time <= item["timestamp"] <= end_time
                 ]
-                
+
                 logger.info(f"Retrieved {len(filtered_data)} historical Greeks from ticker_service")
                 return filtered_data
-            
+
             # STRICT COMPLIANCE: No TimescaleDB fallback - ticker_service is the only source
             logger.error(f"ticker_service unavailable for {instrument_key}, no historical data available")
             return []
-            
+
         except Exception as e:
             logger.error(f"Error getting historical Greeks from ticker_service: {e}")
             # STRICT COMPLIANCE: Fail without TimescaleDB fallback
             return []
-    
-            
+
+
     # Indicators Operations
-    
+
     async def save_indicator(self, indicator: Any) -> int:  # SignalIndicators model not yet available
         """Save indicator calculation to database"""
         await self.ensure_initialized()
-        
+
         try:
             async with self.db_connection.acquire() as conn:
                 result = await conn.fetchrow("""
@@ -367,21 +363,21 @@ class SignalRepository:
                 indicator.indicator_name, json.dumps(indicator.parameters),
                 json.dumps(indicator.values), datetime.utcnow()
                 )
-                
+
                 return result['id']
-                
+
         except Exception as e:
             logger.exception(f"Error saving indicator: {e}")
             raise
-            
+
     async def get_latest_indicator(
         self,
         instrument_key: str,
         indicator_name: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get latest indicator value"""
         await self.ensure_initialized()
-        
+
         try:
             async with self.db_connection.acquire() as conn:
                 result = await conn.fetchrow(
@@ -403,26 +399,26 @@ class SignalRepository:
                     instrument_key,
                     indicator_name,
                 )
-                
+
                 if result:
                     data = dict(result)
                     # Parse JSON fields
                     data['parameters'] = json.loads(data['parameters'])
                     data['values'] = json.loads(data['values'])
                     return data
-                    
+
                 return None
-                
+
         except Exception as e:
             logger.exception(f"Error getting latest indicator: {e}")
             raise DatabaseError(f"Failed to fetch latest indicator {indicator_name} for {instrument_key}: {e}") from e
-            
+
     # Moneyness Greeks Operations
-    
-    async def save_moneyness_greeks(self, moneyness_data: Dict[str, Any]) -> int:
+
+    async def save_moneyness_greeks(self, moneyness_data: dict[str, Any]) -> int:
         """Save aggregated moneyness Greeks"""
         await self.ensure_initialized()
-        
+
         try:
             async with self.db_connection.acquire() as conn:
                 result = await conn.fetchrow("""
@@ -477,25 +473,25 @@ class SignalRepository:
                 moneyness_data['strikes'].get('count'),
                 datetime.utcnow()
                 )
-                
+
                 return result['id']
-                
+
         except Exception as e:
             logger.exception(f"Error saving moneyness Greeks: {e}")
             raise
-            
+
     # Custom Timeframe Operations
-    
+
     async def save_custom_timeframe_data(
         self,
         instrument_key: str,
         signal_type: str,
         timeframe_minutes: int,
-        data: List[Dict[str, Any]]
+        data: list[dict[str, Any]]
     ):
         """Save custom timeframe aggregated data"""
         await self.ensure_initialized()
-        
+
         try:
             async with self.db_connection.acquire() as conn:
                 # Batch insert
@@ -511,13 +507,13 @@ class SignalRepository:
                   record['timestamp'], json.dumps(record), datetime.utcnow())
                  for record in data]
                 )
-                
+
                 logger.info(f"Saved {len(data)} custom timeframe records")
-                
+
         except Exception as e:
             logger.exception(f"Error saving custom timeframe data: {e}")
             raise
-            
+
     async def get_custom_timeframe_data(
         self,
         instrument_key: str,
@@ -525,10 +521,10 @@ class SignalRepository:
         timeframe_minutes: int,
         start_time: datetime,
         end_time: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get custom timeframe data"""
         await self.ensure_initialized()
-        
+
         try:
             # Use compatibility wrapper for asyncpg-style API
             async with self.db_connection.acquire() as conn:
@@ -544,48 +540,48 @@ class SignalRepository:
                     ORDER BY timestamp
                 """, instrument_key, signal_type, timeframe_minutes,
                 start_time, end_time)
-                
+
                 return [
                     {**json.loads(row['data']), 'timestamp': row['timestamp']}
                     for row in results
                 ]
-                
+
         except Exception as e:
             logger.exception(f"Error getting custom timeframe data: {e}")
             raise DatabaseError(f"Failed to fetch custom timeframe data for {instrument_key}: {e}") from e
-            
+
     # Metrics and Analytics
-    
+
     async def get_computation_metrics(
         self,
         start_time: datetime,
         end_time: datetime
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get computation metrics for monitoring"""
         await self.ensure_initialized()
-        
+
         try:
             async with self.db_connection.acquire() as conn:
                 # Greeks metrics
                 greeks_metrics = await conn.fetchrow("""
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_computations,
                         COUNT(DISTINCT instrument_key) as unique_instruments,
                         AVG(EXTRACT(EPOCH FROM (created_at - timestamp))) as avg_latency_seconds
                     FROM signal_greeks
                     WHERE timestamp >= $1 AND timestamp <= $2
                 """, start_time, end_time)
-                
+
                 # Indicators metrics
                 indicators_metrics = await conn.fetchrow("""
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_computations,
                         COUNT(DISTINCT indicator_name) as unique_indicators,
                         COUNT(DISTINCT instrument_key) as unique_instruments
                     FROM signal_indicators
                     WHERE timestamp >= $1 AND timestamp <= $2
                 """, start_time, end_time)
-                
+
                 return {
                     'greeks': dict(greeks_metrics) if greeks_metrics else {},
                     'indicators': dict(indicators_metrics) if indicators_metrics else {},
@@ -594,25 +590,25 @@ class SignalRepository:
                         'end': end_time.isoformat()
                     }
                 }
-                
+
         except Exception as e:
             logger.exception(f"Error getting computation metrics: {e}")
             raise DatabaseError(f"Failed to fetch computation metrics: {e}") from e
-            
+
     async def cleanup_old_data(self, retention_days: int = 90):
         """Clean up old data based on retention policy"""
         await self.ensure_initialized()
-        
+
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
-            
+
             async with self.db_connection.acquire() as conn:
                 # Clean Greeks
                 greeks_deleted = await conn.execute("""
                     DELETE FROM signal_greeks
                     WHERE timestamp < $1
                 """, cutoff_date)
-                
+
                 # Clean indicators
                 indicators_deleted = await conn.execute(
                     """
@@ -630,7 +626,7 @@ class SignalRepository:
 
         except Exception as e:
             logger.exception("Error cleaning up old data: %s", e)
-    
+
     async def get_moneyness_history(
         self,
         underlying: str,
@@ -638,17 +634,17 @@ class SignalRepository:
         expiry_date: str,
         start_time: datetime,
         end_time: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get moneyness historical data - routes through ticker_service (CONSOLIDATED)
-        
+
         Args:
             underlying: Underlying symbol
             moneyness_level: Moneyness level (ATM, OTM, etc.)
             expiry_date: Option expiry date
             start_time: Start time
             end_time: End time
-            
+
         Returns:
             List of moneyness historical data from ticker_service
         """
@@ -658,14 +654,14 @@ class SignalRepository:
             if not historical_manager:
                 logger.error("Historical data manager not available for moneyness data")
                 return []
-            
+
             # Create virtual symbol for moneyness data
             symbol = f"{underlying}_{moneyness_level}_{expiry_date}"
-            
+
             # Calculate periods needed
             time_diff = end_time - start_time
             periods_needed = max(int(time_diff.total_seconds() / 300), 1)  # 5-minute intervals
-            
+
             # Request from ticker_service
             result = await historical_manager.get_historical_data_for_indicator(
                 symbol=symbol,
@@ -673,7 +669,7 @@ class SignalRepository:
                 periods_required=periods_needed,
                 indicator_name="moneyness_greeks"
             )
-            
+
             if result.get("success") and result.get("data"):
                 # Transform ticker_service data to expected format
                 moneyness_data = []
@@ -693,20 +689,20 @@ class SignalRepository:
                         },
                         "source": "ticker_service"
                     })
-                
+
                 # Filter to time range
                 filtered_data = [
-                    item for item in moneyness_data 
+                    item for item in moneyness_data
                     if start_time <= item["timestamp"] <= end_time
                 ]
-                
+
                 logger.info(f"Retrieved {len(filtered_data)} moneyness historical points from ticker_service")
                 return filtered_data
-            
+
             # If ticker_service unavailable, return empty (no local fallback for moneyness)
             logger.warning(f"ticker_service unavailable for moneyness data: {underlying}_{moneyness_level}")
             return []
-            
+
         except Exception as e:
             logger.error(f"Error getting moneyness history from ticker_service: {e}")
             return []

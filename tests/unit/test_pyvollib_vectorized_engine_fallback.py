@@ -2,28 +2,28 @@
 Vectorized pyvollib Greeks Engine Fallback Behavior Tests
 
 Addresses functionality_issues.txt requirement:
-"Vectorized pyvollib-based Greeks engine still documents fallback behavior; ensure tests 
-exercise both vectorized success and fallback-disabled failure paths so the fallback 
+"Vectorized pyvollib-based Greeks engine still documents fallback behavior; ensure tests
+exercise both vectorized success and fallback-disabled failure paths so the fallback
 logic is proven and coverage validated."
 
 These tests verify the vectorized pyvollib engine's production behavior where fallback
 is disabled in production environments to ensure fail-fast reliability.
 """
-import pytest
-import sys
 import os
-import asyncio
-import numpy as np
-from datetime import datetime, date, timedelta
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import numpy as np
+import pytest
 
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 try:
-    from app.services.vectorized_pyvollib_engine import VectorizedPyvolibGreeksEngine
-    from app.errors import GreeksCalculationError, UnsupportedModelError
     import py_vollib
+
+    from app.errors import GreeksCalculationError, UnsupportedModelError
+    from app.services.vectorized_pyvollib_engine import VectorizedPyvolibGreeksEngine
     PYVOLLIB_AVAILABLE = True
 except ImportError:
     PYVOLLIB_AVAILABLE = False
@@ -55,12 +55,12 @@ class TestVectorizedPyvolibProductionBehavior:
         """Create vectorized engine with mocked dependencies."""
         if not PYVOLLIB_AVAILABLE:
             pytest.skip("pyvollib not available")
-        
+
         with patch('app.services.vectorized_pyvollib_engine.get_greeks_model_config') as mock_config:
             with patch('app.services.vectorized_pyvollib_engine.get_circuit_breaker') as mock_breaker:
                 mock_config.return_value = mock_greeks_model_config
                 mock_breaker.return_value = mock_circuit_breaker
-                
+
                 engine = VectorizedPyvolibGreeksEngine(chunk_size=100, max_workers=2)
                 return engine
 
@@ -104,9 +104,9 @@ class TestVectorizedPyvolibProductionBehavior:
             'performance': {'execution_time_ms': 15.5, 'options_processed': 3},
             'method_used': 'vectorized'
         }
-        
+
         mock_circuit_breaker.execute.return_value = mock_result
-        
+
         # Test in production environment
         with patch.dict('os.environ', {'ENVIRONMENT': 'production'}):
             result = await vectorized_engine.calculate_option_chain_greeks_vectorized(
@@ -115,13 +115,13 @@ class TestVectorizedPyvolibProductionBehavior:
                 greeks_to_calculate=['delta', 'gamma', 'theta', 'vega', 'rho'],
                 enable_fallback=True  # Fallback enabled but should be ignored in production
             )
-        
+
         # Verify successful vectorized execution
         assert result is not None
         assert result['method_used'] == 'vectorized'
         assert len(result['results']) == 3
         assert all('delta' in res for res in result['results'])
-        
+
         # Verify circuit breaker was used
         mock_circuit_breaker.execute.assert_called_once()
 
@@ -130,7 +130,7 @@ class TestVectorizedPyvolibProductionBehavior:
         """Test that production environment fails fast without fallback when vectorized calculation fails."""
         # Mock circuit breaker to raise exception
         mock_circuit_breaker.execute.side_effect = Exception("Vectorized calculation failed")
-        
+
         # Test in production environment
         with patch.dict('os.environ', {'ENVIRONMENT': 'production'}):
             with pytest.raises(GreeksCalculationError) as exc_info:
@@ -139,7 +139,7 @@ class TestVectorizedPyvolibProductionBehavior:
                     underlying_price=105.0,
                     enable_fallback=True  # Fallback enabled but should be ignored
                 )
-        
+
         # Verify production fail-fast behavior
         assert "vectorized Greeks calculation failed" in str(exc_info.value).lower()
         assert "fallback disabled for production reliability" in str(exc_info.value)
@@ -149,7 +149,7 @@ class TestVectorizedPyvolibProductionBehavior:
         """Test that development environment allows fallback when vectorized calculation fails."""
         # Mock circuit breaker to raise exception
         mock_circuit_breaker.execute.side_effect = Exception("Vectorized calculation failed")
-        
+
         # Mock the fallback calculation method
         fallback_result = {
             'results': [
@@ -159,7 +159,7 @@ class TestVectorizedPyvolibProductionBehavior:
             'performance': {'execution_time_ms': 85.0, 'options_processed': 2},
             'method_used': 'fallback'
         }
-        
+
         with patch.object(vectorized_engine, '_fallback_option_chain_calculation', return_value=fallback_result):
             # Test in development environment
             with patch.dict('os.environ', {'ENVIRONMENT': 'development'}):
@@ -168,7 +168,7 @@ class TestVectorizedPyvolibProductionBehavior:
                     underlying_price=105.0,
                     enable_fallback=True
                 )
-        
+
         # Verify fallback was used in development
         assert result is not None
         assert result['method_used'] == 'fallback'
@@ -179,7 +179,7 @@ class TestVectorizedPyvolibProductionBehavior:
         """Test that explicitly disabling fallback causes fail-fast behavior regardless of environment."""
         # Mock circuit breaker to raise exception
         mock_circuit_breaker.execute.side_effect = Exception("Vectorized calculation failed")
-        
+
         # Test in development with fallback explicitly disabled
         with patch.dict('os.environ', {'ENVIRONMENT': 'development'}):
             with pytest.raises(GreeksCalculationError):
@@ -194,7 +194,7 @@ class TestVectorizedPyvolibProductionBehavior:
         """Test vectorized calculation failure when array preparation fails."""
         # Mock circuit breaker to call the internal method
         mock_circuit_breaker.execute.side_effect = lambda func, *args, **kwargs: func(*args[:-1])  # Remove cache_key
-        
+
         # Invalid option data that should cause array preparation to fail
         invalid_option_data = [
             {
@@ -203,7 +203,7 @@ class TestVectorizedPyvolibProductionBehavior:
                 'option_type': 'CE'
             }
         ]
-        
+
         with patch.dict('os.environ', {'ENVIRONMENT': 'production'}):
             with pytest.raises(GreeksCalculationError):
                 await vectorized_engine.calculate_option_chain_greeks_vectorized(
@@ -222,7 +222,7 @@ class TestVectorizedPyvolibProductionBehavior:
                 config.model_name = "unsupported_model"
                 config.initialize = MagicMock()
                 mock_config.return_value = config
-                
+
                 # Should raise UnsupportedModelError during initialization
                 with pytest.raises(UnsupportedModelError):
                     VectorizedPyvolibGreeksEngine()
@@ -236,13 +236,13 @@ class TestVectorizedPyvolibProductionBehavior:
                 config.model_name = "black_scholes_merton"
                 config.initialize = MagicMock()
                 mock_config.return_value = config
-                
+
                 # Mock import failure
                 with patch('builtins.__import__', side_effect=ImportError("pyvollib not available")):
                     with pytest.raises(GreeksCalculationError) as exc_info:
                         engine = VectorizedPyvolibGreeksEngine()
                         engine._load_model_functions()
-                
+
                 assert "failed to import pyvollib functions" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
@@ -251,9 +251,9 @@ class TestVectorizedPyvolibProductionBehavior:
         # Mock circuit breaker to call internal method
         async def mock_execute(func, *args, **kwargs):
             return await func(*args[:-1])  # Remove cache_key
-        
+
         mock_circuit_breaker.execute.side_effect = mock_execute
-        
+
         # Invalid data types in option chain
         invalid_data = [
             {
@@ -263,7 +263,7 @@ class TestVectorizedPyvolibProductionBehavior:
                 'volatility': 0.20
             }
         ]
-        
+
         with patch.dict('os.environ', {'ENVIRONMENT': 'production'}):
             with pytest.raises(GreeksCalculationError):
                 await vectorized_engine.calculate_option_chain_greeks_vectorized(
@@ -292,12 +292,12 @@ class TestVectorizedPyvolibProductionBehavior:
                 }
             ]
         }
-        
+
         underlying_prices = {
             'VALID_SYMBOL': 105.0,
             'INVALID_SYMBOL': 110.0
         }
-        
+
         # Mock successful calculation for valid symbol
         with patch.object(vectorized_engine, 'calculate_option_chain_greeks_vectorized') as mock_calc:
             mock_calc.side_effect = [
@@ -308,7 +308,7 @@ class TestVectorizedPyvolibProductionBehavior:
                 },
                 Exception("Calculation failed for invalid symbol")
             ]
-            
+
             with pytest.raises(GreeksCalculationError):
                 await vectorized_engine.calculate_term_structure_vectorized(
                     symbols_data,
@@ -325,16 +325,16 @@ class TestVectorizedPyvolibProductionBehavior:
             'method_used': 'vectorized'
         }
         mock_circuit_breaker.execute.return_value = mock_result
-        
+
         # Reset performance metrics
         vectorized_engine.reset_performance_metrics()
-        
+
         # Execute calculation
         await vectorized_engine.calculate_option_chain_greeks_vectorized(
             valid_option_chain_data[:1],  # Single option
             underlying_price=105.0
         )
-        
+
         # Verify metrics were updated
         metrics = vectorized_engine.get_performance_metrics()
         assert metrics['vectorized_calls'] == 1
@@ -348,7 +348,7 @@ class TestVectorizedPyvolibProductionBehavior:
         strikes = np.array([0.01, 1000000.0])  # Very small and very large
         times_to_expiry = np.array([0.001, 15.0])  # Very short and very long
         volatilities = np.array([0.001, 10.0])  # Very low and very high
-        
+
         # Should fail validation for extreme values
         is_valid = vectorized_engine._validate_vectorized_arrays(
             strikes, times_to_expiry, volatilities
@@ -360,9 +360,9 @@ class TestVectorizedPyvolibProductionBehavior:
         """Test Greek array validation with out-of-bounds values."""
         # Test delta values outside [-1, 1] range
         invalid_deltas = np.array([-2.0, 0.5, 1.5])  # Out of bounds values
-        
+
         validated_deltas = vectorized_engine._validate_greek_array(invalid_deltas, 'delta')
-        
+
         # Out of bounds values should be replaced with NaN
         assert np.isnan(validated_deltas[0])  # -2.0 -> NaN
         assert validated_deltas[1] == 0.5    # Valid value preserved
@@ -380,7 +380,7 @@ class TestVectorizedPyvolibProductionBehavior:
                 'volatility': 0.20
             }
         ]
-        
+
         # Mock both vectorized and legacy calculations
         with patch.object(vectorized_engine, 'calculate_option_chain_greeks_vectorized') as mock_vectorized:
             with patch.object(vectorized_engine, '_legacy_bulk_calculation') as mock_legacy:
@@ -390,12 +390,12 @@ class TestVectorizedPyvolibProductionBehavior:
                     'method_used': 'vectorized'
                 }
                 mock_legacy.return_value = {'note': 'Legacy calculation completed'}
-                
+
                 result = await vectorized_engine.calculate_bulk_greeks_with_performance_metrics(
                     bulk_data,
                     compare_with_legacy=True
                 )
-                
+
                 assert 'performance_comparison' in result
                 assert result['performance_comparison']['speedup_ratio'] >= 0
 
@@ -404,9 +404,9 @@ def run_coverage_test():
     """Run pyvollib vectorized engine coverage tests."""
     import subprocess
     import sys
-    
+
     print("🔍 Running pyvollib Vectorized Engine Fallback Coverage Tests...")
-    
+
     cmd = [
         sys.executable, '-m', 'pytest',
         __file__,
@@ -416,25 +416,25 @@ def run_coverage_test():
         '--cov-fail-under=95',
         '-v'
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     print("STDOUT:")
     print(result.stdout)
-    
+
     if result.stderr:
         print("STDERR:")
         print(result.stderr)
-    
+
     return result.returncode == 0
 
 
 if __name__ == "__main__":
     print("🚀 pyvollib Vectorized Engine Fallback Coverage Tests")
     print("=" * 60)
-    
+
     success = run_coverage_test()
-    
+
     if success:
         print("\n✅ pyvollib vectorized engine tests passed with ≥95% coverage!")
         print("📊 Coverage validated for:")

@@ -5,9 +5,9 @@ Provides an in-memory async stub that implements the subset of Redis
 commands relied on by the service.
 """
 
-from typing import Any, Dict, Optional
 import asyncio
 import json
+from typing import Any
 
 
 class _Pipeline:
@@ -41,8 +41,8 @@ class FakeRedis:
     """Lightweight async in-memory Redis replacement for development."""
 
     def __init__(self):
-        self.store: Dict[str, Any] = {}
-        self.expiry: Dict[str, float] = {}
+        self.store: dict[str, Any] = {}
+        self.expiry: dict[str, float] = {}
 
     def pipeline(self):
         return _Pipeline(self)
@@ -56,7 +56,7 @@ class FakeRedis:
     async def get(self, key: str):
         return self.store.get(key)
 
-    async def set(self, key: str, value: Any, ex: Optional[int] = None):
+    async def set(self, key: str, value: Any, ex: int | None = None):
         self.store[key] = value
         if ex:
             await self.expire(key, ex)
@@ -134,11 +134,11 @@ class FakeRedis:
         stream = self.store.setdefault(name, [])
         msg_id = str(len(stream))
         stream.append((msg_id, {k: str(v) for k, v in fields.items()}))
-        
+
         # Apply maxlen if specified
         if maxlen and len(stream) > maxlen:
             self.store[name] = stream[-maxlen:]
-            
+
         return msg_id
 
     async def xgroup_create(self, *_args, **_kwargs):
@@ -175,15 +175,13 @@ class FakeRedis:
 
     async def subscribe(self, *channels):
         """Mock subscribe for pubsub."""
-        pass
 
     async def unsubscribe(self, *channels):
-        """Mock unsubscribe for pubsub.""" 
-        pass
+        """Mock unsubscribe for pubsub."""
 
     async def get_message(self, ignore_subscribe_messages=True, timeout=None):
         """Mock get_message for pubsub."""
-        return None
+        return
 
     async def publish(self, channel, message):
         """Mock publish."""
@@ -197,7 +195,7 @@ class FakeRedis:
         return {"used_memory": len(self.store), "keys": len(self.store), "connected_clients": 1, "uptime_in_seconds": 3600, "redis_version": "fake", "role": "master"}
 
 
-_fake_client: Optional[FakeRedis] = None
+_fake_client: FakeRedis | None = None
 
 
 async def get_redis_client(redis_url: str = None):

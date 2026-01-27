@@ -9,15 +9,6 @@ Must be called during application initialization (in main.py lifespan).
 import logging
 
 # Import all indicator modules to trigger @register_indicator decorators
-from app.services import (
-    smart_money_indicators,
-    signal_processing_indicators,
-    pattern_indicators,
-    trendline_indicators,
-    clustering_indicators,
-    greeks_indicators
-)
-
 from app.services.indicator_registry import IndicatorRegistry
 
 logger = logging.getLogger(__name__)

@@ -2,30 +2,35 @@
 pandas_ta Indicator Calculation Coverage Tests with Real OHLCV Data
 
 Addresses functionality_issues.txt requirement:
-"pandas_ta indicator calls require real OHLCV history; tests must cover both successful 
+"pandas_ta indicator calls require real OHLCV history; tests must cover both successful
 indicator calculation and failure when history missing to hit 95% branch coverage."
 
-These tests verify pandas_ta indicator calculations work with real OHLCV data 
+These tests verify pandas_ta indicator calculations work with real OHLCV data
 and fail appropriately when historical data is missing or insufficient.
 """
-import pytest
-import sys
-import os
-import asyncio
 import json
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+import os
+import sys
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 try:
-    from app.services.pandas_ta_executor import PandasTAExecutor
-    from app.schemas.config_schema import SignalConfigData, TickProcessingContext, TechnicalIndicatorConfig
-    from app.errors import TechnicalIndicatorError
     import pandas_ta as ta
+
+    from app.errors import TechnicalIndicatorError
+    from app.schemas.config_schema import (
+        SignalConfigData,
+        TechnicalIndicatorConfig,
+        TickProcessingContext,
+    )
+    from app.services.pandas_ta_executor import PandasTAExecutor
     PANDAS_TA_AVAILABLE = True
 except ImportError:
     PANDAS_TA_AVAILABLE = False
@@ -39,23 +44,23 @@ class TestPandasTARealOHLCVData:
         """Generate realistic OHLCV data for testing."""
         dates = pd.date_range(start='2024-01-01', periods=100, freq='5T')
         base_price = 100.0
-        
+
         # Generate realistic price movements
         np.random.seed(42)  # For reproducible tests
         returns = np.random.normal(0, 0.02, len(dates))  # 2% volatility
-        
+
         prices = [base_price]
         for ret in returns[1:]:
             prices.append(prices[-1] * (1 + ret))
-        
+
         # Create OHLC from price series
         data = []
-        for i, (date, price) in enumerate(zip(dates, prices)):
+        for i, (date, price) in enumerate(zip(dates, prices, strict=False)):
             # Simulate intraday volatility
             high = price * (1 + abs(np.random.normal(0, 0.01)))
             low = price * (1 - abs(np.random.normal(0, 0.01)))
             open_price = prices[i-1] if i > 0 else price
-            
+
             data.append({
                 'timestamp': date,
                 'open': open_price,
@@ -64,7 +69,7 @@ class TestPandasTARealOHLCVData:
                 'close': price,
                 'volume': np.random.randint(1000, 10000)
             })
-        
+
         return data
 
     @pytest.fixture
@@ -101,7 +106,7 @@ class TestPandasTARealOHLCVData:
         """Create PandasTAExecutor with mocked dependencies."""
         if not PANDAS_TA_AVAILABLE:
             pytest.skip("pandas_ta not available")
-        
+
         executor = PandasTAExecutor(mock_redis_client)
         return executor
 
@@ -115,7 +120,7 @@ class TestPandasTARealOHLCVData:
                 "success": True,
                 "data": real_ohlcv_data
             }
-            
+
             # Create test configuration
             config = MagicMock()
             config.technical_indicators = [
@@ -125,7 +130,7 @@ class TestPandasTARealOHLCVData:
                     output_key="sma_20"
                 ),
                 MagicMock(
-                    name="RSI", 
+                    name="RSI",
                     parameters={"length": 14},
                     output_key="rsi_14"
                 )
@@ -133,7 +138,7 @@ class TestPandasTARealOHLCVData:
             config.interval.value = "5m"
             config.frequency.value = "1h"
             config.output.cache_results = False
-            
+
             # Create test context
             context = MagicMock()
             context.instrument_key = "NSE@RELIANCE@EQ"
@@ -146,10 +151,10 @@ class TestPandasTARealOHLCVData:
                 'volume': 1500
             }
             context.aggregated_data = {}
-            
+
             # Execute indicators
             result = await pandas_ta_executor.execute_indicators(config, context)
-            
+
             # Verify successful execution
             assert result is not None
             assert result['calculation_type'] == 'technical_indicators'
@@ -157,7 +162,7 @@ class TestPandasTARealOHLCVData:
             assert result['data_points'] > 20  # Sufficient data for calculations
             assert 'results' in result
             assert len(result['results']) > 0
-            
+
             # Verify specific indicator results
             results = result['results']
             assert 'sma_20' in results or any('sma' in str(k).lower() for k in results.keys())
@@ -173,7 +178,7 @@ class TestPandasTARealOHLCVData:
                 "success": False,
                 "data": []
             }
-            
+
             # Create test configuration
             config = MagicMock()
             config.technical_indicators = [
@@ -186,7 +191,7 @@ class TestPandasTARealOHLCVData:
             config.interval.value = "5m"
             config.frequency.value = "1h"
             config.output.cache_results = False
-            
+
             # Create test context with no aggregated data
             context = MagicMock()
             context.instrument_key = "NSE@RELIANCE@EQ"
@@ -195,11 +200,11 @@ class TestPandasTARealOHLCVData:
                 'ltp': {'value': 101.5, 'currency': 'INR'}
             }
             context.aggregated_data = {}
-            
+
             # Should raise TechnicalIndicatorError due to missing data
             with pytest.raises(TechnicalIndicatorError) as exc_info:
                 await pandas_ta_executor.execute_indicators(config, context)
-            
+
             assert "historical data" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
@@ -212,7 +217,7 @@ class TestPandasTARealOHLCVData:
                 "success": True,
                 "data": insufficient_ohlcv_data  # Only 1 data point
             }
-            
+
             # Create test configuration requiring more data than available
             config = MagicMock()
             config.technical_indicators = [
@@ -225,7 +230,7 @@ class TestPandasTARealOHLCVData:
             config.interval.value = "5m"
             config.frequency.value = "1h"
             config.output.cache_results = False
-            
+
             context = MagicMock()
             context.instrument_key = "NSE@RELIANCE@EQ"
             context.timestamp = datetime.now()
@@ -233,7 +238,7 @@ class TestPandasTARealOHLCVData:
                 'ltp': {'value': 101.5, 'currency': 'INR'}
             }
             context.aggregated_data = {}
-            
+
             # Should return empty results due to insufficient data
             result = await pandas_ta_executor.execute_indicators(config, context)
             assert result == {}
@@ -250,27 +255,27 @@ class TestPandasTARealOHLCVData:
                 # Missing: open, high, low
             }
         ]
-        
+
         with patch('app.services.pandas_ta_executor.get_historical_data_manager') as mock_get_manager:
             mock_get_manager.return_value = mock_historical_manager
             mock_historical_manager.get_historical_data_for_indicator.return_value = {
                 "success": True,
                 "data": incomplete_data
             }
-            
+
             config = MagicMock()
             config.interval.value = "5m"
             config.frequency.value = "1h"
-            
+
             context = MagicMock()
             context.instrument_key = "NSE@RELIANCE@EQ"
             context.timestamp = datetime.now()
             context.tick_data = {'ltp': {'value': 101.5}}
             context.aggregated_data = {}
-            
+
             # Should fail to prepare DataFrame with missing columns
             df = await pandas_ta_executor.prepare_dataframe("NSE@RELIANCE@EQ", config, context)
-            
+
             # Should return empty DataFrame when required columns missing
             assert df is None or df.empty
 
@@ -281,7 +286,7 @@ class TestPandasTARealOHLCVData:
             # Should raise error during initialization
             with pytest.raises(TechnicalIndicatorError) as exc_info:
                 PandasTAExecutor(mock_redis_client)
-            
+
             assert "pandas_ta library not available" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -291,45 +296,45 @@ class TestPandasTARealOHLCVData:
         with patch('app.services.pandas_ta_executor.PANDAS_TA_AVAILABLE', False):
             df = pd.DataFrame({
                 'open': [100, 101, 102],
-                'high': [102, 103, 104], 
+                'high': [102, 103, 104],
                 'low': [99, 100, 101],
                 'close': [101, 102, 103],
                 'volume': [1000, 1100, 1200]
             })
-            
+
             strategy_dict = {'sma': [{'kind': 'sma', 'length': 2}]}
             indicators = [MagicMock(output_key='sma_2', name='sma', parameters={'length': 2})]
-            
+
             # Should raise error when pandas_ta not available
             with pytest.raises(TechnicalIndicatorError) as exc_info:
                 await pandas_ta_executor.execute_strategy(df, strategy_dict, indicators)
-            
+
             assert "pandas_ta library not available" in str(exc_info.value)
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_historical_data_retrieval_timeout(self, pandas_ta_executor, mock_historical_manager):
         """Test handling of historical data retrieval timeouts."""
         # Mock historical manager to raise timeout exception
         with patch('app.services.pandas_ta_executor.get_historical_data_manager') as mock_get_manager:
             mock_get_manager.return_value = mock_historical_manager
-            mock_historical_manager.get_historical_data_for_indicator.side_effect = asyncio.TimeoutError("Historical data timeout")
-            
+            mock_historical_manager.get_historical_data_for_indicator.side_effect = TimeoutError("Historical data timeout")
+
             config = MagicMock()
             config.technical_indicators = [MagicMock(name="SMA", parameters={}, output_key="sma")]
             config.interval.value = "5m"
             config.frequency.value = "1h"
             config.output.cache_results = False
-            
+
             context = MagicMock()
             context.instrument_key = "NSE@RELIANCE@EQ"
             context.timestamp = datetime.now()
             context.tick_data = {'ltp': {'value': 101.5}}
             context.aggregated_data = {}
-            
+
             # Should raise TechnicalIndicatorError when historical data times out
             with pytest.raises(TechnicalIndicatorError) as exc_info:
                 await pandas_ta_executor.execute_indicators(config, context)
-            
+
             assert "failed to retrieve sufficient historical data" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
@@ -343,10 +348,10 @@ class TestPandasTARealOHLCVData:
             'close': [101, 102, 103],
             'volume': [1000, 1100, 1200]
         })
-        
+
         # Should detect invalid data and return empty DataFrame
         formatted_df = pandas_ta_executor.format_dataframe(invalid_data)
-        
+
         # Validation should handle negative values appropriately
         assert formatted_df is not None
 
@@ -356,10 +361,10 @@ class TestPandasTARealOHLCVData:
         # Test cache miss -> data retrieval -> cache storage
         cached_data = json.dumps(real_ohlcv_data[:50])  # Partial cached data
         pandas_ta_executor.redis_client.get.return_value = cached_data.encode()
-        
+
         config = MagicMock()
         config.interval.value = "5m"
-        
+
         context = MagicMock()
         context.instrument_key = "NSE@RELIANCE@EQ"
         context.timestamp = datetime.now()
@@ -371,10 +376,10 @@ class TestPandasTARealOHLCVData:
             'volume': 1500
         }
         context.aggregated_data = {}
-        
+
         # Should use cached data and add current tick
         df = await pandas_ta_executor.prepare_dataframe("NSE@RELIANCE@EQ", config, context)
-        
+
         assert df is not None
         assert len(df) > len(real_ohlcv_data[:50])  # Should include cached data + current tick
 
@@ -387,10 +392,10 @@ class TestPandasTAErrorPaths:
         """Test OHLCV extraction from invalid tick data."""
         if not PANDAS_TA_AVAILABLE:
             pytest.skip("pandas_ta not available")
-            
+
         redis_mock = AsyncMock()
         executor = PandasTAExecutor(redis_mock)
-        
+
         # Test with completely invalid tick data
         invalid_ticks = [
             {},  # Empty dict
@@ -399,7 +404,7 @@ class TestPandasTAErrorPaths:
             {'ltp': 'invalid'},  # Non-numeric LTP
             {'ltp': {'value': 'invalid'}},  # Non-numeric nested LTP
         ]
-        
+
         for tick_data in invalid_ticks:
             result = executor.extract_ohlcv_from_tick(tick_data, datetime.now())
             assert result is None
@@ -409,19 +414,19 @@ class TestPandasTAErrorPaths:
         """Test strategy building with invalid indicator configurations."""
         if not PANDAS_TA_AVAILABLE:
             pytest.skip("pandas_ta not available")
-            
+
         redis_mock = AsyncMock()
         executor = PandasTAExecutor(redis_mock)
-        
+
         # Test with invalid indicators
         invalid_indicators = [
             MagicMock(name="INVALID_INDICATOR", parameters={}),
             MagicMock(name=None, parameters={}),  # None name
             MagicMock(name="SMA", parameters=None),  # None parameters
         ]
-        
+
         strategy_dict = executor.build_strategy(invalid_indicators)
-        
+
         # Should handle invalid indicators gracefully
         assert isinstance(strategy_dict, dict)
 
@@ -430,22 +435,22 @@ class TestPandasTAErrorPaths:
         """Test currency conversion failure handling."""
         if not PANDAS_TA_AVAILABLE:
             pytest.skip("pandas_ta not available")
-            
+
         executor = PandasTAExecutor(mock_redis_client)
-        
+
         df = pd.DataFrame({
             'open': [100, 101],
             'high': [102, 103],
-            'low': [99, 100], 
+            'low': [99, 100],
             'close': [101, 102],
             'volume': [1000, 1100]
         })
-        
+
         # Test with invalid currency conversion
         result_df = await executor.prepare_currency_converted_data(
             df, "INVALID_CURRENCY", "USD", "NSE@RELIANCE@EQ"
         )
-        
+
         # Should return original DataFrame on conversion failure
         pd.testing.assert_frame_equal(result_df, df)
 
@@ -454,9 +459,9 @@ def run_coverage_test():
     """Run pandas_ta coverage tests with real OHLCV data."""
     import subprocess
     import sys
-    
+
     print("🔍 Running pandas_ta Real OHLCV Data Coverage Tests...")
-    
+
     cmd = [
         sys.executable, '-m', 'pytest',
         __file__,
@@ -466,25 +471,25 @@ def run_coverage_test():
         '--cov-fail-under=95',
         '-v'
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     print("STDOUT:")
     print(result.stdout)
-    
+
     if result.stderr:
         print("STDERR:")
         print(result.stderr)
-    
+
     return result.returncode == 0
 
 
 if __name__ == "__main__":
     print("🚀 pandas_ta Real OHLCV Data Coverage Tests")
     print("=" * 60)
-    
+
     success = run_coverage_test()
-    
+
     if success:
         print("\n✅ pandas_ta real data tests passed with ≥95% coverage!")
         print("📊 Coverage validated for:")
@@ -502,7 +507,7 @@ if __name__ == "__main__":
         print("  - Currency conversion failure handling")
         print("\n🎯 Real-world scenarios covered:")
         print("  - Market data with realistic price movements")
-        print("  - Insufficient historical data scenarios") 
+        print("  - Insufficient historical data scenarios")
         print("  - Network timeouts and service failures")
         print("  - Data quality validation and error handling")
     else:

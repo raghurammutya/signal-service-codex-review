@@ -14,8 +14,9 @@ Users call indicators by name without knowing the underlying library.
 All indicators follow the same caching, subscription, and batch processing model.
 """
 import logging
-from typing import Dict, Any, Callable, Optional, List
+from collections.abc import Callable
 from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class IndicatorMetadata:
         category: IndicatorCategory,
         library: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         output_type: str = "series"
     ):
         self.name = name
@@ -55,7 +56,7 @@ class IndicatorMetadata:
         self.parameters = parameters
         self.output_type = output_type  # "series", "dataframe", "dict", "float"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert metadata to dictionary for API responses"""
         return {
             "name": self.name,
@@ -78,7 +79,7 @@ class IndicatorRegistry:
     - Category-based organization
     """
 
-    _indicators: Dict[str, IndicatorMetadata] = {}
+    _indicators: dict[str, IndicatorMetadata] = {}
     _initialized = False
 
     @classmethod
@@ -89,7 +90,7 @@ class IndicatorRegistry:
         category: IndicatorCategory,
         library: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         output_type: str = "series"
     ):
         """
@@ -121,7 +122,7 @@ class IndicatorRegistry:
         logger.debug(f"Registered indicator: {name} ({library})")
 
     @classmethod
-    def get(cls, name: str) -> Optional[IndicatorMetadata]:
+    def get(cls, name: str) -> IndicatorMetadata | None:
         """Get indicator metadata by name"""
         return cls._indicators.get(name)
 
@@ -131,7 +132,7 @@ class IndicatorRegistry:
         return name in cls._indicators
 
     @classmethod
-    def list_all(cls) -> Dict[str, List[Dict[str, Any]]]:
+    def list_all(cls) -> dict[str, list[dict[str, Any]]]:
         """
         List all indicators organized by category.
 
@@ -142,7 +143,7 @@ class IndicatorRegistry:
                 ...
             }
         """
-        categories: Dict[str, List[Dict[str, Any]]] = {}
+        categories: dict[str, list[dict[str, Any]]] = {}
 
         for indicator in cls._indicators.values():
             cat = indicator.category.value
@@ -158,7 +159,7 @@ class IndicatorRegistry:
         return categories
 
     @classmethod
-    def list_by_category(cls, category: IndicatorCategory) -> List[Dict[str, Any]]:
+    def list_by_category(cls, category: IndicatorCategory) -> list[dict[str, Any]]:
         """List all indicators in a specific category"""
         return [
             ind.to_dict()
@@ -167,7 +168,7 @@ class IndicatorRegistry:
         ]
 
     @classmethod
-    def search(cls, query: str) -> List[Dict[str, Any]]:
+    def search(cls, query: str) -> list[dict[str, Any]]:
         """
         Search indicators by name or description.
 
@@ -189,7 +190,7 @@ class IndicatorRegistry:
         return results
 
     @classmethod
-    def get_parameter_defaults(cls, name: str) -> Dict[str, Any]:
+    def get_parameter_defaults(cls, name: str) -> dict[str, Any]:
         """Get default parameters for an indicator"""
         indicator = cls.get(name)
         if indicator:
@@ -202,7 +203,7 @@ class IndicatorRegistry:
         return len(cls._indicators)
 
     @classmethod
-    def count_by_category(cls) -> Dict[str, int]:
+    def count_by_category(cls) -> dict[str, int]:
         """Count indicators by category"""
         counts = {}
         for indicator in cls._indicators.values():
@@ -233,7 +234,7 @@ def register_indicator(
     category: IndicatorCategory,
     library: str,
     description: str,
-    parameters: Optional[Dict[str, Any]] = None,
+    parameters: dict[str, Any] | None = None,
     output_type: str = "series"
 ):
     """

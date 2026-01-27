@@ -6,13 +6,12 @@ Tests wildcard restrictions, production security requirements, attack prevention
 and security compliance for different deployment environments.
 """
 import os
-import pytest
-from unittest.mock import patch, Mock, MagicMock
-from typing import Dict, List, Optional, Set
-import re
 import urllib.parse
+from unittest.mock import patch
 
-from common.cors_config import get_allowed_origins, validate_cors_configuration
+import pytest
+
+from common.cors_config import get_allowed_origins
 
 
 class TestCORSWildcardSecurityValidation:
@@ -26,7 +25,7 @@ class TestCORSWildcardSecurityValidation:
             "https://*",
             "http://*"
         ]
-        
+
         for pattern in wildcard_patterns:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": pattern}, clear=True):
                 with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
@@ -41,7 +40,7 @@ class TestCORSWildcardSecurityValidation:
             "https://*.*.example.com",
             "http://*.localhost"
         ]
-        
+
         for wildcard in subdomain_wildcards:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True):
                 with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
@@ -55,7 +54,7 @@ class TestCORSWildcardSecurityValidation:
             "*,https://dashboard.stocksblitz.com",
             "https://api.stocksblitz.com,https://*.example.com,https://dashboard.stocksblitz.com"
         ]
-        
+
         for pattern in mixed_patterns:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": pattern}, clear=True):
                 with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
@@ -66,17 +65,17 @@ class TestCORSWildcardSecurityValidation:
         def contains_wildcard(origin: str) -> bool:
             """Test wildcard detection logic."""
             return "*" in origin
-        
+
         wildcard_cases = [
             ("*", True),
-            ("https://*", True), 
+            ("https://*", True),
             ("https://*.example.com", True),
             ("https://api.*.com", True),
             ("https://app.stocksblitz.com", False),
             ("https://app-staging.stocksblitz.com", False),  # Hyphen is not wildcard
             ("https://app.stocksblitz.com:8443", False)     # Port is not wildcard
         ]
-        
+
         for origin, expected_wildcard in wildcard_cases:
             assert contains_wildcard(origin) == expected_wildcard, \
                 f"Wildcard detection failed for: {origin}"
@@ -88,7 +87,7 @@ class TestCORSWildcardSecurityValidation:
             "*",
             "https://*.staging.stocksblitz.com"
         ]
-        
+
         for wildcard in staging_wildcards:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True):
                 # Staging should be secure like production
@@ -114,12 +113,12 @@ class TestCORSProductionSecurityRequirements:
             "https://dashboard.stocksblitz.com",
             "https://api.stocksblitz.com"
         ]
-        
+
         origins_string = ",".join(https_origins)
-        
+
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins_string}, clear=True):
             origins = get_allowed_origins("production")
-            
+
             for origin in origins:
                 # Production should primarily use HTTPS
                 if not origin.startswith("http://localhost") and not origin.startswith("http://127.0.0.1"):
@@ -134,34 +133,34 @@ class TestCORSProductionSecurityRequirements:
             "http://127.0.0.1:8080",
             "https://127.0.0.1:8443"
         ]
-        
+
         for localhost_origin in localhost_origins:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": localhost_origin}, clear=True):
-                origins = get_allowed_origins("production")
+                get_allowed_origins("production")
                 # Note: Current implementation allows localhost, but this could be a security improvement
                 # In a more secure implementation, production would reject localhost origins
 
     def test_production_domain_validation(self):
         """Test production domain validation security."""
-        def validate_production_domain(origin: str) -> Dict[str, any]:
+        def validate_production_domain(origin: str) -> dict[str, any]:
             """Validate domain security for production."""
             validation = {
                 "valid": False,
                 "security_issues": [],
                 "origin": origin
             }
-            
+
             # Parse URL
             try:
                 parsed = urllib.parse.urlparse(origin)
                 domain = parsed.netloc.lower()
-                
+
                 # Check for security issues
                 if not parsed.scheme:
                     validation["security_issues"].append("Missing protocol scheme")
                 elif parsed.scheme not in ["https", "http"]:
                     validation["security_issues"].append(f"Unsupported protocol: {parsed.scheme}")
-                
+
                 # Domain security checks
                 if not domain:
                     validation["security_issues"].append("Missing domain")
@@ -171,29 +170,29 @@ class TestCORSProductionSecurityRequirements:
                     validation["security_issues"].append("IP address domain in production")
                 elif "." not in domain and domain != "localhost":
                     validation["security_issues"].append("Invalid domain format")
-                
+
                 # Wildcard checks
                 if "*" in domain:
                     validation["security_issues"].append("Wildcard in domain")
-                
+
                 validation["valid"] = len(validation["security_issues"]) == 0
-                
+
             except Exception as e:
                 validation["security_issues"].append(f"URL parsing error: {str(e)}")
-            
+
             return validation
-        
+
         # Test valid production domains
         valid_domains = [
             "https://app.stocksblitz.com",
             "https://dashboard.example.com",
             "https://api.company.org"
         ]
-        
+
         for domain in valid_domains:
             result = validate_production_domain(domain)
             assert result["valid"] is True, f"Valid domain rejected: {domain}"
-        
+
         # Test invalid production domains
         invalid_domains = [
             "http://localhost:3000",
@@ -202,7 +201,7 @@ class TestCORSProductionSecurityRequirements:
             "https://*.example.com",
             "javascript:alert('xss')"
         ]
-        
+
         for domain in invalid_domains:
             result = validate_production_domain(domain)
             assert result["valid"] is False, f"Invalid domain accepted: {domain}"
@@ -212,13 +211,13 @@ class TestCORSProductionSecurityRequirements:
         # Generate many origins
         many_origins = [f"https://app{i}.stocksblitz.com" for i in range(50)]
         origins_string = ",".join(many_origins)
-        
+
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins_string}, clear=True):
             origins = get_allowed_origins("production")
-            
+
             # Should handle reasonable number of origins
             assert len(origins) == 50
-            
+
             # Could implement origin count limits for security
             # if len(origins) > PRODUCTION_ORIGIN_LIMIT:
             #     raise ValueError("Too many CORS origins for production")
@@ -226,10 +225,10 @@ class TestCORSProductionSecurityRequirements:
     def test_production_origin_uniqueness(self):
         """Test that production origins are unique."""
         duplicate_origins = "https://app.stocksblitz.com,https://app.stocksblitz.com,https://dashboard.stocksblitz.com"
-        
+
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": duplicate_origins}, clear=True):
             origins = get_allowed_origins("production")
-            
+
             # Should have unique origins only
             unique_origins = list(set(origins))
             assert len(origins) == len(unique_origins), "Origins should be unique"
@@ -249,7 +248,7 @@ class TestCORSAttackPreventionValidation:
             "data:text/html,<script>alert('xss')</script>",  # Data URL injection
             "vbscript:msgbox('xss')"                         # VBScript injection
         ]
-        
+
         for malicious_origin in malicious_origins:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": malicious_origin}, clear=True):
                 try:
@@ -266,59 +265,59 @@ class TestCORSAttackPreventionValidation:
 
     def test_cors_domain_spoofing_detection(self):
         """Test detection of domain spoofing attempts."""
-        def detect_domain_spoofing(origin: str, legitimate_domains: Set[str]) -> bool:
+        def detect_domain_spoofing(origin: str, legitimate_domains: set[str]) -> bool:
             """Detect potential domain spoofing."""
             try:
                 parsed = urllib.parse.urlparse(origin)
                 domain = parsed.netloc.lower()
-                
+
                 # Remove port if present
                 if ":" in domain:
                     domain = domain.split(":")[0]
-                
+
                 # Check for exact matches
                 if domain in legitimate_domains:
                     return False  # Not spoofing
-                
+
                 # Check for common spoofing patterns
                 for legit_domain in legitimate_domains:
                     # Subdomain spoofing: evil.com vs app.stocksblitz.com
                     if domain.endswith(f".{legit_domain}") and domain != f"app.{legit_domain}":
                         return True
-                    
+
                     # Character substitution spoofing
                     if domain.replace("0", "o").replace("1", "l") == legit_domain:
                         return True
-                
+
                 return False  # Not obviously spoofing
-                
+
             except Exception:
                 return True  # Assume spoofing if can't parse
-        
+
         legitimate_domains = {"stocksblitz.com", "example.com"}
-        
+
         spoofing_attempts = [
             "https://stocksb1itz.com",      # Character substitution
             "https://stocksblitz.co",       # TLD variation
             "https://evil.stocksblitz.com", # Subdomain spoofing
             "https://stocksblitz.com.evil.com"  # Domain append
         ]
-        
+
         for spoof_attempt in spoofing_attempts:
-            is_spoofing = detect_domain_spoofing(spoof_attempt, legitimate_domains)
+            detect_domain_spoofing(spoof_attempt, legitimate_domains)
             # Most should be detected as potential spoofing
 
     def test_cors_protocol_security_validation(self):
         """Test CORS protocol security validation."""
         dangerous_protocols = [
             "javascript:alert('xss')",
-            "vbscript:msgbox('xss')", 
+            "vbscript:msgbox('xss')",
             "data:text/html,<script>",
             "file:///etc/passwd",
             "ftp://files.example.com",
             "gopher://example.com"
         ]
-        
+
         for dangerous_protocol in dangerous_protocols:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": dangerous_protocol}, clear=True):
                 try:
@@ -340,7 +339,7 @@ class TestCORSAttackPreventionValidation:
             "https://app.stocksblitz.com%0d%0aX-Injected: evil",  # URL encoded CRLF
             "https://app.stocksblitz.com%0aX-Injected: evil"      # URL encoded LF
         ]
-        
+
         for injection_attempt in header_injection_attempts:
             with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": injection_attempt}, clear=True):
                 try:
@@ -359,7 +358,7 @@ class TestCORSSecurityCompliance:
 
     def test_cors_security_compliance_checker(self):
         """Test comprehensive CORS security compliance checker."""
-        def check_cors_security_compliance(environment: str) -> Dict[str, any]:
+        def check_cors_security_compliance(environment: str) -> dict[str, any]:
             """Check CORS security compliance."""
             compliance = {
                 "environment": environment,
@@ -369,28 +368,28 @@ class TestCORSSecurityCompliance:
                 "recommendations": [],
                 "origins_analyzed": []
             }
-            
+
             try:
                 origins = get_allowed_origins(environment)
                 compliance["origins_analyzed"] = origins
-                
+
                 security_score = 100
-                
+
                 for origin in origins:
                     origin_issues = []
                     parsed = urllib.parse.urlparse(origin)
-                    
+
                     # Protocol security
                     if parsed.scheme == "http" and environment == "production":
                         if "localhost" not in origin and "127.0.0.1" not in origin:
                             origin_issues.append(f"HTTP protocol in production: {origin}")
                             security_score -= 20
-                    
+
                     # Wildcard detection
                     if "*" in origin:
                         origin_issues.append(f"Wildcard origin: {origin}")
                         security_score -= 50
-                    
+
                     # Domain validation
                     domain = parsed.netloc.lower()
                     if not domain:
@@ -400,30 +399,30 @@ class TestCORSSecurityCompliance:
                         if environment == "production":
                             origin_issues.append(f"IP address in production: {origin}")
                             security_score -= 15
-                    
+
                     compliance["issues"].extend(origin_issues)
-                
+
                 # Generate recommendations
                 if security_score < 100:
                     compliance["recommendations"].append("Use HTTPS origins in production")
                     compliance["recommendations"].append("Avoid wildcard origins")
                     compliance["recommendations"].append("Use specific domain names")
-                
+
                 compliance["security_score"] = max(0, security_score)
                 compliance["compliant"] = security_score >= 80
-                
+
             except Exception as e:
                 compliance["issues"].append(f"Configuration error: {str(e)}")
                 compliance["security_score"] = 0
-            
+
             return compliance
-        
+
         # Test compliant configuration
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com,https://dashboard.stocksblitz.com"}, clear=True):
             result = check_cors_security_compliance("production")
             assert result["compliant"] is True
             assert result["security_score"] >= 80
-        
+
         # Test non-compliant configuration
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True):
             try:
@@ -435,7 +434,7 @@ class TestCORSSecurityCompliance:
 
     def test_cors_security_audit_trail(self):
         """Test CORS security audit trail and logging."""
-        def create_cors_security_audit(environment: str) -> Dict[str, any]:
+        def create_cors_security_audit(environment: str) -> dict[str, any]:
             """Create CORS security audit trail."""
             audit = {
                 "timestamp": "2023-12-13T10:00:00Z",
@@ -446,40 +445,40 @@ class TestCORSSecurityCompliance:
                 "validation_errors": [],
                 "security_warnings": []
             }
-            
+
             try:
                 # Get current configuration
                 cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
-                
+
                 if cors_origins_env:
                     origins = get_allowed_origins(environment)
                     audit["origins_configured"] = origins
-                    
+
                     # Security validation
                     for origin in origins:
                         # Check for security issues
                         if "*" in origin and environment == "production":
                             audit["validation_errors"].append(f"Wildcard origin in production: {origin}")
-                        
+
                         if origin.startswith("http://") and environment == "production":
                             if "localhost" not in origin:
                                 audit["security_warnings"].append(f"HTTP origin in production: {origin}")
-                    
+
                     audit["security_validation_passed"] = len(audit["validation_errors"]) == 0
                 else:
                     audit["validation_errors"].append("CORS_ALLOWED_ORIGINS not configured")
-                
+
             except Exception as e:
                 audit["validation_errors"].append(str(e))
-            
+
             return audit
-        
+
         # Test security audit with valid configuration
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
             audit = create_cors_security_audit("production")
             assert audit["security_validation_passed"] is True
             assert len(audit["validation_errors"]) == 0
-        
+
         # Test security audit with invalid configuration
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True):
             try:
@@ -496,32 +495,32 @@ class TestCORSSecurityCompliance:
             "*",                                           # Open CORS
             "null",                                        # Null origin bypass
             "https://evil.com",                           # Malicious domain
-            
+
             # Advanced attacks
             "https://app.stocksblitz.com.evil.com",       # Domain spoofing
             "https://evil.com/app.stocksblitz.com",       # Path injection
             "https://app.stocksblitz.com@evil.com",       # User info injection
-            
+
             # Protocol attacks
             "javascript:alert('xss')",                    # JavaScript protocol
             "data:text/html,<script>alert('xss')</script>", # Data protocol
-            
+
             # Header injection
             "https://app.stocksblitz.com\r\nX-Evil: true", # CRLF injection
         ]
-        
+
         penetration_test_results = {
             "total_tests": len(penetration_test_origins),
             "blocked_attacks": 0,
             "allowed_attacks": 0,
             "attack_details": []
         }
-        
+
         for attack_origin in penetration_test_origins:
             try:
                 with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": attack_origin}, clear=True):
                     origins = get_allowed_origins("production")
-                    
+
                     # Attack was allowed
                     penetration_test_results["allowed_attacks"] += 1
                     penetration_test_results["attack_details"].append({
@@ -529,7 +528,7 @@ class TestCORSSecurityCompliance:
                         "status": "allowed",
                         "origins_returned": origins
                     })
-                    
+
             except ValueError as e:
                 # Attack was blocked
                 penetration_test_results["blocked_attacks"] += 1
@@ -538,10 +537,10 @@ class TestCORSSecurityCompliance:
                     "status": "blocked",
                     "error": str(e)
                 })
-        
+
         # Security expectation: Most attacks should be blocked
-        block_ratio = penetration_test_results["blocked_attacks"] / penetration_test_results["total_tests"]
-        
+        penetration_test_results["blocked_attacks"] / penetration_test_results["total_tests"]
+
         # At minimum, wildcard attacks should be blocked
         wildcard_blocked = any(
             detail["attack"] == "*" and detail["status"] == "blocked"
@@ -553,25 +552,25 @@ class TestCORSSecurityCompliance:
 def run_cors_security_validation_tests():
     """Run all CORS security validation tests."""
     print("🔍 Running CORS Security Validation Tests...")
-    
+
     test_classes = [
         TestCORSWildcardSecurityValidation,
         TestCORSProductionSecurityRequirements,
         TestCORSAttackPreventionValidation,
         TestCORSSecurityCompliance
     ]
-    
+
     total_tests = 0
     passed_tests = 0
-    
+
     for test_class in test_classes:
         class_name = test_class.__name__
         print(f"\n📋 Testing {class_name}...")
-        
+
         # Get test methods
         test_methods = [method for method in dir(test_class) if method.startswith('test_')]
         total_tests += len(test_methods)
-        
+
         try:
             test_instance = test_class()
             for test_method in test_methods:
@@ -584,9 +583,9 @@ def run_cors_security_validation_tests():
                     print(f"  ❌ {test_method}: {e}")
         except Exception as e:
             print(f"  ❌ Failed to initialize {class_name}: {e}")
-    
+
     print(f"\n📊 Test Results: {passed_tests}/{total_tests} tests passed")
-    
+
     if passed_tests == total_tests:
         print("\n✅ All CORS security validation tests passed!")
         print("\n🛡️ Security Validation Coverage:")
@@ -594,13 +593,13 @@ def run_cors_security_validation_tests():
         print("  - Production HTTPS requirements")
         print("  - Attack vector prevention")
         print("  - Domain spoofing detection")
-        print("  - Protocol injection prevention") 
+        print("  - Protocol injection prevention")
         print("  - Security compliance checking")
         print("  - Penetration testing scenarios")
         print("  - Audit trail and monitoring")
     else:
         print(f"\n⚠️  {total_tests - passed_tests} CORS security validation tests need attention")
-    
+
     return passed_tests == total_tests
 
 

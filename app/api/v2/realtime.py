@@ -2,28 +2,25 @@
 Real-time Signal API v2
 Provides real-time Greeks, indicators, and moneyness-based calculations
 """
-from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-
 import logging
+from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 logger = logging.getLogger(__name__)
-from app.services.signal_processor import SignalProcessor
-from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
-from app.services.instrument_service_client import InstrumentServiceClient
+import os
 
 # Import standardized error handling (architecture compliance)
 import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-from common.errors.standardized_errors import (
-    resource_not_found_error, internal_server_error, invalid_input_error
-)
-# from app.models.signal_models import SignalGreeks, SignalIndicators
-from app.schemas.signal_schemas import (
-    GreeksResponse, IndicatorResponse, MoneynessGreeksResponse
-)
 
+from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
+from app.services.signal_processor import SignalProcessor
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+# from app.models.signal_models import SignalGreeks, SignalIndicators
+from app.schemas.signal_schemas import GreeksResponse, IndicatorResponse, MoneynessGreeksResponse
+from common.errors.standardized_errors import internal_server_error, resource_not_found_error
 
 router = APIRouter(prefix="/realtime", tags=["realtime"])
 
@@ -60,20 +57,20 @@ async def get_realtime_greeks(
 ) -> GreeksResponse:
     """
     Get real-time Greeks for an instrument
-    
+
     Args:
         instrument_key: Universal instrument key
-        
+
     Returns:
         Current Greeks values
     """
     try:
         # Get latest Greeks from cache or compute
         greeks = await processor.get_latest_greeks(instrument_key)
-        
+
         if not greeks:
             resource_not_found_error("Greeks", instrument_key)
-            
+
         return GreeksResponse(
             instrument_key=instrument_key,
             timestamp=datetime.utcnow(),
@@ -88,7 +85,7 @@ async def get_realtime_greeks(
             underlying_price=greeks.underlying_price,
             option_price=greeks.theoretical_value
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -105,12 +102,12 @@ async def get_realtime_indicator(
 ) -> IndicatorResponse:
     """
     Get real-time indicator value
-    
+
     Args:
         instrument_key: Universal instrument key
         indicator: Indicator name (rsi, macd, sma, etc.)
         period: Indicator period
-        
+
     Returns:
         Current indicator value
     """
@@ -119,10 +116,10 @@ async def get_realtime_indicator(
         value = await processor.get_latest_indicator(
             instrument_key, indicator, period
         )
-        
+
         if value is None:
             resource_not_found_error("Indicator", f"{instrument_key}/{indicator}")
-            
+
         return IndicatorResponse(
             instrument_key=instrument_key,
             indicator=indicator,
@@ -134,7 +131,7 @@ async def get_realtime_indicator(
                 "data_points": period
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -146,18 +143,18 @@ async def get_realtime_indicator(
 async def get_moneyness_greeks(
     underlying: str,
     moneyness_level: str,
-    expiry_date: Optional[str] = None,
+    expiry_date: str | None = None,
     calculator: MoneynessAwareGreeksCalculator = Depends(get_moneyness_calculator),
     processor: SignalProcessor = Depends(get_signal_processor)
 ) -> MoneynessGreeksResponse:
     """
     Get aggregated Greeks for a moneyness level
-    
+
     Args:
         underlying: Underlying symbol
         moneyness_level: Moneyness level (ATM, OTM5delta, etc.)
         expiry_date: Optional expiry date filter
-        
+
     Returns:
         Aggregated Greeks for the moneyness level
     """
@@ -166,7 +163,7 @@ async def get_moneyness_greeks(
         spot_price = await processor.get_latest_price(underlying)
         if not spot_price:
             resource_not_found_error("Underlying price", underlying)
-            
+
         # Calculate moneyness Greeks
         result = await calculator.calculate_moneyness_greeks(
             underlying,
@@ -174,12 +171,12 @@ async def get_moneyness_greeks(
             moneyness_level,
             expiry_date
         )
-        
+
         if not result or not result.get("aggregated_greeks", {}).get("all"):
             resource_not_found_error("Options for moneyness level", f"{underlying}/{moneyness_level}")
-            
+
         return MoneynessGreeksResponse(**result)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -194,15 +191,15 @@ async def get_atm_iv(
     timeframe: str = Query("5m", regex="^[0-9]+m$"),
     calculator: MoneynessAwareGreeksCalculator = Depends(get_moneyness_calculator),
     processor: SignalProcessor = Depends(get_signal_processor)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get ATM implied volatility
-    
+
     Args:
         underlying: Underlying symbol
         expiry_date: Option expiry date
         timeframe: Time interval (default 5m)
-        
+
     Returns:
         ATM IV data
     """
@@ -211,7 +208,7 @@ async def get_atm_iv(
         spot_price = await processor.get_latest_price(underlying)
         if not spot_price:
             resource_not_found_error("Underlying price", underlying)
-            
+
         # Calculate ATM IV
         result = await calculator.calculate_atm_iv(
             underlying,
@@ -219,12 +216,12 @@ async def get_atm_iv(
             expiry_date,
             timeframe
         )
-        
+
         if result.get("error"):
             resource_not_found_error("ATM IV data", f"{underlying}/{expiry_date}")
-            
+
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -237,19 +234,19 @@ async def get_otm_delta_greeks(
     underlying: str,
     delta: float = Query(0.05, ge=0.01, le=0.5),
     option_type: str = Query("put", regex="^(call|put)$"),
-    expiry_date: Optional[str] = None,
+    expiry_date: str | None = None,
     calculator: MoneynessAwareGreeksCalculator = Depends(get_moneyness_calculator),
     processor: SignalProcessor = Depends(get_signal_processor)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get Greeks for OTM options by delta
-    
+
     Args:
         underlying: Underlying symbol
         delta: Target delta value
         option_type: 'call' or 'put'
         expiry_date: Optional expiry filter
-        
+
     Returns:
         Greeks for matching options
     """
@@ -258,7 +255,7 @@ async def get_otm_delta_greeks(
         spot_price = await processor.get_latest_price(underlying)
         if not spot_price:
             resource_not_found_error("Underlying price", underlying)
-            
+
         # Get OTM delta Greeks
         result = await calculator.calculate_otm_delta_greeks(
             underlying,
@@ -267,12 +264,12 @@ async def get_otm_delta_greeks(
             option_type,
             expiry_date
         )
-        
+
         if result.get("error"):
             resource_not_found_error("ATM IV data", f"{underlying}/{expiry_date}")
-            
+
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -284,29 +281,29 @@ async def get_otm_delta_greeks(
 async def get_realtime_price(
     instrument_key: str,
     processor: SignalProcessor = Depends(get_signal_processor)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get real-time price for an instrument
-    
+
     Args:
         instrument_key: Universal instrument key
-        
+
     Returns:
         Current price data
     """
     try:
         price = await processor.get_latest_price(instrument_key)
-        
+
         if price is None:
             resource_not_found_error("Price", instrument_key)
-            
+
         return {
             "instrument_key": instrument_key,
             "price": price,
             "timestamp": datetime.utcnow().isoformat(),
             "source": "signal_service"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:

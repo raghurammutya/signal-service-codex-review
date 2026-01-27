@@ -2,8 +2,7 @@
 
 import logging
 import time
-from typing import Dict, Any
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ class DockerOrchestrator:
         self.scale_cooldown = 30
         self.last_scaling_time = None
 
-    async def _make_scaling_decision(self, current_replicas: int, recommendations: Dict[str, Any]) -> Dict[str, Any]:
+    async def _make_scaling_decision(self, current_replicas: int, recommendations: dict[str, Any]) -> dict[str, Any]:
         action = recommendations.get("action", "none")
         target = recommendations.get("target_replicas", current_replicas)
         urgency = recommendations.get("urgency", "low")
@@ -38,7 +37,7 @@ class DockerOrchestrator:
         direction = "up" if target > current_replicas else "down"
         return {"scale": True, "target_replicas": target, "direction": direction}
 
-    async def _get_cluster_health(self) -> Dict[str, Any]:
+    async def _get_cluster_health(self) -> dict[str, Any]:
         # Simulate three instances using _check_instance_health
         results = [
             await self._check_instance_health(),
@@ -112,7 +111,7 @@ class DockerOrchestrator:
             except Exception:
                 continue
 
-    async def _execute_scaling_decision(self, decision: Dict[str, Any]):
+    async def _execute_scaling_decision(self, decision: dict[str, Any]):
         if not decision.get("scale"):
             return {"success": True}
         result = None

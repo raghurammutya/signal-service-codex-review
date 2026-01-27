@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
@@ -26,8 +26,8 @@ class SignalIndicators:
     instrument_key: str
     timestamp: datetime
     indicator_name: str
-    parameters: Dict[str, Any]
-    values: Dict[str, Any]
+    parameters: dict[str, Any]
+    values: dict[str, Any]
     signal_id: int = 0
     id: int = 0
 

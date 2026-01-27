@@ -8,11 +8,11 @@ ARCHITECTURE COMPLIANCE:
 - Fail-fast if config service unavailable
 """
 
-import os
 import logging
+import os
 import sys
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,6 @@ _config_loaded = False
 # Define ConfigServiceError for fallback handling
 class ConfigServiceError(Exception):
     """Exception raised when config service operations fail"""
-    pass
 
 
 def _get_config_client():
@@ -62,11 +61,10 @@ def _get_config_client():
                     logger.info("✓ Config service connected successfully")
                     _config_client = client
                     return _config_client
-                else:
-                    logger.warning(f"Config service unhealthy (attempt {attempt+1}/3)")
-                    if attempt < 2:
-                        import time
-                        time.sleep(2 ** attempt)  # Exponential backoff: 1s, 2s
+                logger.warning(f"Config service unhealthy (attempt {attempt+1}/3)")
+                if attempt < 2:
+                    import time
+                    time.sleep(2 ** attempt)  # Exponential backoff: 1s, 2s
             except Exception as retry_error:
                 logger.warning(f"Health check failed (attempt {attempt+1}/3): {retry_error}")
                 if attempt < 2:
@@ -88,12 +86,12 @@ def _get_config_client():
         sys.exit(1)
 
 
-def _get_from_config_service(key: str, required: bool = True, is_secret: bool = False, default: Optional[str] = None) -> Optional[str]:
+def _get_from_config_service(key: str, required: bool = True, is_secret: bool = False, default: str | None = None) -> str | None:
     """
     Get value from config service ONLY - no environment variable fallbacks.
 
     ARCHITECTURE COMPLIANCE:
-    - Fetches from config_service ONLY 
+    - Fetches from config_service ONLY
     - Fails gracefully with clear message if config service lacks required parameters
     - No fallbacks to environment variables (config_service is the single source of truth)
     """
@@ -168,7 +166,7 @@ def _get_service_url(service_name: str) -> str:
     if not client:
         logger.warning(f"Config service unavailable - cannot get URL for {service_name}")
         raise ConfigServiceError(f"Config service unavailable for {service_name}")
-        
+
     try:
         # Use docker-compose service name for inter-container communication
         # Map service names to docker-compose service names
@@ -182,17 +180,17 @@ def _get_service_url(service_name: str) -> str:
         url = client.get_service_url(service_name, host=host)
         if url:
             return url
-            
+
         # No URL found in config_service - raise exception for fallback handling
         logger.warning(f"Service URL not found in config_service: {service_name}")
         raise ConfigServiceError(f"Service URL not found in config_service: {service_name}")
-        
+
     except Exception as e:
         logger.warning(f"Failed to get service URL for {service_name}: {e}")
         raise ConfigServiceError(f"Failed to get service URL for {service_name}: {e}")
 
 
-def _bool(val: Optional[str], default: bool = False) -> bool:
+def _bool(val: str | None, default: bool = False) -> bool:
     if val is None:
         return default
     return str(val).lower() in ("true", "1", "yes")
@@ -207,42 +205,42 @@ class SignalServiceConfig:
         if not self.service_name:
             logger.critical("SERVICE_NAME must be provided in docker-compose.production.yml")
             sys.exit(1)
-            
-        self.environment = os.getenv("ENVIRONMENT") 
+
+        self.environment = os.getenv("ENVIRONMENT")
         if not self.environment:
             logger.critical("ENVIRONMENT must be provided in docker-compose.production.yml")
             sys.exit(1)
-            
+
         if self.environment != "production":
             logger.critical(f"ENVIRONMENT must be 'production', got: {self.environment}")
             sys.exit(1)
-            
+
         self.PORT = os.getenv("PORT")
         if not self.PORT:
             logger.critical("PORT must be provided in docker-compose.production.yml")
             sys.exit(1)
         self.PORT = int(self.PORT)
-        
+
         self.DATABASE_URL = os.getenv("DATABASE_URL")
         if not self.DATABASE_URL:
             logger.critical("DATABASE_URL must be provided in docker-compose.production.yml")
             sys.exit(1)
-            
+
         self.REDIS_URL = os.getenv("REDIS_URL")
         if not self.REDIS_URL:
             logger.critical("REDIS_URL must be provided in docker-compose.production.yml")
             sys.exit(1)
 
         logger.info(f"✓ Basic configuration loaded from docker-compose for {self.service_name} in {self.environment}")
-        
+
         # Load remaining configuration from config_service
         self._load_from_config_service()
 
     def _load_from_config_service(self):
-        # Load additional configuration from config_service 
+        # Load additional configuration from config_service
         # Basic parameters already loaded from docker-compose environment variables
         logger.info("Loading additional configuration from config_service...")
-        
+
         # DATABASE_URL and REDIS_URL already loaded from docker-compose environment
 
         # Redis Sentinel (optional)
@@ -259,7 +257,7 @@ class SignalServiceConfig:
             logger.info("✓ Using Docker network alias for ticker_service: http://ticker-service:8089")
         # INSTRUMENT_SERVICE_URL → Use TICKER_SERVICE_URL (ticker service handles instruments)
         self.INSTRUMENT_SERVICE_URL = self.TICKER_SERVICE_URL
-        
+
         try:
             self.MARKETPLACE_SERVICE_URL = _get_service_url("marketplace_service")
         except Exception:
@@ -279,14 +277,14 @@ class SignalServiceConfig:
         )
         if not self.gateway_secret:
             raise ValueError("GATEWAY_SECRET or INTERNAL_API_KEY not found in config_service")
-        
+
         # Internal API key for service-to-service communication
         self.internal_api_key = _get_from_config_service(
             "INTERNAL_API_KEY",
             required=False,
             is_secret=True
         )
-        
+
         # Marketplace webhook secret (optional)
         self.MARKETPLACE_WEBHOOK_SECRET = _get_from_config_service(
             "MARKETPLACE_WEBHOOK_SECRET",
@@ -346,7 +344,7 @@ class SignalServiceConfig:
 
     def get_tick_stream_name(self, instrument_key: str) -> str:
         return f"{self.REDIS_TICK_STREAM_PREFIX}{instrument_key}"
-    
+
     def get_config(self, key: str, default=None):
         """Get configuration value from config service."""
         return _get_from_config_service(key, required=False, is_secret=False, default=default)

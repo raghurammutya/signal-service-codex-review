@@ -1,6 +1,7 @@
 """Time utilities for signal service"""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 
 def utcnow():
     """Return current UTC time"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

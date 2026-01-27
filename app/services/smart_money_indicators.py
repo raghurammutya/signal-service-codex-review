@@ -14,14 +14,10 @@ Fallback: smartmoneyconcepts library (when dependency conflicts resolved)
 Documentation: Institutional trading concepts based on ICT methodology
 """
 import logging
-from typing import Dict, Any, Optional
-import pandas as pd
-import numpy as np
 
-from app.services.indicator_registry import (
-    register_indicator,
-    IndicatorCategory
-)
+import pandas as pd
+
+from app.services.indicator_registry import IndicatorCategory, register_indicator
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +285,7 @@ def previous_high_low(
     df: pd.DataFrame,
     period: str = "1D",
     **kwargs
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Calculate previous period high and low.
 
@@ -361,24 +357,24 @@ def trading_sessions(
 def _get_real_swings(df: pd.DataFrame, swing_length: int = 5) -> pd.Series:
     """
     Real swing detection using professional algorithms
-    
+
     Returns:
         Series with 1 for swing high, -1 for swing low, 0 for neither
     """
     try:
         from app.services.custom_indicators import CustomIndicators
-        
+
         # Get swing highs and lows using real implementation
         swing_highs = CustomIndicators.swing_high(df, left_bars=swing_length, right_bars=swing_length)
         swing_lows = CustomIndicators.swing_low(df, left_bars=swing_length, right_bars=swing_length)
-        
+
         # Combine into single series
         result = pd.Series(0, index=df.index)
         result[swing_highs.notna()] = 1  # Swing high = 1
         result[swing_lows.notna()] = -1  # Swing low = -1
-        
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"Error in real swing detection: {e}")
         # Fallback to simple pattern if custom indicators fail
@@ -390,17 +386,17 @@ def _simple_swing_fallback(df: pd.DataFrame, swing_length: int) -> pd.Series:
     result = pd.Series(0, index=df.index)
     highs = df['high'].rolling(window=swing_length*2+1, center=True).max()
     lows = df['low'].rolling(window=swing_length*2+1, center=True).min()
-    
+
     result[(df['high'] == highs) & (df['high'].shift(1) < df['high']) & (df['high'].shift(-1) < df['high'])] = 1
     result[(df['low'] == lows) & (df['low'].shift(1) > df['low']) & (df['low'].shift(-1) > df['low'])] = -1
-    
+
     return result
 
 
 def _real_bos(df: pd.DataFrame) -> pd.Series:
     """
     REAL Break of Structure Implementation
-    
+
     BOS Logic:
     1. Identify swing highs/lows using real swing detection
     2. Determine market structure (bullish/bearish trend)
@@ -410,28 +406,28 @@ def _real_bos(df: pd.DataFrame) -> pd.Series:
     try:
         if len(df) < 20:  # Need minimum data
             return pd.Series(0, index=df.index)
-            
+
         # Get real swing points
         swings = _get_real_swings(df, swing_length=5)
-        
+
         # Initialize result
         result = pd.Series(0, index=df.index)
-        
+
         # Get swing high and low indices
         swing_high_indices = df.index[swings == 1].tolist()
         swing_low_indices = df.index[swings == -1].tolist()
-        
+
         # Track last swing highs and lows
         for i in range(len(df)):
             current_idx = df.index[i]
             current_high = df['high'].iloc[i]
             current_low = df['low'].iloc[i]
-            
+
             # Find most recent swing high before current bar
             recent_swing_highs = [idx for idx in swing_high_indices if idx < current_idx]
             if recent_swing_highs:
                 last_swing_high = df.loc[recent_swing_highs[-1], 'high']
-                
+
                 # Bullish BOS: Current high breaks above last swing high
                 if current_high > last_swing_high:
                     # Confirm with volume if available
@@ -441,12 +437,12 @@ def _real_bos(df: pd.DataFrame) -> pd.Series:
                             result.iloc[i] = 1
                     else:
                         result.iloc[i] = 1
-            
+
             # Find most recent swing low before current bar
             recent_swing_lows = [idx for idx in swing_low_indices if idx < current_idx]
             if recent_swing_lows:
                 last_swing_low = df.loc[recent_swing_lows[-1], 'low']
-                
+
                 # Bearish BOS: Current low breaks below last swing low
                 if current_low < last_swing_low:
                     # Confirm with volume if available
@@ -456,9 +452,9 @@ def _real_bos(df: pd.DataFrame) -> pd.Series:
                             result.iloc[i] = -1
                     else:
                         result.iloc[i] = -1
-        
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"Error in real BOS calculation: {e}")
         return pd.Series(0, index=df.index)
@@ -467,7 +463,7 @@ def _real_bos(df: pd.DataFrame) -> pd.Series:
 def _real_choch(df: pd.DataFrame) -> pd.Series:
     """
     REAL Change of Character Implementation
-    
+
     CHoCH Logic:
     1. Determine current market structure trend
     2. Bullish CHoCH: In bearish trend, price breaks above previous swing high
@@ -477,51 +473,51 @@ def _real_choch(df: pd.DataFrame) -> pd.Series:
     try:
         if len(df) < 30:  # Need more data for trend determination
             return pd.Series(0, index=df.index)
-            
+
         # Get real swing points
         swings = _get_real_swings(df, swing_length=5)
         result = pd.Series(0, index=df.index)
-        
+
         # Determine market structure using Higher Highs/Lower Lows
         swing_high_indices = df.index[swings == 1].tolist()
         swing_low_indices = df.index[swings == -1].tolist()
-        
+
         for i in range(20, len(df)):  # Start after enough data
             current_idx = df.index[i]
             current_high = df['high'].iloc[i]
             current_low = df['low'].iloc[i]
-            
+
             # Get recent swing structure (last 3 swings)
             recent_highs = [idx for idx in swing_high_indices if idx < current_idx][-3:]
             recent_lows = [idx for idx in swing_low_indices if idx < current_idx][-3:]
-            
+
             if len(recent_highs) >= 2 and len(recent_lows) >= 2:
                 # Determine trend based on swing structure
                 high_values = [df.loc[idx, 'high'] for idx in recent_highs]
                 low_values = [df.loc[idx, 'low'] for idx in recent_lows]
-                
+
                 # Bearish trend: Lower Highs and Lower Lows
                 is_bearish_trend = (len(high_values) >= 2 and high_values[-1] < high_values[-2] and
                                   len(low_values) >= 2 and low_values[-1] < low_values[-2])
-                
+
                 # Bullish trend: Higher Highs and Higher Lows
                 is_bullish_trend = (len(high_values) >= 2 and high_values[-1] > high_values[-2] and
                                   len(low_values) >= 2 and low_values[-1] > low_values[-2])
-                
+
                 # Bullish CHoCH: In bearish trend, break above recent swing high
                 if is_bearish_trend and recent_highs:
                     last_swing_high = df.loc[recent_highs[-1], 'high']
                     if current_high > last_swing_high:
                         result.iloc[i] = 1
-                
+
                 # Bearish CHoCH: In bullish trend, break below recent swing low
                 elif is_bullish_trend and recent_lows:
                     last_swing_low = df.loc[recent_lows[-1], 'low']
                     if current_low < last_swing_low:
                         result.iloc[i] = -1
-        
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"Error in real CHoCH calculation: {e}")
         return pd.Series(0, index=df.index)
@@ -530,7 +526,7 @@ def _real_choch(df: pd.DataFrame) -> pd.Series:
 def _real_order_blocks(df: pd.DataFrame) -> pd.DataFrame:
     """
     REAL Order Blocks Implementation
-    
+
     Order Block Logic:
     1. Identify swing points with high volume
     2. Find candlesticks before strong moves (displacement)
@@ -540,26 +536,26 @@ def _real_order_blocks(df: pd.DataFrame) -> pd.DataFrame:
     try:
         if len(df) < 20:
             return pd.DataFrame(columns=['top', 'bottom', 'type', 'timestamp', 'strength'])
-            
+
         # Get swing points
-        swings = _get_real_swings(df, swing_length=3)
+        _get_real_swings(df, swing_length=3)
         order_blocks = []
-        
+
         # Find displacement moves (strong price movements)
         price_change = df['close'].pct_change().abs()
         avg_change = price_change.rolling(window=20).mean()
         displacement_threshold = avg_change * 2  # 2x average move
-        
+
         for i in range(10, len(df) - 5):
             # Check if this bar created displacement
             if price_change.iloc[i] > displacement_threshold.iloc[i]:
-                
+
                 # Volume confirmation if available
                 volume_confirmed = True
                 if 'volume' in df.columns:
                     avg_volume = df['volume'].iloc[i-10:i].mean()
                     volume_confirmed = df['volume'].iloc[i] > avg_volume * 1.5
-                
+
                 if volume_confirmed:
                     # Bullish displacement (strong up move)
                     if df['close'].iloc[i] > df['open'].iloc[i]:
@@ -574,7 +570,7 @@ def _real_order_blocks(df: pd.DataFrame) -> pd.DataFrame:
                                     'strength': float(price_change.iloc[i])
                                 })
                                 break
-                    
+
                     # Bearish displacement (strong down move)
                     elif df['close'].iloc[i] < df['open'].iloc[i]:
                         # Look for the last bullish candle before displacement
@@ -588,15 +584,15 @@ def _real_order_blocks(df: pd.DataFrame) -> pd.DataFrame:
                                     'strength': float(price_change.iloc[i])
                                 })
                                 break
-        
+
         # Return top 10 strongest order blocks
         if order_blocks:
             ob_df = pd.DataFrame(order_blocks)
             ob_df = ob_df.sort_values('strength', ascending=False).head(10)
             return ob_df.reset_index(drop=True)
-        
+
         return pd.DataFrame(columns=['top', 'bottom', 'type', 'timestamp', 'strength'])
-        
+
     except Exception as e:
         logger.exception(f"Error in real Order Blocks calculation: {e}")
         return pd.DataFrame(columns=['top', 'bottom', 'type', 'timestamp', 'strength'])
@@ -605,7 +601,7 @@ def _real_order_blocks(df: pd.DataFrame) -> pd.DataFrame:
 def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
     """
     REAL Fair Value Gaps Implementation
-    
+
     FVG Logic:
     1. Identify 3-candle patterns with gaps
     2. Bullish FVG: Gap between candle 1 high and candle 3 low
@@ -615,15 +611,15 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
     try:
         if len(df) < 10:
             return pd.DataFrame(columns=['top', 'bottom', 'type', 'timestamp', 'filled'])
-            
+
         fvg_list = []
-        
+
         for i in range(2, len(df)):  # Need at least 3 candles
             # Get 3-candle pattern
             candle1 = df.iloc[i-2]
-            candle2 = df.iloc[i-1] 
+            df.iloc[i-1]
             candle3 = df.iloc[i]
-            
+
             # Bullish FVG: Gap up pattern
             # Candle 1 high < Candle 3 low (gap between them)
             if candle1['high'] < candle3['low']:
@@ -631,7 +627,7 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
                 if candle3['close'] > candle1['close'] * 1.005:  # At least 0.5% move
                     gap_top = candle3['low']
                     gap_bottom = candle1['high']
-                    
+
                     # Check if gap is significant (> 0.1% of price)
                     if (gap_top - gap_bottom) / candle1['close'] > 0.001:
                         fvg_list.append({
@@ -641,7 +637,7 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
                             'timestamp': df.index[i],
                             'filled': False
                         })
-            
+
             # Bearish FVG: Gap down pattern
             # Candle 1 low > Candle 3 high (gap between them)
             elif candle1['low'] > candle3['high']:
@@ -649,7 +645,7 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
                 if candle3['close'] < candle1['close'] * 0.995:  # At least 0.5% move
                     gap_top = candle1['low']
                     gap_bottom = candle3['high']
-                    
+
                     # Check if gap is significant (> 0.1% of price)
                     if (gap_top - gap_bottom) / candle1['close'] > 0.001:
                         fvg_list.append({
@@ -659,22 +655,22 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
                             'timestamp': df.index[i],
                             'filled': False
                         })
-        
+
         # Check if any FVGs have been filled by subsequent price action
         if fvg_list:
             fvg_df = pd.DataFrame(fvg_list)
             current_price = df['close'].iloc[-1]
-            
+
             for idx, row in fvg_df.iterrows():
                 # FVG is filled if price has traded through the gap
                 if row['bottom'] <= current_price <= row['top']:
                     fvg_df.loc[idx, 'filled'] = True
-            
+
             # Return unfilled FVGs (most relevant)
-            return fvg_df[fvg_df['filled'] == False].reset_index(drop=True)
-        
+            return fvg_df[not fvg_df['filled']].reset_index(drop=True)
+
         return pd.DataFrame(columns=['top', 'bottom', 'type', 'timestamp', 'filled'])
-        
+
     except Exception as e:
         logger.exception(f"Error in real FVG calculation: {e}")
         return pd.DataFrame(columns=['top', 'bottom', 'type', 'timestamp', 'filled'])
@@ -683,7 +679,7 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
 def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
     """
     REAL Liquidity Levels Implementation
-    
+
     Liquidity Logic:
     1. Find swing highs/lows (where stops cluster)
     2. Equal highs/lows (liquidity pools)
@@ -693,14 +689,14 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
     try:
         if len(df) < 20:
             return pd.DataFrame(columns=['level', 'type', 'strength', 'touches'])
-            
+
         liquidity_levels = []
-        
+
         # Get swing points
         swings = _get_real_swings(df, swing_length=5)
         swing_high_indices = df.index[swings == 1].tolist()
         swing_low_indices = df.index[swings == -1].tolist()
-        
+
         # 1. Swing High Liquidity (Sell-side liquidity)
         swing_highs = [df.loc[idx, 'high'] for idx in swing_high_indices]
         for high_level in swing_highs[-10:]:  # Last 10 swing highs
@@ -712,7 +708,7 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
                     'strength': min(touches / 5.0, 1.0),  # Normalize to 0-1
                     'touches': touches
                 })
-        
+
         # 2. Swing Low Liquidity (Buy-side liquidity)
         swing_lows = [df.loc[idx, 'low'] for idx in swing_low_indices]
         for low_level in swing_lows[-10:]:  # Last 10 swing lows
@@ -720,16 +716,16 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
             if touches >= 2:  # Multiple touches = stronger level
                 liquidity_levels.append({
                     'level': float(low_level),
-                    'type': 'buy-side', 
+                    'type': 'buy-side',
                     'strength': min(touches / 5.0, 1.0),  # Normalize to 0-1
                     'touches': touches
                 })
-        
+
         # 3. Previous period highs/lows
         if len(df) >= 50:  # Daily data
             prev_high = df['high'].iloc[-50:-1].max()  # Previous ~2 months
             prev_low = df['low'].iloc[-50:-1].min()
-            
+
             liquidity_levels.extend([
                 {
                     'level': float(prev_high),
@@ -744,27 +740,27 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
                     'touches': 1
                 }
             ])
-        
+
         # 4. Round number levels (psychological)
         current_price = df['close'].iloc[-1]
         price_range = df['high'].max() - df['low'].min()
-        
+
         # Find round numbers within price range
         if current_price > 100:
             step = 50 if current_price > 1000 else 25
         else:
             step = 10 if current_price > 50 else 5
-        
+
         price_min = int((current_price - price_range/2) / step) * step
         price_max = int((current_price + price_range/2) / step) * step
-        
+
         for round_level in range(price_min, price_max + step, step):
             if round_level > 0:  # Valid price
                 # Check if price has interacted with this level
-                interaction_count = sum(1 for i in range(len(df)) 
+                interaction_count = sum(1 for i in range(len(df))
                                      if abs(df['high'].iloc[i] - round_level) < round_level * 0.001 or
                                         abs(df['low'].iloc[i] - round_level) < round_level * 0.001)
-                
+
                 if interaction_count > 0:
                     liq_type = 'sell-side' if round_level > current_price else 'buy-side'
                     liquidity_levels.append({
@@ -773,44 +769,44 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
                         'strength': 0.6,  # Medium strength for round numbers
                         'touches': interaction_count
                     })
-        
+
         # Remove duplicates and sort by strength
         if liquidity_levels:
             liq_df = pd.DataFrame(liquidity_levels)
             liq_df = liq_df.drop_duplicates(subset=['level'], keep='first')
             liq_df = liq_df.sort_values('strength', ascending=False).head(15)
             return liq_df.reset_index(drop=True)
-        
+
         return pd.DataFrame(columns=['level', 'type', 'strength', 'touches'])
-        
+
     except Exception as e:
         logger.exception(f"Error in real Liquidity calculation: {e}")
         return pd.DataFrame(columns=['level', 'type', 'strength', 'touches'])
 
 
-def _real_prev_hl(df: pd.DataFrame) -> Dict[str, float]:
+def _real_prev_hl(df: pd.DataFrame) -> dict[str, float]:
     """
     REAL Previous High/Low Implementation
-    
+
     Returns significant previous period levels based on timeframe
     """
     try:
         if len(df) < 2:
             return {'previous_high': float(df['high'].iloc[-1]), 'previous_low': float(df['low'].iloc[-1])}
-        
+
         # Determine lookback period based on data frequency
         if len(df) > 100:  # Likely daily or higher frequency data
             lookback = min(20, len(df) // 2)  # Previous 20 periods or half the data
         else:
             lookback = min(10, len(df) // 2)
-        
+
         # Get previous period (excluding current bar)
         prev_data = df.iloc[-(lookback+1):-1] if len(df) > lookback else df.iloc[:-1]
-        
+
         # Find significant levels (not just previous bar)
         prev_high = prev_data['high'].max()
         prev_low = prev_data['low'].min()
-        
+
         # Add additional context
         result = {
             'previous_high': float(prev_high),
@@ -818,9 +814,9 @@ def _real_prev_hl(df: pd.DataFrame) -> Dict[str, float]:
             'previous_close': float(df['close'].iloc[-2]) if len(df) >= 2 else float(df['close'].iloc[-1]),
             'range_pct': float((prev_high - prev_low) / prev_low * 100) if prev_low > 0 else 0.0
         }
-        
+
         return result
-        
+
     except Exception as e:
         logger.exception(f"Error calculating previous high/low: {e}")
         return {'previous_high': float(df['high'].iloc[-1]), 'previous_low': float(df['low'].iloc[-1])}
@@ -829,13 +825,13 @@ def _real_prev_hl(df: pd.DataFrame) -> Dict[str, float]:
 def _real_sessions(df: pd.DataFrame) -> pd.DataFrame:
     """
     REAL Trading Sessions Implementation
-    
+
     Identifies Asian, London, and New York sessions with their key levels
     """
     try:
         if len(df) < 10:
             return pd.DataFrame(columns=['session', 'high', 'low', 'open', 'close'])
-        
+
         # Check if index has timezone info
         if not hasattr(df.index, 'tz') or df.index.tz is None:
             # Assume UTC if no timezone
@@ -843,37 +839,37 @@ def _real_sessions(df: pd.DataFrame) -> pd.DataFrame:
             df_tz.index = pd.to_datetime(df.index, utc=True)
         else:
             df_tz = df.copy()
-        
+
         sessions = []
-        
+
         # Define session times (UTC)
         session_times = {
             'asian': (0, 8),      # 00:00-08:00 UTC
             'london': (7, 15),    # 07:00-15:00 UTC (overlap with Asian)
             'newyork': (13, 21)   # 13:00-21:00 UTC (overlap with London)
         }
-        
+
         # Group data by date
         df_tz['date'] = df_tz.index.date
         daily_groups = df_tz.groupby('date')
-        
+
         for date, day_data in daily_groups:
             day_data_hourly = day_data.copy()
             day_data_hourly['hour'] = day_data.index.hour
-            
+
             for session_name, (start_hour, end_hour) in session_times.items():
                 # Get session data
                 if start_hour <= end_hour:
                     session_data = day_data_hourly[
-                        (day_data_hourly['hour'] >= start_hour) & 
+                        (day_data_hourly['hour'] >= start_hour) &
                         (day_data_hourly['hour'] < end_hour)
                     ]
                 else:  # Handle overnight sessions
                     session_data = day_data_hourly[
-                        (day_data_hourly['hour'] >= start_hour) | 
+                        (day_data_hourly['hour'] >= start_hour) |
                         (day_data_hourly['hour'] < end_hour)
                     ]
-                
+
                 if not session_data.empty:
                     sessions.append({
                         'date': date,
@@ -885,11 +881,11 @@ def _real_sessions(df: pd.DataFrame) -> pd.DataFrame:
                         'start_time': session_data.index[0],
                         'end_time': session_data.index[-1]
                     })
-        
+
         if sessions:
             session_df = pd.DataFrame(sessions)
             return session_df.tail(20)  # Return last 20 sessions
-        
+
         # Fallback: Create simple session markers based on time patterns
         session_count = len(df) // 3
         return pd.DataFrame({
@@ -899,7 +895,7 @@ def _real_sessions(df: pd.DataFrame) -> pd.DataFrame:
             'open': df['open'].values if 'open' in df.columns else df['close'].values,
             'close': df['close'].values
         })
-        
+
     except Exception as e:
         logger.exception(f"Error calculating sessions: {e}")
         return pd.DataFrame(columns=['session', 'high', 'low', 'open', 'close'])

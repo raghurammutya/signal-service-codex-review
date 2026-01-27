@@ -4,10 +4,9 @@ Simple Enhanced Monitoring API for Signal Service
 Minimal implementation that works without external dependencies.
 Provides basic monitoring endpoints for immediate functionality testing.
 """
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException
 from datetime import datetime
-import json
+
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/monitoring", tags=["simple-monitoring"])
 
@@ -41,34 +40,34 @@ async def health_summary():
 @router.get("/component-status")
 async def component_status():
     """Check availability of monitoring components"""
-    
+
     # Check if components can be imported
     components = {}
-    
+
     try:
         from app.core.health_checker import get_health_checker
         components["health_checker"] = "available"
     except ImportError:
         components["health_checker"] = "not_available"
-    
+
     try:
-        from app.core.circuit_breaker import get_circuit_breaker_manager  
+        from app.core.circuit_breaker import get_circuit_breaker_manager
         components["circuit_breaker"] = "available"
     except ImportError:
         components["circuit_breaker"] = "not_available"
-    
+
     try:
         from monitoring.enhanced_metrics import get_enhanced_metrics_collector
         components["enhanced_metrics"] = "available"
     except ImportError:
         components["enhanced_metrics"] = "not_available"
-    
+
     try:
         from prometheus_client import generate_latest
         components["prometheus"] = "available"
     except ImportError:
         components["prometheus"] = "not_available"
-    
+
     return {
         "timestamp": datetime.utcnow().isoformat(),
         "component_availability": components,
@@ -79,14 +78,14 @@ async def component_status():
 @router.get("/basic-metrics")
 async def basic_metrics():
     """Provide basic system metrics without external dependencies"""
+
     import psutil
-    import time
-    
+
     try:
         # Basic system metrics
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
-        
+
         return {
             "timestamp": datetime.utcnow().isoformat(),
             "system_metrics": {
@@ -119,7 +118,7 @@ async def deployment_test():
     return {
         "deployment_status": "success",
         "router_registration": "confirmed",
-        "endpoint_accessibility": "verified", 
+        "endpoint_accessibility": "verified",
         "timestamp": datetime.utcnow().isoformat(),
         "test_result": "PASS - Enhanced monitoring router is accessible and functional"
     }

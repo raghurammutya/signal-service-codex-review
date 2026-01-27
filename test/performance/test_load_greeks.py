@@ -1,30 +1,32 @@
 """Load testing for Greeks calculation endpoints."""
-from locust import HttpUser, task, between
 import json
 import random
 
+from locust import HttpUser, between, task
+
+
 class GreeksCalculationUser(HttpUser):
     """Load testing for Greeks calculation endpoints."""
-    
+
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
-    
+
     def on_start(self):
         """Initialize test data."""
         self.test_instruments = [
             f"NSE@TESTSYM{i}@CE@{20000 + i*100}"
             for i in range(100)
         ]
-        
+
         self.test_equities = [
             f"NSE@TESTSYM{i}" for i in range(50)
         ]
-    
+
     @task(3)
     def calculate_greeks(self):
         """Test Greeks calculation under load."""
         instrument = random.choice(self.test_instruments)
         spot_price = random.uniform(19000, 21000)
-        
+
         request_data = {
             "spot_price": spot_price,
             "options": [{
@@ -34,8 +36,8 @@ class GreeksCalculationUser(HttpUser):
                 "expiry_date": "2024-12-28"
             }]
         }
-        
-        with self.client.post("/api/v2/greeks/calculate", 
+
+        with self.client.post("/api/v2/greeks/calculate",
                              json=request_data,
                              catch_response=True) as response:
             if response.status_code != 200:
@@ -51,12 +53,12 @@ class GreeksCalculationUser(HttpUser):
                         response.failure("Missing Greeks in response")
                 except json.JSONDecodeError:
                     response.failure("Invalid JSON response")
-    
+
     @task(2)
     def get_historical_data(self):
         """Test historical data retrieval under load."""
         instrument = random.choice(self.test_instruments)
-        
+
         with self.client.get(f"/api/v2/signals/historical/greeks/{instrument}",
                            params={
                                "start_time": "2024-01-01T00:00:00Z",
@@ -71,25 +73,25 @@ class GreeksCalculationUser(HttpUser):
                 response.failure(f"Failed with status {response.status_code}")
             elif response.elapsed.total_seconds() > 3.0:
                 response.failure("Historical data too slow (>3s)")
-    
+
     @task(2)
     def smart_money_calculation(self):
         """Test Smart Money indicators under load."""
         equity = random.choice(self.test_equities)
-        
+
         # Generate random OHLCV data
         market_data = {
             "instrument_key": equity,
             "timeframe": random.choice(["5m", "15m", "1h"]),
             "ohlcv_data": []
         }
-        
+
         base_price = random.uniform(19000, 21000)
         for i in range(50):  # 50 data points
             price = base_price * (1 + random.uniform(-0.02, 0.02))  # ±2% variation
             high = price * (1 + abs(random.uniform(0, 0.01)))
             low = price * (1 - abs(random.uniform(0, 0.01)))
-            
+
             market_data["ohlcv_data"].append({
                 "timestamp": f"2024-01-01T{9 + i//12:02d}:{(i*5)%60:02d}:00Z",
                 "open": round(base_price, 2),
@@ -99,7 +101,7 @@ class GreeksCalculationUser(HttpUser):
                 "volume": random.randint(50000, 200000)
             })
             base_price = price
-        
+
         with self.client.post("/api/v2/indicators/smart-money/calculate",
                              json=market_data,
                              catch_response=True) as response:
@@ -117,12 +119,12 @@ class GreeksCalculationUser(HttpUser):
                             break
                 except json.JSONDecodeError:
                     response.failure("Invalid JSON response")
-    
+
     @task(1)
     def process_tick_data(self):
         """Test tick data processing under load."""
         instrument = random.choice(self.test_instruments + self.test_equities)
-        
+
         tick_data = {
             "instrument_key": instrument,
             "last_price": random.uniform(100, 300),
@@ -131,7 +133,7 @@ class GreeksCalculationUser(HttpUser):
             "volume": random.randint(1000, 50000),
             "timestamp": "2024-01-01T10:00:00Z"
         }
-        
+
         with self.client.post("/api/v2/signals/process-tick",
                              json=tick_data,
                              catch_response=True) as response:
@@ -142,9 +144,9 @@ class GreeksCalculationUser(HttpUser):
 
 class SystemLoadUser(HttpUser):
     """System-wide load testing."""
-    
+
     wait_time = between(0.5, 2)
-    
+
     @task(1)
     def health_check(self):
         """Regular health checks."""
@@ -153,7 +155,7 @@ class SystemLoadUser(HttpUser):
                 response.failure(f"Unexpected health status: {response.status_code}")
             elif response.elapsed.total_seconds() > 2.0:
                 response.failure("Health check too slow")
-    
+
     @task(1)
     def websocket_info(self):
         """Test WebSocket endpoint info."""
@@ -164,14 +166,14 @@ class SystemLoadUser(HttpUser):
 
 class StressTestUser(HttpUser):
     """Stress testing with aggressive load."""
-    
+
     wait_time = between(0.1, 0.5)  # Very short wait times
-    
+
     @task(1)
     def aggressive_greeks_calculation(self):
         """Aggressive Greeks calculation load."""
         instruments = [f"NSE@STRESS{i}@CE@{20000 + i*50}" for i in range(10)]
-        
+
         # Multiple options in single request
         request_data = {
             "spot_price": 20000,
@@ -185,7 +187,7 @@ class StressTestUser(HttpUser):
                 for _ in range(5)  # 5 options per request
             ]
         }
-        
+
         with self.client.post("/api/v2/greeks/calculate",
                              json=request_data,
                              catch_response=True) as response:
@@ -201,9 +203,9 @@ class StressTestUser(HttpUser):
 # Custom load test scenarios
 class MemoryIntensiveUser(HttpUser):
     """Test memory-intensive operations."""
-    
+
     wait_time = between(5, 10)  # Longer waits for memory-intensive ops
-    
+
     @task(1)
     def large_smart_money_calculation(self):
         """Test Smart Money with large dataset."""
@@ -212,7 +214,7 @@ class MemoryIntensiveUser(HttpUser):
             "timeframe": "1m",
             "ohlcv_data": []
         }
-        
+
         # Large dataset (1000 data points)
         base_price = 20000
         for i in range(1000):
@@ -226,7 +228,7 @@ class MemoryIntensiveUser(HttpUser):
                 "volume": random.randint(10000, 100000)
             })
             base_price = price
-        
+
         with self.client.post("/api/v2/indicators/smart-money/calculate",
                              json=market_data,
                              timeout=60,  # Longer timeout for large datasets
@@ -240,7 +242,7 @@ class MemoryIntensiveUser(HttpUser):
 if __name__ == "__main__":
     import subprocess
     import sys
-    
+
     # Run different load test scenarios
     scenarios = [
         {
@@ -251,7 +253,7 @@ if __name__ == "__main__":
             "user_class": "GreeksCalculationUser"
         },
         {
-            "name": "System Load Test", 
+            "name": "System Load Test",
             "users": 100,
             "spawn_rate": 10,
             "run_time": "180s",
@@ -261,7 +263,7 @@ if __name__ == "__main__":
             "name": "Stress Test",
             "users": 200,
             "spawn_rate": 20,
-            "run_time": "120s", 
+            "run_time": "120s",
             "user_class": "StressTestUser"
         },
         {
@@ -272,14 +274,14 @@ if __name__ == "__main__":
             "user_class": "MemoryIntensiveUser"
         }
     ]
-    
+
     host = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8003"
-    
+
     for scenario in scenarios:
         print(f"\n{'='*50}")
         print(f"Running {scenario['name']}")
         print(f"{'='*50}")
-        
+
         cmd = [
             "locust",
             "-f", __file__,
@@ -292,7 +294,7 @@ if __name__ == "__main__":
             "--csv", f"performance-reports/{scenario['name'].lower().replace(' ', '-')}",
             scenario["user_class"]
         ]
-        
+
         try:
             subprocess.run(cmd, check=True)
             print(f"✅ {scenario['name']} completed successfully")

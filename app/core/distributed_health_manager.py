@@ -3,16 +3,12 @@ Distributed health management for Signal Service horizontal scaling
 """
 import asyncio
 import json
-import socket
-import time
-import uuid
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
 import logging
-
-import redis.asyncio as redis
-import time
+import socket
+import uuid
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +22,13 @@ class ServiceInstance:
     started_at: datetime
     last_heartbeat: datetime
     status: str  # healthy, unhealthy, error
-    health_data: Dict[str, Any]
-    load_metrics: Dict[str, Any]
-    assigned_instruments: List[str]
+    health_data: dict[str, Any]
+    load_metrics: dict[str, Any]
+    assigned_instruments: list[str]
 
 class DistributedHealthManager:
     """Manages health across multiple Signal Service instances"""
-    
+
     def __init__(self, redis_client, instance_id: str = None):
         self.redis_client = redis_client
         # Use POD_NAME environment variable for consistency with ScalableSignalProcessor
@@ -50,7 +46,7 @@ class DistributedHealthManager:
         self.started_at = datetime.utcnow()
         self.heartbeat_interval = 30  # seconds
         self.instance_ttl = 90  # seconds before considering instance dead
-        
+
         # Redis keys for distributed coordination
         self.redis_keys = {
             'instances': 'signal_service:instances',
@@ -58,11 +54,11 @@ class DistributedHealthManager:
             'scaling_metrics': 'signal_service:scaling:metrics',
             'load_distribution': 'signal_service:load:distribution'
         }
-    
+
     def _generate_instance_id(self) -> str:
         """Generate unique instance ID"""
         return f"signal-service-{uuid.uuid4().hex[:8]}"
-    
+
     def _get_container_name(self) -> str:
         """Get container name from environment"""
         import os
@@ -70,7 +66,7 @@ class DistributedHealthManager:
         if not container_name:
             raise RuntimeError("CONTAINER_NAME environment variable required for distributed health monitoring. No fallbacks allowed per architecture.")
         return container_name
-    
+
     def _get_host_ip(self) -> str:
         """Get host IP address"""
         try:
@@ -79,7 +75,7 @@ class DistributedHealthManager:
             pod_ip = os.environ.get('POD_IP')
             if pod_ip:
                 return pod_ip
-            
+
             # Connect to external address to determine local IP
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # Use cluster DNS or gateway instead of hardcoded public IP
@@ -94,7 +90,7 @@ class DistributedHealthManager:
                 return socket.gethostbyname(socket.gethostname())
             except Exception:
                 return "127.0.0.1"
-    
+
     async def register_instance(self, health_checker) -> None:
         """Register this instance in the distributed registry"""
         try:
@@ -110,25 +106,25 @@ class DistributedHealthManager:
                 load_metrics={},
                 assigned_instruments=[]
             )
-            
+
             # Store instance data
             await self.redis_client.hset(
                 self.redis_keys['instances'],
                 self.instance_id,
                 json.dumps(asdict(instance), default=str)
             )
-            
+
             # Set TTL for auto-cleanup
             await self.redis_client.expire(
                 f"{self.redis_keys['instances']}:{self.instance_id}",
                 self.instance_ttl
             )
-            
+
             logger.info(f"Registered instance {self.instance_id} ({self.container_name})")
-            
+
         except Exception as e:
             logger.error(f"Failed to register instance: {e}")
-    
+
     async def start_heartbeat(self, health_checker) -> None:
         """Start periodic heartbeat and health reporting"""
         while True:
@@ -138,16 +134,16 @@ class DistributedHealthManager:
             except Exception as e:
                 logger.error(f"Heartbeat failed: {e}")
                 await asyncio.sleep(5)  # Retry after 5 seconds
-    
+
     async def _send_heartbeat(self, health_checker) -> None:
         """Send heartbeat with current health and load data"""
         try:
             # Get current health status
             health_data = await health_checker.get_comprehensive_health()
-            
+
             # Get current load metrics
             load_metrics = await self._collect_load_metrics()
-            
+
             # Update instance data
             instance_data = {
                 'instance_id': self.instance_id,
@@ -161,30 +157,30 @@ class DistributedHealthManager:
                 'load_metrics': load_metrics,
                 'assigned_instruments': await self._get_assigned_instruments()
             }
-            
+
             # Store in Redis
             await self.redis_client.hset(
                 self.redis_keys['instances'],
                 self.instance_id,
                 json.dumps(instance_data)
             )
-            
+
             # Update aggregate health
             await self._update_aggregate_health()
-            
+
             # Update scaling metrics
             await self._update_scaling_metrics(load_metrics)
-            
+
         except Exception as e:
             logger.error(f"Failed to send heartbeat: {e}")
-    
-    async def _collect_load_metrics(self) -> Dict[str, Any]:
+
+    async def _collect_load_metrics(self) -> dict[str, Any]:
         """Collect current load metrics for this instance"""
         import psutil
-        
+
         try:
             process = psutil.Process()
-            
+
             return {
                 'cpu_percent': process.cpu_percent(),
                 'memory_percent': process.memory_percent(),
@@ -199,243 +195,55 @@ class DistributedHealthManager:
         except Exception as e:
             logger.error(f"Failed to collect load metrics: {e}")
             return {}
-    
+
     async def _get_request_rate(self) -> float:
         """Get current request rate (requests per minute)"""
-<<<<<<< HEAD
-        # Get real request rate from metrics system
-        try:
-            from app.metrics.threshold_metrics import get_metrics_collector
-            metrics_collector = get_metrics_collector()
-            request_rate = await metrics_collector.get_request_rate()
-            return float(request_rate)
-        except Exception as e:
-            logger.error(f"Failed to get real request rate: {e}")
-            # Fail fast instead of returning mock data
-            raise ValueError("Unable to get real request rate from metrics system. No mock data allowed in production.")
-    
-    async def _get_queue_size(self) -> int:
-        """Get current processing queue size from ScalableSignalProcessor"""
-        try:
-            # Get queue size from Redis metrics (try both key formats for compatibility)
-            queue_metrics_key = f"signal:pod:metrics:{self.instance_id}"
-            metrics_data = await self.redis_client.get(queue_metrics_key)
-            
-            # Fallback to instance metrics key if pod metrics not found
-            if not metrics_data:
-                queue_metrics_key = f"signal:instance:metrics:{self.instance_id}"
-                metrics_data = await self.redis_client.get(queue_metrics_key)
-            
-            if metrics_data:
-                import json
-                metrics = json.loads(metrics_data)
-                worker_pool_metrics = metrics.get('worker_pool', {})
-                return int(worker_pool_metrics.get('total_tasks_queued', 0))
-            else:
-                # If no metrics available yet, return 0 (empty queue)
-                return 0
-        except Exception as e:
-            logger.error(f"Failed to get queue size from Redis metrics: {e}")
-            # Fail fast instead of returning mock data
-            raise ValueError("Unable to get real queue size from Redis metrics. No mock data allowed in production.")
-    
-    async def _get_processing_rate(self) -> float:
-        """Get current signal processing rate from ScalableSignalProcessor"""
-        try:
-            # Get processing rate from Redis metrics (try both key formats for compatibility)
-            processing_metrics_key = f"signal:pod:metrics:{self.instance_id}"
-            metrics_data = await self.redis_client.get(processing_metrics_key)
-            
-            # Fallback to instance metrics key if pod metrics not found
-            if not metrics_data:
-                processing_metrics_key = f"signal:instance:metrics:{self.instance_id}"
-                metrics_data = await self.redis_client.get(processing_metrics_key)
-            
-            if metrics_data:
-                import json
-                metrics = json.loads(metrics_data)
-                computations_completed = metrics.get('computations_completed', 0)
-                ticks_processed = metrics.get('ticks_processed', 0)
-                # Calculate rate as computations per tick if available
-                if ticks_processed > 0:
-                    return float(computations_completed / ticks_processed)
-                else:
-                    return 0.0
-            else:
-                # If no metrics available yet, return 0
-                return 0.0
-        except Exception as e:
-            logger.error(f"Failed to get processing rate from Redis metrics: {e}")
-            # Fail fast instead of returning mock data
-            raise ValueError("Unable to get real processing rate from Redis metrics. No mock data allowed in production.")
-=======
-        try:
-            # Get request rate from metrics service if available
-            if hasattr(self, '_metrics_client') and self._metrics_client:
-                return await self._metrics_client.get_request_rate()
-            
-            # Fallback: estimate from Redis stats if available
-            redis_info = await self.redis_client.info('stats')
-            total_commands = redis_info.get('total_commands_processed', 0)
-            
-            # Store current count and calculate rate
-            current_time = datetime.utcnow().timestamp()
-            if hasattr(self, '_last_command_count') and hasattr(self, '_last_check_time'):
-                time_diff = current_time - self._last_check_time
-                command_diff = total_commands - self._last_command_count
-                rate = (command_diff / time_diff) * 60 if time_diff > 0 else 0.0
-            else:
-                rate = 0.0
-            
-            self._last_command_count = total_commands
-            self._last_check_time = current_time
-            
-            return rate
-        except Exception as e:
-            logger.warning(f"Failed to get request rate: {e}")
-            return 0.0
-    
-    async def _get_queue_size(self) -> int:
-        """Get current processing queue size"""
-        try:
-            # Get queue size from metrics service if available
-            if hasattr(self, '_metrics_client') and self._metrics_client:
-                return await self._metrics_client.get_queue_size()
-            
-            # Fallback: estimate from Redis queue lengths
-            queue_keys = [
-                'signal_service:processing_queue',
-                'signal_service:priority_queue',
-                'signal_service:retry_queue'
-            ]
-            
-            total_size = 0
-            for key in queue_keys:
-                try:
-                    size = await self.redis_client.llen(key)
-                    total_size += size
-                except Exception:
-                    continue
-            
-            return total_size
-        except Exception as e:
-            logger.warning(f"Failed to get queue size: {e}")
-            return 0
-    
-    async def _get_processing_rate(self) -> float:
-        """Get current signal processing rate"""
-        try:
-            # Get processing rate from metrics service if available
-            if hasattr(self, '_metrics_client') and self._metrics_client:
-                return await self._metrics_client.get_processing_rate()
-            
-            # Fallback: calculate from processed signals count
-            processed_key = f"signal_service:processed_count:{self.instance_id}"
-            current_count = await self.redis_client.get(processed_key) or 0
-            current_count = int(current_count)
-            
-            current_time = datetime.utcnow().timestamp()
-            if hasattr(self, '_last_processed_count') and hasattr(self, '_last_processing_check'):
-                time_diff = current_time - self._last_processing_check
-                count_diff = current_count - self._last_processed_count
-                rate = (count_diff / time_diff) * 60 if time_diff > 0 else 0.0
-            else:
-                rate = 0.0
-            
-            self._last_processed_count = current_count
-            self._last_processing_check = current_time
-            
-            return rate
-        except Exception as e:
-            logger.warning(f"Failed to get processing rate: {e}")
-            return 0.0
->>>>>>> compliance-violations-fixed
-    
-    async def _get_assigned_instruments(self) -> List[str]:
+
+    async def _get_assigned_instruments(self) -> list[str]:
         """Get list of instruments assigned to this instance"""
         try:
-<<<<<<< HEAD
-            # Get assigned instruments from Redis metrics (try both key formats for compatibility)
-            assignments_metrics_key = f"signal:pod:metrics:{self.instance_id}"
-            metrics_data = await self.redis_client.get(assignments_metrics_key)
-            
-            # Fallback to instance metrics key if pod metrics not found
-            if not metrics_data:
-                assignments_metrics_key = f"signal:instance:metrics:{self.instance_id}"
-                metrics_data = await self.redis_client.get(assignments_metrics_key)
-            
-            if metrics_data:
-                import json
-                metrics = json.loads(metrics_data)
-                return metrics.get('assigned_instruments', [])
-            else:
-                # If no metrics available yet, return empty list
-                return []
-        except Exception as e:
-            logger.error(f"Failed to get assigned instruments from Redis metrics: {e}")
-            # Fail fast instead of returning mock data
-            raise ValueError("Unable to get real assigned instruments from Redis metrics. No mock data allowed in production.")
-=======
-            # Get assigned instruments from Redis assignment registry
-            assignment_key = f"signal_service:assignments:{self.instance_id}"
-            assignments = await self.redis_client.smembers(assignment_key)
-            
-            if assignments:
-                return [assignment.decode() if isinstance(assignment, bytes) else assignment for assignment in assignments]
-            
-            # Fallback: get from global assignment if no specific assignments
-            global_assignments = await self.redis_client.hget(
-                "signal_service:global_assignments", 
-                self.instance_id
-            )
-            
-            if global_assignments:
-                import json
-                return json.loads(global_assignments)
-            
+            # Placeholder - would get assigned instruments
             return []
         except Exception as e:
-            logger.warning(f"Failed to get assigned instruments: {e}")
+            logger.error(f"Failed to get assigned instruments: {e}")
             return []
->>>>>>> compliance-violations-fixed
-    
     async def _update_aggregate_health(self) -> None:
         """Update aggregate health status across all instances"""
         try:
             # Get all active instances
             instances_data = await self.redis_client.hgetall(self.redis_keys['instances'])
-            
+
             if not instances_data:
                 return
-            
+
             instances = []
             current_time = datetime.utcnow()
-            
+
             for instance_json in instances_data.values():
                 try:
                     instance = json.loads(instance_json)
                     last_heartbeat = datetime.fromisoformat(instance['last_heartbeat'])
-                    
+
                     # Check if instance is still alive
                     if (current_time - last_heartbeat).total_seconds() < self.instance_ttl:
                         instances.append(instance)
                 except Exception as e:
                     logger.warning(f"Failed to parse instance data: {e}")
-            
+
             # Calculate aggregate metrics
             aggregate_data = await self._calculate_aggregate_metrics(instances)
-            
+
             # Store aggregate data
             await self.redis_client.set(
                 self.redis_keys['health_aggregate'],
                 json.dumps(aggregate_data),
                 ex=60  # Expire after 1 minute
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to update aggregate health: {e}")
-    
-    async def _calculate_aggregate_metrics(self, instances: List[Dict]) -> Dict[str, Any]:
+
+    async def _calculate_aggregate_metrics(self, instances: list[dict]) -> dict[str, Any]:
         """Calculate aggregate metrics across all instances"""
         if not instances:
             return {
@@ -443,31 +251,31 @@ class DistributedHealthManager:
                 'message': 'No active instances',
                 'timestamp': datetime.utcnow().isoformat()
             }
-        
+
         # Count statuses
         status_counts = {'healthy': 0, 'unhealthy': 0, 'error': 0}
         total_instances = len(instances)
-        
+
         # Aggregate load metrics
         total_cpu = 0
         total_memory = 0
         total_requests = 0
         total_queue_size = 0
         total_instruments = 0
-        
+
         instance_details = []
-        
+
         for instance in instances:
             status = instance.get('status', 'error')
             status_counts[status] = status_counts.get(status, 0) + 1
-            
+
             load_metrics = instance.get('load_metrics', {})
             total_cpu += load_metrics.get('cpu_percent', 0)
             total_memory += load_metrics.get('memory_percent', 0)
             total_requests += load_metrics.get('requests_per_minute', 0)
             total_queue_size += load_metrics.get('queue_size', 0)
             total_instruments += len(instance.get('assigned_instruments', []))
-            
+
             instance_details.append({
                 'instance_id': instance['instance_id'],
                 'container_name': instance['container_name'],
@@ -479,21 +287,19 @@ class DistributedHealthManager:
                 'load_metrics': load_metrics,
                 'assigned_instruments_count': len(instance.get('assigned_instruments', []))
             })
-        
+
         # Determine overall status
         if status_counts['error'] > 0:
             overall_status = 'error'
-        elif status_counts['unhealthy'] > total_instances * 0.5:  # More than 50% unhealthy
-            overall_status = 'unhealthy'
-        elif status_counts['unhealthy'] > 0:
+        elif status_counts['unhealthy'] > total_instances * 0.5 or status_counts['unhealthy'] > 0:  # More than 50% unhealthy
             overall_status = 'unhealthy'
         else:
             overall_status = 'healthy'
-        
+
         # Calculate averages
         avg_cpu = total_cpu / total_instances if total_instances > 0 else 0
         avg_memory = total_memory / total_instances if total_instances > 0 else 0
-        
+
         return {
             'status': overall_status,
             'timestamp': datetime.utcnow().isoformat(),
@@ -513,22 +319,22 @@ class DistributedHealthManager:
             'scaling_recommendation': await self._get_scaling_recommendation(instances),
             'load_distribution': await self._analyze_load_distribution(instances)
         }
-    
-    async def _get_scaling_recommendation(self, instances: List[Dict]) -> Dict[str, Any]:
+
+    async def _get_scaling_recommendation(self, instances: list[dict]) -> dict[str, Any]:
         """Analyze if scaling up or down is recommended"""
         if not instances:
             return {'action': 'scale_up', 'reason': 'No instances running', 'target_instances': 1}
-        
+
         total_instances = len(instances)
-        
+
         # Calculate average load metrics
         avg_cpu = sum(inst.get('load_metrics', {}).get('cpu_percent', 0) for inst in instances) / total_instances
         avg_memory = sum(inst.get('load_metrics', {}).get('memory_percent', 0) for inst in instances) / total_instances
         avg_queue_size = sum(inst.get('load_metrics', {}).get('queue_size', 0) for inst in instances) / total_instances
-        
+
         # Count unhealthy instances
         unhealthy_count = sum(1 for inst in instances if inst.get('status') != 'healthy')
-        
+
         # Scaling logic
         if unhealthy_count > total_instances * 0.3:  # More than 30% unhealthy
             return {
@@ -537,56 +343,55 @@ class DistributedHealthManager:
                 'target_instances': min(total_instances + 2, 10),
                 'urgency': 'high'
             }
-        elif avg_cpu > 85 or avg_memory > 85 or avg_queue_size > 1000:
+        if avg_cpu > 85 or avg_memory > 85 or avg_queue_size > 1000:
             return {
                 'action': 'scale_up',
                 'reason': f'High load: CPU {avg_cpu:.1f}%, Memory {avg_memory:.1f}%, Queue {avg_queue_size}',
                 'target_instances': min(total_instances + 1, 10),
                 'urgency': 'medium'
             }
-        elif total_instances > 1 and avg_cpu < 30 and avg_memory < 50 and avg_queue_size < 100:
+        if total_instances > 1 and avg_cpu < 30 and avg_memory < 50 and avg_queue_size < 100:
             return {
                 'action': 'scale_down',
                 'reason': f'Low load: CPU {avg_cpu:.1f}%, Memory {avg_memory:.1f}%, Queue {avg_queue_size}',
                 'target_instances': max(total_instances - 1, 1),
                 'urgency': 'low'
             }
-        else:
-            return {
-                'action': 'maintain',
-                'reason': 'Load within acceptable range',
-                'target_instances': total_instances,
-                'urgency': 'none'
-            }
-    
-    async def _analyze_load_distribution(self, instances: List[Dict]) -> Dict[str, Any]:
+        return {
+            'action': 'maintain',
+            'reason': 'Load within acceptable range',
+            'target_instances': total_instances,
+            'urgency': 'none'
+        }
+
+    async def _analyze_load_distribution(self, instances: list[dict]) -> dict[str, Any]:
         """Analyze load distribution across instances"""
         if not instances:
             return {}
-        
+
         # Calculate load variance
         cpu_values = [inst.get('load_metrics', {}).get('cpu_percent', 0) for inst in instances]
         memory_values = [inst.get('load_metrics', {}).get('memory_percent', 0) for inst in instances]
-        
+
         import statistics
-        
+
         cpu_variance = statistics.variance(cpu_values) if len(cpu_values) > 1 else 0
         memory_variance = statistics.variance(memory_values) if len(memory_values) > 1 else 0
-        
+
         # Find overloaded instances
         overloaded = [
             inst['instance_id'] for inst in instances
             if (inst.get('load_metrics', {}).get('cpu_percent', 0) > 90 or
                 inst.get('load_metrics', {}).get('memory_percent', 0) > 90)
         ]
-        
+
         # Find underutilized instances
         underutilized = [
             inst['instance_id'] for inst in instances
             if (inst.get('load_metrics', {}).get('cpu_percent', 0) < 20 and
                 inst.get('load_metrics', {}).get('memory_percent', 0) < 30)
         ]
-        
+
         return {
             'cpu_variance': round(cpu_variance, 2),
             'memory_variance': round(memory_variance, 2),
@@ -595,19 +400,18 @@ class DistributedHealthManager:
             'underutilized_instances': underutilized,
             'rebalancing_needed': len(overloaded) > 0 and len(underutilized) > 0
         }
-    
+
     def _calculate_load_balance_score(self, cpu_variance: float, memory_variance: float) -> str:
         """Calculate load balance score (good/fair/poor)"""
         max_variance = max(cpu_variance, memory_variance)
-        
+
         if max_variance < 100:
             return 'good'
-        elif max_variance < 400:
+        if max_variance < 400:
             return 'fair'
-        else:
-            return 'poor'
-    
-    async def _update_scaling_metrics(self, load_metrics: Dict[str, Any]) -> None:
+        return 'poor'
+
+    async def _update_scaling_metrics(self, load_metrics: dict[str, Any]) -> None:
         """Update scaling metrics for dashboard"""
         try:
             scaling_data = {
@@ -615,28 +419,28 @@ class DistributedHealthManager:
                 'timestamp': datetime.utcnow().isoformat(),
                 'metrics': load_metrics
             }
-            
+
             # Store individual instance metrics
             await self.redis_client.lpush(
                 f"{self.redis_keys['scaling_metrics']}:{self.instance_id}",
                 json.dumps(scaling_data)
             )
-            
+
             # Keep only last 100 entries per instance
             await self.redis_client.ltrim(
                 f"{self.redis_keys['scaling_metrics']}:{self.instance_id}",
                 0, 99
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to update scaling metrics: {e}")
-    
-    async def get_cluster_health_for_dashboard(self) -> Dict[str, Any]:
+
+    async def get_cluster_health_for_dashboard(self) -> dict[str, Any]:
         """Get cluster health data formatted for the dynamic dashboard"""
         try:
             # Get aggregate health data
             aggregate_data = await self.redis_client.get(self.redis_keys['health_aggregate'])
-            
+
             if not aggregate_data:
                 return {
                     'service_name': 'signal_service',
@@ -645,9 +449,9 @@ class DistributedHealthManager:
                     'instances': [],
                     'cluster_metrics': {}
                 }
-            
+
             health_data = json.loads(aggregate_data)
-            
+
             # Format for dashboard
             dashboard_data = {
                 'service_name': 'signal_service',
@@ -672,9 +476,9 @@ class DistributedHealthManager:
                     for inst in health_data['instances']
                 ]
             }
-            
+
             return dashboard_data
-            
+
         except Exception as e:
             logger.error(f"Failed to get cluster health for dashboard: {e}")
             return {
@@ -684,30 +488,30 @@ class DistributedHealthManager:
                 'instances': [],
                 'cluster_metrics': {}
             }
-    
+
     async def cleanup_dead_instances(self) -> None:
         """Remove dead instances from the registry"""
         try:
             instances_data = await self.redis_client.hgetall(self.redis_keys['instances'])
             current_time = datetime.utcnow()
-            
+
             for instance_id, instance_json in instances_data.items():
                 try:
                     instance = json.loads(instance_json)
                     last_heartbeat = datetime.fromisoformat(instance['last_heartbeat'])
-                    
+
                     if (current_time - last_heartbeat).total_seconds() > self.instance_ttl:
                         await self.redis_client.hdel(self.redis_keys['instances'], instance_id)
                         logger.info(f"Cleaned up dead instance: {instance_id}")
-                        
+
                 except Exception as e:
                     logger.warning(f"Failed to check instance {instance_id}: {e}")
                     # Remove malformed data
                     await self.redis_client.hdel(self.redis_keys['instances'], instance_id)
-                    
+
         except Exception as e:
             logger.error(f"Failed to cleanup dead instances: {e}")
-    
+
     async def shutdown(self) -> None:
         """Gracefully shutdown and unregister this instance"""
         try:

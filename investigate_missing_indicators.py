@@ -4,10 +4,9 @@ Systematic investigation of missing pandas_ta indicators
 Check if functions exist, find alternative names, and clean up test database
 """
 
-import pandas as pd
+
 import numpy as np
-from datetime import datetime
-import re
+import pandas as pd
 
 try:
     import pandas_ta as ta
@@ -23,7 +22,7 @@ def get_all_pandas_ta_functions():
     """Get comprehensive list of all available pandas_ta functions"""
     all_attrs = dir(ta)
     functions = []
-    
+
     for attr in all_attrs:
         if not attr.startswith('_'):
             try:
@@ -32,25 +31,25 @@ def get_all_pandas_ta_functions():
                     functions.append(attr)
             except Exception:
                 pass
-    
+
     return sorted(functions)
 
 
 def search_for_indicator(search_terms, all_functions):
     """Search for indicators by various terms"""
     matches = []
-    
+
     for term in search_terms:
         term_lower = term.lower()
         for func in all_functions:
             func_lower = func.lower()
-            if (term_lower in func_lower or 
+            if (term_lower in func_lower or
                 func_lower in term_lower or
                 # Check for abbreviation matches
                 any(t in func_lower for t in term_lower.split('_'))):
                 if func not in matches:
                     matches.append(func)
-    
+
     return matches
 
 
@@ -58,10 +57,10 @@ def test_indicator_function(func_name, test_data):
     """Test if an indicator function works with our test data"""
     if not hasattr(ta, func_name):
         return False, "Function not found"
-    
+
     try:
         indicator_func = getattr(ta, func_name)
-        
+
         # Try different parameter combinations
         parameter_sets = [
             {},  # No parameters
@@ -69,7 +68,7 @@ def test_indicator_function(func_name, test_data):
             {'period': 14}, {'period': 20},  # Alternative parameter names
             {'window': 14}, {'window': 20},  # Window parameters
         ]
-        
+
         for params in parameter_sets:
             try:
                 # Try with all OHLCV data
@@ -103,11 +102,11 @@ def test_indicator_function(func_name, test_data):
                             return True, f"Works with params (close only): {params}"
                     except TypeError:
                         continue
-            except Exception as e:
+            except Exception:
                 continue
-        
+
         return False, "No valid parameter combination found"
-        
+
     except Exception as e:
         return False, f"Error: {str(e)}"
 
@@ -116,17 +115,17 @@ def generate_test_data():
     """Generate test OHLCV data"""
     periods = 50
     dates = pd.date_range(start='2024-01-01', periods=periods, freq='5min')
-    
+
     # Simple trending data
     closes = [100 + i * 0.5 + np.random.normal(0, 1) for i in range(periods)]
-    
+
     data = []
-    for i, (date, close) in enumerate(zip(dates, closes)):
+    for i, (date, close) in enumerate(zip(dates, closes, strict=False)):
         open_price = close + np.random.uniform(-0.5, 0.5)
         high = max(open_price, close) + np.random.uniform(0, 1)
         low = min(open_price, close) - np.random.uniform(0, 1)
         volume = np.random.randint(10000, 50000)
-        
+
         data.append({
             'timestamp': date,
             'open': open_price,
@@ -135,7 +134,7 @@ def generate_test_data():
             'close': close,
             'volume': volume
         })
-    
+
     df = pd.DataFrame(data)
     df.set_index('timestamp', inplace=True)
     return df
@@ -143,18 +142,18 @@ def generate_test_data():
 
 def investigate_missing_indicators():
     """Investigate the specific missing indicators"""
-    
+
     print("\n🔍 INVESTIGATING MISSING INDICATORS")
     print("="*60)
-    
+
     # Get all available functions
     all_functions = get_all_pandas_ta_functions()
     print(f"📊 Total pandas_ta functions available: {len(all_functions)}")
-    
+
     # Generate test data
     test_data = generate_test_data()
     print(f"📈 Generated test data: {len(test_data)} periods")
-    
+
     # Failing indicators from our tests
     missing_indicators = {
         'trange': ['true_range', 'tr', 'truerange', 'true range', 'range'],
@@ -162,18 +161,18 @@ def investigate_missing_indicators():
         'fi': ['force_index', 'force index', 'fi'],
         'pvi': ['positive_volume_index', 'pos_vol_index', 'positive volume']
     }
-    
+
     results = {}
-    
+
     for indicator, search_terms in missing_indicators.items():
         print(f"\n🔎 Investigating '{indicator}'...")
-        
+
         # Search for potential matches
         matches = search_for_indicator(search_terms, all_functions)
-        
+
         if matches:
             print(f"   🎯 Potential matches found: {matches}")
-            
+
             # Test each match
             for match in matches:
                 works, details = test_indicator_function(match, test_data)
@@ -185,37 +184,36 @@ def investigate_missing_indicators():
                         'details': details
                     }
                     break
-                else:
-                    print(f"   ❌ {match}: {details}")
-            
+                print(f"   ❌ {match}: {details}")
+
             if indicator not in results:
                 results[indicator] = {
                     'status': 'matches_found_but_not_working',
                     'matches': matches
                 }
         else:
-            print(f"   ❌ No matches found")
+            print("   ❌ No matches found")
             results[indicator] = {
                 'status': 'not_found',
                 'searched_terms': search_terms
             }
-    
+
     return results, all_functions
 
 
 def check_all_volume_indicators():
     """Specifically check all volume-related indicators"""
-    print(f"\n📊 CHECKING ALL VOLUME INDICATORS")
+    print("\n📊 CHECKING ALL VOLUME INDICATORS")
     print("="*50)
-    
+
     all_functions = get_all_pandas_ta_functions()
-    volume_indicators = [func for func in all_functions 
+    volume_indicators = [func for func in all_functions
                         if any(term in func.lower() for term in ['vol', 'obv', 'ad', 'mf', 'nvi', 'pvi'])]
-    
+
     print(f"Found {len(volume_indicators)} volume-related indicators:")
-    
+
     test_data = generate_test_data()
-    
+
     for indicator in volume_indicators:
         works, details = test_indicator_function(indicator, test_data)
         status = "✅" if works else "❌"
@@ -224,17 +222,17 @@ def check_all_volume_indicators():
 
 def check_volatility_indicators():
     """Check all volatility/range indicators"""
-    print(f"\n📈 CHECKING ALL VOLATILITY/RANGE INDICATORS")
+    print("\n📈 CHECKING ALL VOLATILITY/RANGE INDICATORS")
     print("="*50)
-    
+
     all_functions = get_all_pandas_ta_functions()
-    volatility_indicators = [func for func in all_functions 
+    volatility_indicators = [func for func in all_functions
                            if any(term in func.lower() for term in ['atr', 'range', 'volatility', 'true', 'tr'])]
-    
+
     print(f"Found {len(volatility_indicators)} volatility-related indicators:")
-    
+
     test_data = generate_test_data()
-    
+
     for indicator in volatility_indicators:
         works, details = test_indicator_function(indicator, test_data)
         status = "✅" if works else "❌"
@@ -243,12 +241,12 @@ def check_volatility_indicators():
 
 def generate_corrected_test_list():
     """Generate a corrected test list with only working indicators"""
-    print(f"\n🛠️  GENERATING CORRECTED INDICATOR TEST LIST")
+    print("\n🛠️  GENERATING CORRECTED INDICATOR TEST LIST")
     print("="*50)
-    
+
     all_functions = get_all_pandas_ta_functions()
     test_data = generate_test_data()
-    
+
     # Filter out utility functions
     exclude_patterns = [
         'category', 'camelcase', 'deprecated', 'utils', 'version',
@@ -258,7 +256,7 @@ def generate_corrected_test_list():
         'log', 'cumulative', 'percent_return', 'df_', 'create_dir',
         'combination', 'consecutive_streak', 'candle_color'
     ]
-    
+
     working_indicators = []
     categories = {
         'trend': [],
@@ -268,21 +266,21 @@ def generate_corrected_test_list():
         'overlap': [],
         'multi_component': []
     }
-    
+
     for func_name in all_functions:
         # Skip utility functions
         if any(pattern in func_name.lower() for pattern in exclude_patterns):
             continue
-            
+
         # Skip class constructors
         if func_name[0].isupper():
             continue
-        
+
         works, details = test_indicator_function(func_name, test_data)
-        
+
         if works:
             working_indicators.append(func_name)
-            
+
             # Categorize
             func_lower = func_name.lower()
             if any(term in func_lower for term in ['sma', 'ema', 'wma', 'tema', 'dema', 'linreg', 'supertrend']):
@@ -299,12 +297,12 @@ def generate_corrected_test_list():
                 categories['multi_component'].append(func_name)
         else:
             print(f"   ❌ {func_name}: {details}")
-    
+
     print(f"\n✅ Working Indicators: {len(working_indicators)}")
-    print(f"📊 By Category:")
+    print("📊 By Category:")
     for category, indicators in categories.items():
         print(f"   {category:15s}: {len(indicators):3d} indicators")
-    
+
     return working_indicators, categories
 
 
@@ -312,28 +310,28 @@ def main():
     """Main investigation function"""
     print("🚀 pandas_ta Indicator Investigation and Cleanup")
     print("="*60)
-    
+
     if not PANDAS_TA_AVAILABLE:
         print("❌ pandas_ta not available")
-        return
-    
+        return None
+
     # 1. Investigate specific missing indicators
     missing_results, all_functions = investigate_missing_indicators()
-    
-    # 2. Check volume indicators comprehensively  
+
+    # 2. Check volume indicators comprehensively
     check_all_volume_indicators()
-    
+
     # 3. Check volatility indicators comprehensively
     check_volatility_indicators()
-    
+
     # 4. Generate corrected test list
     working_indicators, categories = generate_corrected_test_list()
-    
+
     # 5. Print summary and recommendations
-    print(f"\n🎯 INVESTIGATION SUMMARY")
+    print("\n🎯 INVESTIGATION SUMMARY")
     print("="*50)
-    
-    print(f"📋 Missing Indicator Analysis:")
+
+    print("📋 Missing Indicator Analysis:")
     for indicator, result in missing_results.items():
         status = result['status']
         if status == 'found_alternative':
@@ -344,19 +342,19 @@ def main():
             print(f"   ⚠️  {indicator:8s} -> Found {matches} but not working")
         else:
             print(f"   ❌ {indicator:8s} -> Not found in pandas_ta")
-    
+
     print(f"\n📊 Total Working Indicators: {len(working_indicators)}")
-    print(f"📈 Recommended Action: Update tests to use only these working indicators")
-    
+    print("📈 Recommended Action: Update tests to use only these working indicators")
+
     # Generate updated test configuration
-    print(f"\n🛠️  UPDATED TEST CONFIGURATION:")
+    print("\n🛠️  UPDATED TEST CONFIGURATION:")
     print("```python")
     print("# Updated indicator test categories")
     for category, indicators in categories.items():
         if indicators:
             print(f"{category}_indicators = {indicators[:5]}  # Top 5, total: {len(indicators)}")
     print("```")
-    
+
     return missing_results, working_indicators, categories
 
 

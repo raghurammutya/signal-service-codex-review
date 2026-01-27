@@ -9,7 +9,7 @@ The following configurations should be added to config_service:
 
 # Historical Data Writer (config_service keys)
 # ENABLE_HISTORICAL_WRITER (required in config_service)
-# HISTORICAL_WRITER_BATCH_SIZE (required in config_service)  
+# HISTORICAL_WRITER_BATCH_SIZE (required in config_service)
 # HISTORICAL_WRITER_FLUSH_INTERVAL (required in config_service)
 
 # TimescaleDB Configuration (config_service keys)
@@ -18,7 +18,7 @@ The following configurations should be added to config_service:
 # TIMESCALEDB_COMPRESSION_AFTER_DAYS (required in config_service)
 # TIMESCALEDB_RETENTION_MONTHS (required in config_service)
 
-# Timeframe Cache Configuration (config_service keys)  
+# Timeframe Cache Configuration (config_service keys)
 # TIMEFRAME_CACHE_CLEANUP_INTERVAL (required in config_service)
 # TIMEFRAME_CACHE_MAX_AGE (required in config_service)
 # TIMEFRAME_CACHE_TTL_MAP (required in config_service as JSON)
@@ -28,7 +28,7 @@ The following configurations should be added to config_service:
 # CUSTOM_INDICATORS_LIST (required in config_service as JSON array)
 
 # Aggregation Configuration (config_service keys)
-# ENABLE_ON_DEMAND_AGGREGATION (required in config_service)  
+# ENABLE_ON_DEMAND_AGGREGATION (required in config_service)
 # AGGREGATION_FACTORS (required in config_service as JSON)
 
 # Performance Tuning (config_service keys)
@@ -51,7 +51,7 @@ The following configurations should be added to config_service:
 #     return ttl_map[timeframe]
 
 # Example implementation for get_aggregation_factor(self, source: str, target: str) -> Optional[int]:
-#     """Get aggregation factor between timeframes from config_service"""  
+#     """Get aggregation factor between timeframes from config_service"""
 #     from common.config_service.client import ConfigServiceClient
 #     config_client = ConfigServiceClient(service_name="signal_service", environment=self.environment)
 #     agg_factors = config_client.get_config("AGGREGATION_FACTORS", config_type="json")

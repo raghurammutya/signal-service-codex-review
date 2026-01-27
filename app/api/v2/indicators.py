@@ -3,22 +3,25 @@ On-demand Indicator Calculation API
 Provides one-time calculation of technical indicators without subscriptions
 """
 
-from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta, timezone
-import pandas as pd
-import numpy as np
-import pandas_ta as ta
 import inspect
 import json
-from typing import Callable
-import httpx
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from app.utils.logging_utils import log_info, log_error, log_exception
-from app.schemas.signal_schemas import BaseResponse
-from app.services.worker_affinity_manager import get_worker_affinity_manager
-from app.services.indicator_cache_manager import indicator_cache_manager, cached_indicator_calculation
+import httpx
+import numpy as np
+import pandas as pd
+import pandas_ta as ta
+from fastapi import APIRouter, HTTPException, Query
+
 from app.core.config import settings
+from app.schemas.signal_schemas import BaseResponse
+from app.services.indicator_cache_manager import (
+    cached_indicator_calculation,
+    indicator_cache_manager,
+)
+from app.services.worker_affinity_manager import get_worker_affinity_manager
+from app.utils.logging_utils import log_error, log_exception, log_info
 
 router = APIRouter(prefix="/indicators", tags=["on-demand-indicators"])
 
@@ -27,7 +30,7 @@ class IndicatorCalculator:
     """Handles on-demand technical indicator calculations"""
 
     def __init__(self):
-        self._http_client: Optional[httpx.AsyncClient] = None
+        self._http_client: httpx.AsyncClient | None = None
         self._initialized = False
 
     async def initialize(self):
@@ -41,7 +44,7 @@ class IndicatorCalculator:
         instrument_key: str,
         timeframe: str,
         periods: int,
-        end_date: Optional[datetime] = None
+        end_date: datetime | None = None
     ) -> pd.DataFrame:
         """
         Fetch historical data from ticker_service API.
@@ -56,7 +59,7 @@ class IndicatorCalculator:
             DataFrame with columns: timestamp, open, high, low, close, volume
         """
         if not end_date:
-            end_date = datetime.now(timezone.utc)
+            end_date = datetime.now(UTC)
 
         # Ensure we're initialized
         if not self._initialized:
@@ -163,74 +166,74 @@ class IndicatorCalculator:
                 status_code=500,
                 detail=f"Failed to fetch historical data: {str(e)}"
             )
-    
+
     def calculate_sma(self, df: pd.DataFrame, period: int) -> pd.Series:
         """Calculate Simple Moving Average"""
         return df['close'].rolling(window=period).mean()
-    
+
     def calculate_ema(self, df: pd.DataFrame, period: int) -> pd.Series:
         """Calculate Exponential Moving Average"""
         return df['close'].ewm(span=period, adjust=False).mean()
-    
+
     def calculate_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
         """Calculate Relative Strength Index"""
         delta = df['close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        
+
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         return rsi
-    
-    def calculate_macd(self, df: pd.DataFrame, fast=12, slow=26, signal=9) -> Dict[str, pd.Series]:
+
+    def calculate_macd(self, df: pd.DataFrame, fast=12, slow=26, signal=9) -> dict[str, pd.Series]:
         """Calculate MACD"""
         ema_fast = df['close'].ewm(span=fast, adjust=False).mean()
         ema_slow = df['close'].ewm(span=slow, adjust=False).mean()
-        
+
         macd_line = ema_fast - ema_slow
         signal_line = macd_line.ewm(span=signal, adjust=False).mean()
         histogram = macd_line - signal_line
-        
+
         return {
             'macd': macd_line,
             'signal': signal_line,
             'histogram': histogram
         }
-    
-    def calculate_bollinger_bands(self, df: pd.DataFrame, period: int = 20, std_dev: int = 2) -> Dict[str, pd.Series]:
+
+    def calculate_bollinger_bands(self, df: pd.DataFrame, period: int = 20, std_dev: int = 2) -> dict[str, pd.Series]:
         """Calculate Bollinger Bands"""
         sma = df['close'].rolling(window=period).mean()
         std = df['close'].rolling(window=period).std()
-        
+
         upper_band = sma + (std * std_dev)
         lower_band = sma - (std * std_dev)
-        
+
         return {
             'upper': upper_band,
             'middle': sma,
             'lower': lower_band
         }
-    
+
     def calculate_vwap(self, df: pd.DataFrame) -> pd.Series:
         """Calculate Volume Weighted Average Price"""
         typical_price = (df['high'] + df['low'] + df['close']) / 3
         vwap = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
         return vwap
-    
+
     def calculate_atr(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
         """Calculate Average True Range"""
         high_low = df['high'] - df['low']
         high_close = np.abs(df['high'] - df['close'].shift())
         low_close = np.abs(df['low'] - df['close'].shift())
-        
+
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         atr = true_range.rolling(window=period).mean()
         return atr
-    
-    def get_available_indicators(self) -> Dict[str, Dict[str, Any]]:
+
+    def get_available_indicators(self) -> dict[str, dict[str, Any]]:
         """Get all available pandas_ta indicators with their parameters"""
         indicators = {}
-        
+
         # Get all indicators from pandas_ta
         for name, obj in inspect.getmembers(ta):
             if callable(obj) and not name.startswith('_'):
@@ -238,14 +241,14 @@ class IndicatorCalculator:
                     # Get function signature
                     sig = inspect.signature(obj)
                     params = {}
-                    
+
                     for param_name, param in sig.parameters.items():
                         if param_name not in ['self', 'close', 'high', 'low', 'open', 'volume', 'df']:
                             params[param_name] = {
                                 'default': param.default if param.default is not inspect.Parameter.empty else None,
                                 'type': str(param.annotation) if param.annotation is not inspect.Parameter.empty else 'Any'
                             }
-                    
+
                     indicators[name] = {
                         'function': obj,
                         'parameters': params,
@@ -253,9 +256,9 @@ class IndicatorCalculator:
                     }
                 except Exception:
                     continue
-        
+
         return indicators
-    
+
     async def calculate_dynamic_indicator(self, df: pd.DataFrame, indicator: str, **kwargs) -> pd.DataFrame:
         """Calculate any indicator dynamically - checks custom registry first, then pandas_ta"""
         try:
@@ -270,18 +273,17 @@ class IndicatorCalculator:
                 # Handle different output types from custom indicators
                 if isinstance(result, pd.Series):
                     return pd.DataFrame({indicator: result})
-                elif isinstance(result, pd.DataFrame):
+                if isinstance(result, pd.DataFrame):
                     return result
-                elif isinstance(result, dict):
+                if isinstance(result, dict):
                     # Convert dict to DataFrame (for indicators like previous_high_low, pivot_points)
                     return pd.DataFrame([result])
-                elif isinstance(result, (int, float)):
+                if isinstance(result, (int, float)):
                     return pd.DataFrame({indicator: [result]})
-                elif isinstance(result, list):
+                if isinstance(result, list):
                     return pd.DataFrame({indicator: result})
-                else:
-                    log_error(f"Unsupported output type from custom indicator {indicator}: {type(result)}")
-                    raise ValueError(f"Unsupported output type: {type(result)}")
+                log_error(f"Unsupported output type from custom indicator {indicator}: {type(result)}")
+                raise ValueError(f"Unsupported output type: {type(result)}")
 
             # STEP 2: Check if indicator exists in pandas_ta
             if hasattr(ta, indicator):
@@ -302,14 +304,13 @@ class IndicatorCalculator:
                 # Handle different return types
                 if isinstance(result, pd.Series):
                     return pd.DataFrame({indicator: result})
-                elif isinstance(result, pd.DataFrame):
+                if isinstance(result, pd.DataFrame):
                     return result
-                elif result is None:
+                if result is None:
                     # pandas_ta returned None - likely not enough data or wrong parameters
                     log_error(f"pandas_ta returned None for {indicator} with params {kwargs}. DataFrame shape: {df.shape}")
                     raise ValueError(f"pandas_ta returned None for {indicator}. Check data and parameters.")
-                else:
-                    raise ValueError(f"Unexpected result type from {indicator}: {type(result)}")
+                raise ValueError(f"Unexpected result type from {indicator}: {type(result)}")
 
             # STEP 3: Fallback to built-in methods
             method_map = {
@@ -327,10 +328,9 @@ class IndicatorCalculator:
                 result = method_map[indicator](df, **kwargs)
                 if isinstance(result, pd.Series):
                     return pd.DataFrame({indicator: result})
-                elif isinstance(result, dict):
+                if isinstance(result, dict):
                     return pd.DataFrame(result)
-                else:
-                    return result
+                return result
 
             raise ValueError(f"Unknown indicator: {indicator}")
 
@@ -388,7 +388,7 @@ async def calculate_sma_endpoint(
 ):
     """
     Calculate Simple Moving Average (SMA) on demand
-    
+
     Args:
         symbol: Instrument key (e.g., NSE@RELIANCE@equities)
         period: SMA period (default 20)
@@ -402,7 +402,7 @@ async def calculate_sma_endpoint(
             # Get correct worker
             assigned_worker = await affinity_manager.get_worker_for_symbol(symbol)
             log_info(f"Redirecting {symbol} computation to worker {assigned_worker}")
-            
+
             # In production, this would redirect to the correct worker
             # For now, we'll just note it and continue
             return BaseResponse(
@@ -426,7 +426,7 @@ async def calculate_sma_endpoint(
                     'value': round(sma_series.iloc[-1], 2),
                     'timestamp': df.index[-1]
                 }
-            
+
             # Use cached calculation
             result = await cached_indicator_calculation(
                 symbol=symbol,
@@ -435,7 +435,7 @@ async def calculate_sma_endpoint(
                 timeframe=timeframe,
                 calculation_func=calculate
             )
-            
+
             return BaseResponse(
                 success=True,
                 message=f"SMA({period}) {'retrieved from cache' if result.get('cached') else 'calculated'}",
@@ -452,18 +452,18 @@ async def calculate_sma_endpoint(
                     'cache_time': result.get('cache_time').isoformat() if result.get('cache_time') else None
                 }
             )
-        
+
         # For multiple data points, calculate fresh (can be cached later)
         required_periods = period + data_points - 1
-        
+
         # Get historical data
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
-        
+
         # Calculate SMA
         sma_series = indicator_calculator.calculate_sma(df, period)
-        
+
         # Prepare response
         values = []
         for idx in range(-data_points, 0):
@@ -472,7 +472,7 @@ async def calculate_sma_endpoint(
                     'timestamp': df.index[idx].isoformat(),
                     'value': round(sma_series.iloc[idx], 2)
                 })
-        
+
         # Cache the latest value
         if values:
             await indicator_cache_manager.cache_indicator_result(
@@ -483,7 +483,7 @@ async def calculate_sma_endpoint(
                 value=values[-1]['value'],
                 timestamp=datetime.fromisoformat(values[-1]['timestamp'])
             )
-        
+
         return BaseResponse(
             success=True,
             message=f"SMA({period}) calculated successfully",
@@ -496,7 +496,7 @@ async def calculate_sma_endpoint(
                 'cached': False
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -515,13 +515,13 @@ async def calculate_ema_endpoint(
     try:
         # EMA needs more historical data for accuracy
         required_periods = period * 2 + data_points
-        
+
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
-        
+
         ema_series = indicator_calculator.calculate_ema(df, period)
-        
+
         values = []
         for idx in range(-data_points, 0):
             if not pd.isna(ema_series.iloc[idx]):
@@ -529,7 +529,7 @@ async def calculate_ema_endpoint(
                     'timestamp': df.index[idx].isoformat(),
                     'value': round(ema_series.iloc[idx], 2)
                 })
-        
+
         return BaseResponse(
             success=True,
             message=f"EMA({period}) calculated successfully",
@@ -541,7 +541,7 @@ async def calculate_ema_endpoint(
                 'values': values
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -559,13 +559,13 @@ async def calculate_rsi_endpoint(
     """Calculate Relative Strength Index (RSI) on demand"""
     try:
         required_periods = period + data_points + 10  # Extra for RSI calculation
-        
+
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
-        
+
         rsi_series = indicator_calculator.calculate_rsi(df, period)
-        
+
         values = []
         for idx in range(-data_points, 0):
             if not pd.isna(rsi_series.iloc[idx]):
@@ -573,7 +573,7 @@ async def calculate_rsi_endpoint(
                     'timestamp': df.index[idx].isoformat(),
                     'value': round(rsi_series.iloc[idx], 2)
                 })
-        
+
         return BaseResponse(
             success=True,
             message=f"RSI({period}) calculated successfully",
@@ -585,7 +585,7 @@ async def calculate_rsi_endpoint(
                 'values': values
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -605,15 +605,15 @@ async def calculate_macd_endpoint(
     """Calculate MACD on demand"""
     try:
         required_periods = slow_period * 2 + data_points
-        
+
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
-        
+
         macd_result = indicator_calculator.calculate_macd(
             df, fast_period, slow_period, signal_period
         )
-        
+
         values = []
         for idx in range(-data_points, 0):
             if not pd.isna(macd_result['macd'].iloc[idx]):
@@ -623,7 +623,7 @@ async def calculate_macd_endpoint(
                     'signal': round(macd_result['signal'].iloc[idx], 2),
                     'histogram': round(macd_result['histogram'].iloc[idx], 2)
                 })
-        
+
         return BaseResponse(
             success=True,
             message="MACD calculated successfully",
@@ -637,7 +637,7 @@ async def calculate_macd_endpoint(
                 'values': values
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -656,15 +656,15 @@ async def calculate_bollinger_bands_endpoint(
     """Calculate Bollinger Bands on demand"""
     try:
         required_periods = period + data_points - 1
-        
+
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
-        
+
         bb_result = indicator_calculator.calculate_bollinger_bands(
             df, period, std_dev
         )
-        
+
         values = []
         for idx in range(-data_points, 0):
             if not pd.isna(bb_result['middle'].iloc[idx]):
@@ -674,7 +674,7 @@ async def calculate_bollinger_bands_endpoint(
                     'middle': round(bb_result['middle'].iloc[idx], 2),
                     'lower': round(bb_result['lower'].iloc[idx], 2)
                 })
-        
+
         return BaseResponse(
             success=True,
             message=f"Bollinger Bands({period},{std_dev}) calculated successfully",
@@ -687,7 +687,7 @@ async def calculate_bollinger_bands_endpoint(
                 'values': values
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -697,11 +697,11 @@ async def calculate_bollinger_bands_endpoint(
 
 @router.post("/calculate/batch")
 async def calculate_batch_indicators(
-    request: Dict[str, Any]
+    request: dict[str, Any]
 ):
     """
     Calculate multiple indicators in one request
-    
+
     Request format:
     {
         "symbol": "NSE@RELIANCE@equities",
@@ -717,13 +717,13 @@ async def calculate_batch_indicators(
         symbol = request.get('symbol')
         timeframe = request.get('timeframe', '1day')
         indicators = request.get('indicators', [])
-        
+
         if not symbol or not indicators:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Symbol and indicators list required"
             )
-        
+
         # Calculate max periods needed
         max_periods = 50  # Default
         for ind in indicators:
@@ -731,19 +731,19 @@ async def calculate_batch_indicators(
                 max_periods = max(max_periods, ind['params'].get('period', 20) * 2)
             elif ind['type'] == 'macd':
                 max_periods = max(max_periods, ind['params'].get('slow_period', 26) * 2)
-        
+
         # Get historical data once
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, max_periods
         )
-        
+
         # Calculate all indicators
         results = {}
-        
+
         for ind in indicators:
             ind_type = ind['type']
             params = ind.get('params', {})
-            
+
             try:
                 if ind_type == 'sma':
                     period = params.get('period', 20)
@@ -752,7 +752,7 @@ async def calculate_batch_indicators(
                         'value': round(series.iloc[-1], 2) if not pd.isna(series.iloc[-1]) else None,
                         'timestamp': df.index[-1].isoformat()
                     }
-                
+
                 elif ind_type == 'ema':
                     period = params.get('period', 12)
                     series = indicator_calculator.calculate_ema(df, period)
@@ -760,7 +760,7 @@ async def calculate_batch_indicators(
                         'value': round(series.iloc[-1], 2) if not pd.isna(series.iloc[-1]) else None,
                         'timestamp': df.index[-1].isoformat()
                     }
-                
+
                 elif ind_type == 'rsi':
                     period = params.get('period', 14)
                     series = indicator_calculator.calculate_rsi(df, period)
@@ -768,7 +768,7 @@ async def calculate_batch_indicators(
                         'value': round(series.iloc[-1], 2) if not pd.isna(series.iloc[-1]) else None,
                         'timestamp': df.index[-1].isoformat()
                     }
-                
+
                 elif ind_type == 'macd':
                     fast = params.get('fast_period', 12)
                     slow = params.get('slow_period', 26)
@@ -780,10 +780,10 @@ async def calculate_batch_indicators(
                         'histogram': round(macd_result['histogram'].iloc[-1], 2),
                         'timestamp': df.index[-1].isoformat()
                     }
-                
+
             except Exception as e:
                 results[ind_type] = {'error': str(e)}
-        
+
         # Add current price info
         current_price = {
             'open': round(df['open'].iloc[-1], 2),
@@ -793,7 +793,7 @@ async def calculate_batch_indicators(
             'volume': int(df['volume'].iloc[-1]),
             'timestamp': df.index[-1].isoformat()
         }
-        
+
         return BaseResponse(
             success=True,
             message="Batch indicators calculated successfully",
@@ -804,7 +804,7 @@ async def calculate_batch_indicators(
                 'indicators': results
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -818,13 +818,13 @@ async def get_worker_affinity_status():
     try:
         affinity_manager = await get_worker_affinity_manager()
         stats = await affinity_manager.get_affinity_stats()
-        
+
         return BaseResponse(
             success=True,
             message="Worker affinity status retrieved",
             data=stats
         )
-        
+
     except Exception as e:
         log_exception(f"Error getting worker affinity status: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -837,7 +837,7 @@ async def check_symbol_affinity(symbol: str):
         affinity_manager = await get_worker_affinity_manager()
         assigned_worker = await affinity_manager.get_worker_for_symbol(symbol)
         should_handle = await affinity_manager.should_handle_computation(symbol)
-        
+
         return BaseResponse(
             success=True,
             message="Symbol affinity checked",
@@ -848,7 +848,7 @@ async def check_symbol_affinity(symbol: str):
                 'should_handle': should_handle
             }
         )
-        
+
     except Exception as e:
         log_exception(f"Error checking symbol affinity: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -859,7 +859,7 @@ async def get_available_indicators():
     """Get list of all available pandas_ta indicators with their parameters"""
     try:
         indicators = indicator_calculator.get_available_indicators()
-        
+
         # Format for API response (exclude function objects for serialization)
         formatted_indicators = {}
         for name, info in indicators.items():
@@ -867,13 +867,13 @@ async def get_available_indicators():
                 'parameters': info['parameters'],
                 'description': info['doc'].split('\n')[0] if info['doc'] else 'No description'
             }
-        
+
         return BaseResponse(
             success=True,
             message=f"Found {len(formatted_indicators)} available indicators",
             data=formatted_indicators
         )
-        
+
     except Exception as e:
         log_exception(f"Error getting available indicators: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -885,11 +885,11 @@ async def calculate_dynamic_indicator(
     symbol: str,
     timeframe: str = Query("1day", regex="^(1day|1hour|30min|15min|5min|1min)$"),
     data_points: int = Query(1, ge=1, le=100),
-    params: Dict[str, Any] = {}
+    params: dict[str, Any] = {}
 ):
     """
     Calculate any pandas_ta indicator dynamically
-    
+
     Args:
         indicator: Name of the pandas_ta indicator (e.g., 'sma', 'ema', 'bbands', 'stoch', etc.)
         symbol: Instrument key (e.g., NSE@RELIANCE@equities)
@@ -901,37 +901,36 @@ async def calculate_dynamic_indicator(
         # For single data point, use caching
         if data_points == 1:
             # Create cache key from params
-            cache_params = f"{indicator}_{json.dumps(params, sort_keys=True)}"
-            
+            f"{indicator}_{json.dumps(params, sort_keys=True)}"
+
             async def calculate():
                 # Determine periods needed based on indicator
                 required_periods = params.get('length', params.get('period', 50)) * 2 + 50
-                
+
                 df = await indicator_calculator.get_historical_data(
                     symbol, timeframe, required_periods
                 )
-                
+
                 result_df = await indicator_calculator.calculate_dynamic_indicator(
                     df, indicator, **params
                 )
-                
+
                 # Get the last value(s)
                 if len(result_df.columns) == 1:
                     return {
                         'value': round(result_df.iloc[-1, 0], 4),
                         'timestamp': df.index[-1]
                     }
-                else:
-                    # Multiple columns (like Bollinger Bands)
-                    values = {}
-                    for col in result_df.columns:
-                        if not pd.isna(result_df[col].iloc[-1]):
-                            values[col] = round(result_df[col].iloc[-1], 4)
-                    return {
-                        'values': values,
-                        'timestamp': df.index[-1]
-                    }
-            
+                # Multiple columns (like Bollinger Bands)
+                values = {}
+                for col in result_df.columns:
+                    if not pd.isna(result_df[col].iloc[-1]):
+                        values[col] = round(result_df[col].iloc[-1], 4)
+                return {
+                    'values': values,
+                    'timestamp': df.index[-1]
+                }
+
             # Use cached calculation
             result = await cached_indicator_calculation(
                 symbol=symbol,
@@ -940,7 +939,7 @@ async def calculate_dynamic_indicator(
                 timeframe=timeframe,
                 calculation_func=calculate
             )
-            
+
             return BaseResponse(
                 success=True,
                 message=f"{indicator} {'retrieved from cache' if result.get('cached') else 'calculated'}",
@@ -954,21 +953,21 @@ async def calculate_dynamic_indicator(
                     'cached': result.get('cached', False)
                 }
             )
-        
+
         # Multiple data points - calculate fresh
         required_periods = params.get('length', params.get('period', 50)) * 2 + data_points + 50
-        
+
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
-        
+
         result_df = await indicator_calculator.calculate_dynamic_indicator(
             df, indicator, **params
         )
-        
+
         # Prepare response values
         values = []
-        
+
         if len(result_df.columns) == 1:
             # Single column result
             for idx in range(-data_points, 0):
@@ -987,13 +986,13 @@ async def calculate_dynamic_indicator(
                     for col in result_df.columns:
                         if not pd.isna(result_df[col].iloc[idx]):
                             row_values[col] = round(result_df[col].iloc[idx], 4)
-                    
+
                     if row_values:
                         values.append({
                             'timestamp': df.index[idx].isoformat(),
                             'values': row_values
                         })
-        
+
         return BaseResponse(
             success=True,
             message=f"{indicator} calculated successfully",
@@ -1006,7 +1005,7 @@ async def calculate_dynamic_indicator(
                 'cached': False
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1016,11 +1015,11 @@ async def calculate_dynamic_indicator(
 
 @router.post("/calculate/dynamic-batch")
 async def calculate_dynamic_batch(
-    request: Dict[str, Any]
+    request: dict[str, Any]
 ):
     """
     Calculate multiple pandas_ta indicators in one request
-    
+
     Request format:
     {
         "symbol": "NSE@RELIANCE@equities",
@@ -1039,13 +1038,13 @@ async def calculate_dynamic_batch(
         symbol = request.get('symbol')
         timeframe = request.get('timeframe', '1day')
         indicators = request.get('indicators', [])
-        
+
         if not symbol or not indicators:
             raise HTTPException(
                 status_code=400,
                 detail="Symbol and indicators list required"
             )
-        
+
         # Calculate max periods needed
         max_periods = 100  # Default minimum
         for ind in indicators:
@@ -1054,24 +1053,24 @@ async def calculate_dynamic_batch(
             for param_name in ['length', 'period', 'slow', 'timeperiod', 'window']:
                 if param_name in params:
                     max_periods = max(max_periods, params[param_name] * 2 + 50)
-        
+
         # Get historical data once
         df = await indicator_calculator.get_historical_data(
             symbol, timeframe, max_periods
         )
-        
+
         # Calculate all indicators
         results = {}
-        
+
         for ind in indicators:
             ind_name = ind['name']
             params = ind.get('params', {})
-            
+
             try:
                 result_df = await indicator_calculator.calculate_dynamic_indicator(
                     df, ind_name, **params
                 )
-                
+
                 # Get latest values
                 if len(result_df.columns) == 1:
                     val = result_df.iloc[-1, 0]
@@ -1086,19 +1085,19 @@ async def calculate_dynamic_batch(
                     for col in result_df.columns:
                         if not pd.isna(result_df[col].iloc[-1]):
                             values[col] = round(result_df[col].iloc[-1], 4)
-                    
+
                     results[ind_name] = {
                         'values': values,
                         'timestamp': df.index[-1].isoformat(),
                         'params': params
                     }
-                    
+
             except Exception as e:
                 results[ind_name] = {
                     'error': str(e),
                     'params': params
                 }
-        
+
         # Add current price info
         current_price = {
             'open': round(df['open'].iloc[-1], 2),
@@ -1108,7 +1107,7 @@ async def calculate_dynamic_batch(
             'volume': int(df['volume'].iloc[-1]),
             'timestamp': df.index[-1].isoformat()
         }
-        
+
         return BaseResponse(
             success=True,
             message="Dynamic batch indicators calculated successfully",
@@ -1119,7 +1118,7 @@ async def calculate_dynamic_batch(
                 'indicators': results
             }
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

@@ -4,19 +4,20 @@ Watermark Fail-Secure Integration Tests
 Addresses critical integration gap: End-to-end watermark failure handling
 ensuring WatermarkError bubbles up and marketplace receives 403 responses.
 """
-import pytest
 import asyncio
-import json
-from unittest.mock import AsyncMock, patch, MagicMock
-from datetime import datetime
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import aiohttp
+import pytest
 
 try:
+    from fastapi import HTTPException
+    from fastapi.testclient import TestClient
+
+    from app.api.v2.sdk_signals import router as sdk_router
     from app.services.enhanced_watermark_integration import EnhancedWatermarkService, WatermarkError
     from app.services.signal_delivery_service import SignalDeliveryService
-    from app.api.v2.sdk_signals import router as sdk_router
-    from fastapi.testclient import TestClient
-    from fastapi import HTTPException
     WATERMARK_SERVICE_AVAILABLE = True
 except ImportError:
     WATERMARK_SERVICE_AVAILABLE = False
@@ -30,7 +31,7 @@ class TestWatermarkFailSecureIntegration:
         """Mock marketplace API responses."""
         async def mock_request(method, url, **kwargs):
             response_mock = MagicMock()
-            
+
             # Simulate different marketplace scenarios
             if "watermark_success" in url:
                 response_mock.status = 200
@@ -44,23 +45,23 @@ class TestWatermarkFailSecureIntegration:
             else:
                 response_mock.status = 403
                 response_mock.json = AsyncMock(return_value={"error": "Watermark validation failed"})
-            
+
             return response_mock
-        
+
         return mock_request
 
-    @pytest.fixture 
+    @pytest.fixture
     def watermark_service(self, mock_marketplace_api):
         """Create watermark service with mocked marketplace API."""
         if not WATERMARK_SERVICE_AVAILABLE:
             pytest.skip("Watermark service not available")
-        
+
         service = EnhancedWatermarkService(
             marketplace_url="http://localhost:8080/marketplace",
             watermark_secret="test_secret_key_123",
             fail_secure=True
         )
-        
+
         # Mock the HTTP session
         with patch('aiohttp.ClientSession.request', new=mock_marketplace_api):
             yield service
@@ -84,7 +85,7 @@ class TestWatermarkFailSecureIntegration:
                 "confidence": 0.85
             }
         }
-        
+
         # Mock successful watermarking
         with patch('aiohttp.ClientSession.request') as mock_request:
             mock_response = AsyncMock()
@@ -95,10 +96,10 @@ class TestWatermarkFailSecureIntegration:
                 "expiry": "2026-01-18T00:00:00Z"
             })
             mock_request.return_value = mock_response
-            
+
             # Should succeed with watermark
             watermarked_signal = await watermark_service.apply_watermark(signal_data)
-            
+
             assert "watermark_token" in watermarked_signal
             assert watermarked_signal["watermark_token"] == "wm_abc123"
             assert watermarked_signal["signal_id"] == "test_signal_123"
@@ -107,12 +108,12 @@ class TestWatermarkFailSecureIntegration:
     async def test_watermark_failure_prevents_signal_delivery(self, watermark_service):
         """Test that watermark failure prevents signal delivery with WatermarkError."""
         signal_data = {
-            "signal_id": "test_signal_456", 
+            "signal_id": "test_signal_456",
             "instrument_key": "NSE@INFY@EQ",
             "signal_type": "sell",
             "metadata": {"price": 1800.0}
         }
-        
+
         # Mock watermarking failure
         with patch('aiohttp.ClientSession.request') as mock_request:
             mock_response = AsyncMock()
@@ -121,11 +122,11 @@ class TestWatermarkFailSecureIntegration:
                 "error": "Watermark service internal error"
             })
             mock_request.return_value = mock_response
-            
+
             # Should raise WatermarkError and not return original data
             with pytest.raises(WatermarkError) as exc_info:
                 await watermark_service.apply_watermark(signal_data)
-            
+
             assert "watermark service internal error" in str(exc_info.value).lower()
             # Verify no original data is leaked in error
 
@@ -134,7 +135,7 @@ class TestWatermarkFailSecureIntegration:
         """Test that fail-secure behavior doesn't leak original data."""
         sensitive_signal = {
             "signal_id": "sensitive_signal_789",
-            "instrument_key": "NSE@SENSITIVE@EQ", 
+            "instrument_key": "NSE@SENSITIVE@EQ",
             "signal_type": "buy",
             "metadata": {
                 "proprietary_score": 0.95,
@@ -142,7 +143,7 @@ class TestWatermarkFailSecureIntegration:
                 "cost_basis": 2200.0
             }
         }
-        
+
         # Mock authentication failure
         with patch('aiohttp.ClientSession.request') as mock_request:
             mock_response = AsyncMock()
@@ -151,15 +152,15 @@ class TestWatermarkFailSecureIntegration:
                 "error": "Invalid watermark credentials"
             })
             mock_request.return_value = mock_response
-            
+
             # Should fail secure without exposing original data
             with pytest.raises(WatermarkError) as exc_info:
                 await watermark_service.apply_watermark(sensitive_signal)
-            
+
             error_message = str(exc_info.value)
             # Verify sensitive data not in error message
             assert "proprietary_score" not in error_message
-            assert "internal_model" not in error_message 
+            assert "internal_model" not in error_message
             assert "cost_basis" not in error_message
             assert "alpha_v3" not in error_message
 
@@ -167,25 +168,25 @@ class TestWatermarkFailSecureIntegration:
     async def test_marketplace_receives_403_on_watermark_failure(self, watermark_service):
         """Test that marketplace receives 403 when watermark fails."""
         # Mock the marketplace HTTP client that would call our service
-        marketplace_client_mock = AsyncMock()
-        
+        AsyncMock()
+
         # Simulate marketplace requesting signal data
         signal_request = {
             "user_id": "user_123",
             "signal_id": "requested_signal_456",
             "marketplace_token": "mp_token_789"
         }
-        
+
         # Mock our service's response to marketplace
         with patch('app.api.v2.sdk_signals.get_watermarked_signal') as mock_get_signal:
             # Simulate watermark failure in our service
             mock_get_signal.side_effect = WatermarkError("Watermark validation failed")
-            
+
             # Marketplace should receive 403
             with pytest.raises(HTTPException) as exc_info:
                 # This simulates the marketplace calling our API
                 await sdk_router.dependencies[0].dependency(signal_request)
-            
+
             assert exc_info.value.status_code == 403
             assert "watermark" in exc_info.value.detail.lower()
 
@@ -202,15 +203,15 @@ class TestWatermarkFailSecureIntegration:
                 "price": 3800.0
             }
         }
-        
+
         # Mock watermark failure
         with patch.object(watermark_service, 'apply_watermark') as mock_watermark:
             mock_watermark.side_effect = WatermarkError("Watermark service timeout")
-            
+
             # Signal delivery should fail due to watermark error
             with pytest.raises(WatermarkError):
                 await signal_delivery_service.deliver_signal(delivery_request)
-            
+
             # Verify signal was not delivered to any channel
             assert signal_delivery_service._delivery_attempts == 0
             assert signal_delivery_service._failed_watermark_count > 0
@@ -220,18 +221,18 @@ class TestWatermarkFailSecureIntegration:
         """Test watermark retry behavior for transient failures."""
         signal_data = {
             "signal_id": "retry_test_123",
-            "instrument_key": "NSE@WIPRO@EQ", 
+            "instrument_key": "NSE@WIPRO@EQ",
             "signal_type": "hold"
         }
-        
+
         call_count = 0
-        
+
         async def mock_request_with_retry(method, url, **kwargs):
             nonlocal call_count
             call_count += 1
-            
+
             response_mock = MagicMock()
-            
+
             if call_count <= 2:
                 # First two calls fail with transient errors
                 response_mock.status = 503
@@ -245,13 +246,13 @@ class TestWatermarkFailSecureIntegration:
                     "status": "watermarked",
                     "watermark_token": "retry_success_token"
                 })
-            
+
             return response_mock
-        
+
         with patch('aiohttp.ClientSession.request', new=mock_request_with_retry):
             # Should eventually succeed after retries
             result = await watermark_service.apply_watermark(signal_data)
-            
+
             assert result["watermark_token"] == "retry_success_token"
             assert call_count == 3  # Verify retries happened
 
@@ -263,18 +264,18 @@ class TestWatermarkFailSecureIntegration:
             "instrument_key": "NSE@HDFC@EQ",
             "metadata": {"urgent": True}
         }
-        
+
         # Mock timeout scenario
         with patch('aiohttp.ClientSession.request') as mock_request:
             mock_request.side_effect = aiohttp.ServerTimeoutError()
-            
+
             # Should fail secure on timeout
             with pytest.raises(WatermarkError) as exc_info:
                 await watermark_service.apply_watermark(signal_data)
-            
+
             assert "timeout" in str(exc_info.value).lower()
 
-    @pytest.mark.asyncio  
+    @pytest.mark.asyncio
     async def test_concurrent_watermark_requests(self, watermark_service):
         """Test concurrent watermark requests under load."""
         # Create multiple concurrent watermark requests
@@ -286,21 +287,21 @@ class TestWatermarkFailSecureIntegration:
                 "signal_type": "buy"
             }
             signals.append(signal)
-        
+
         # Mock successful watermarking for all
         with patch('aiohttp.ClientSession.request') as mock_request:
             mock_response = AsyncMock()
             mock_response.status = 200
             mock_response.json = AsyncMock(return_value={
-                "status": "watermarked", 
+                "status": "watermarked",
                 "watermark_token": "concurrent_token"
             })
             mock_request.return_value = mock_response
-            
+
             # Execute concurrent watermarking
             tasks = [watermark_service.apply_watermark(signal) for signal in signals]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # All should succeed
             successful_results = [r for r in results if not isinstance(r, Exception)]
             assert len(successful_results) == 10
@@ -314,11 +315,11 @@ class TestWatermarkFailSecureIntegration:
             {"marketplace_url": "http://valid.com", "watermark_secret": ""},  # Empty secret
             {"marketplace_url": "invalid_url", "watermark_secret": "valid_secret"},  # Invalid URL format
         ]
-        
+
         for invalid_config in invalid_configs:
             with pytest.raises(ValueError) as exc_info:
                 EnhancedWatermarkService(**invalid_config, fail_secure=True)
-            
+
             assert "configuration" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
@@ -339,7 +340,7 @@ class TestWatermarkFailSecureIntegration:
             },
             "timestamp": "2026-01-17T10:30:00Z"
         }
-        
+
         # Mock successful watermarking
         with patch('aiohttp.ClientSession.request') as mock_request:
             mock_response = AsyncMock()
@@ -349,15 +350,15 @@ class TestWatermarkFailSecureIntegration:
                 "watermark_token": "metadata_preserved_token"
             })
             mock_request.return_value = mock_response
-            
+
             watermarked_signal = await watermark_service.apply_watermark(original_signal)
-            
+
             # Verify all original metadata is preserved
             assert watermarked_signal["signal_id"] == original_signal["signal_id"]
             assert watermarked_signal["instrument_key"] == original_signal["instrument_key"]
             assert watermarked_signal["metadata"] == original_signal["metadata"]
             assert watermarked_signal["timestamp"] == original_signal["timestamp"]
-            
+
             # Verify watermark was added
             assert "watermark_token" in watermarked_signal
             assert watermarked_signal["watermark_token"] == "metadata_preserved_token"
@@ -367,9 +368,9 @@ def run_integration_coverage_test():
     """Run watermark fail-secure integration coverage test."""
     import subprocess
     import sys
-    
+
     print("🔍 Running Watermark Fail-Secure Integration Coverage Tests...")
-    
+
     cmd = [
         sys.executable, "-m", "pytest",
         __file__,
@@ -381,25 +382,25 @@ def run_integration_coverage_test():
         "--cov-fail-under=95",
         "-v"
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     print("STDOUT:")
     print(result.stdout)
-    
+
     if result.stderr:
         print("STDERR:")
         print(result.stderr)
-    
+
     return result.returncode == 0
 
 
 if __name__ == "__main__":
     print("🚀 Watermark Fail-Secure Integration Tests")
     print("=" * 60)
-    
+
     success = run_integration_coverage_test()
-    
+
     if success:
         print("\n✅ Watermark fail-secure integration tests passed with ≥95% coverage!")
         print("📊 Integration coverage validated for:")

@@ -5,7 +5,8 @@ Provides Redis-based caching with TTL support.
 """
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
+
 from app.core.redis_manager import get_redis_client
 
 logger = logging.getLogger(__name__)
@@ -13,23 +14,23 @@ logger = logging.getLogger(__name__)
 
 class Cache:
     """Redis-based cache implementation."""
-    
+
     def __init__(self):
         self.redis_client = None
-    
+
     async def initialize(self):
         """Initialize cache with Redis client."""
         self.redis_client = await get_redis_client()
-    
-    async def set(self, key: str, value: Any, expire: Optional[int] = None) -> bool:
+
+    async def set(self, key: str, value: Any, expire: int | None = None) -> bool:
         """
         Set a value in cache with optional expiration.
-        
+
         Args:
             key: Cache key
             value: Value to cache (will be JSON serialized)
             expire: TTL in seconds (None for no expiration)
-            
+
         Returns:
             True if successful
         """
@@ -43,14 +44,14 @@ class Cache:
         except Exception as e:
             logger.error(f"Cache set error: {e}")
             return False
-    
-    async def get(self, key: str) -> Optional[Any]:
+
+    async def get(self, key: str) -> Any | None:
         """
         Get a value from cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             Cached value or None if not found
         """
@@ -62,14 +63,14 @@ class Cache:
         except Exception as e:
             logger.error(f"Cache get error: {e}")
             return None
-    
+
     async def delete(self, key: str) -> bool:
         """
         Delete a value from cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             True if deleted
         """
@@ -79,14 +80,14 @@ class Cache:
         except Exception as e:
             logger.error(f"Cache delete error: {e}")
             return False
-    
+
     async def exists(self, key: str) -> bool:
         """
         Check if key exists in cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             True if exists
         """

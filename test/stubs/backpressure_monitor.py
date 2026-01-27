@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Any
+from typing import Any
 
 
 class BackpressureLevel(Enum):
@@ -28,7 +28,7 @@ class BackpressureMonitor:
         self.queue_size = 0
         self.processing_rate = 0.0
         self.memory_usage = 0.0
-        self.metrics_history: List[Dict[str, Any]] = []
+        self.metrics_history: list[dict[str, Any]] = []
 
     def update_queue_size(self, size: int):
         self.queue_size = size
@@ -86,7 +86,7 @@ class BackpressureMonitor:
         self.current_level = max(queue_level, rate_level, mem_level, key=lambda x: x.value)
         return self.current_level
 
-    def get_trend_analysis(self) -> Dict[str, Any]:
+    def get_trend_analysis(self) -> dict[str, Any]:
         history = self.metrics_history[-5:] if len(self.metrics_history) > 5 else self.metrics_history
         if len(history) < 2:
             return {"direction": "stable", "severity": "low"}
@@ -96,7 +96,7 @@ class BackpressureMonitor:
         severity = "high" if abs(delta_sum) > 500 else "medium" if abs(delta_sum) > 100 else "low"
         return {"direction": trend, "severity": severity}
 
-    def get_scaling_recommendations(self) -> Dict[str, Any]:
+    def get_scaling_recommendations(self) -> dict[str, Any]:
         level = self.get_backpressure_level()
         if level == BackpressureLevel.CRITICAL:
             return {"action": "scale_up", "urgency": "critical", "target_replicas": 3}

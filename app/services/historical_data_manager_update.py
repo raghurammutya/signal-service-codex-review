@@ -3,13 +3,10 @@ Historical data manager requiring proper TimescaleDB integration.
 Production implementation removed to enforce proper database integration.
 """
 
-from datetime import datetime, timedelta
-from typing import List
 
 
 class HistoricalDataAccessError(Exception):
     """Exception raised when historical data access requires proper implementation"""
-    pass
 
 
 async def get_async_db():

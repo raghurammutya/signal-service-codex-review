@@ -1,29 +1,24 @@
 # Subscription Service Client for Signal Service
-import asyncio
-import json
-import time
-from typing import Dict, List, Optional, Any
-import httpx
-from datetime import datetime, timezone
-
 import logging
+import time
+from typing import Any
+
+import httpx
+
 logger = logging.getLogger(__name__)
 from ..core.config import settings
 
 
 class SignalSubscriptionError(Exception):
     """Exception raised for subscription service errors"""
-    pass
 
 
 class QuotaExceededException(SignalSubscriptionError):
     """Exception raised when user exceeds quotas"""
-    pass
 
 
 class PermissionDeniedException(SignalSubscriptionError):
     """Exception raised when user lacks permissions"""
-    pass
 
 
 class SignalSubscriptionClient:
@@ -31,15 +26,15 @@ class SignalSubscriptionClient:
     Client for integrating signal_service with subscription_service
     Handles signal computation quotas, threshold monitoring limits, and resource allocation
     """
-    
+
     def __init__(self, base_url: str = None, timeout: float = 10.0):
         self.base_url = base_url or settings.SUBSCRIPTION_SERVICE_URL
         self.timeout = timeout
         self.client_name = "signal_service"
-        
+
         logger.info(f"SignalSubscriptionClient initialized with URL: {self.base_url}")
-    
-    def _get_headers(self, user_id: str = None) -> Dict[str, str]:
+
+    def _get_headers(self, user_id: str = None) -> dict[str, str]:
         """Get request headers with service authentication"""
         headers = {
             "Content-Type": "application/json",
@@ -47,20 +42,20 @@ class SignalSubscriptionClient:
             "X-Service-Name": self.client_name,
             "X-Request-ID": f"signal_{int(time.time())}"
         }
-        
+
         if user_id:
             headers["X-User-ID"] = user_id
-            
+
         return headers
-    
-    async def validate_threshold_creation(self, user_id: str, threshold_config: dict) -> Dict[str, Any]:
+
+    async def validate_threshold_creation(self, user_id: str, threshold_config: dict) -> dict[str, Any]:
         """
         Validate if user can create a threshold based on their subscription
-        
+
         Args:
             user_id: User requesting threshold creation
             threshold_config: Threshold configuration details
-            
+
         Returns:
             Dict with validation result, monitoring tier, and resource allocation
         """
@@ -89,7 +84,7 @@ class SignalSubscriptionClient:
                     },
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     return {
@@ -100,34 +95,33 @@ class SignalSubscriptionClient:
                         "estimated_resource_usage": data.get("estimated_resource_usage", {}),
                         "reason": "Threshold creation approved"
                     }
-                elif response.status_code == 403:
+                if response.status_code == 403:
                     error_data = response.json()
                     return {
                         "allowed": False,
                         "reason": error_data.get("error", {}).get("message", "Threshold creation denied"),
                         "details": error_data.get("error", {}).get("details", {})
                     }
-                else:
-                    return {
-                        "allowed": False,
-                        "reason": f"Validation failed with status {response.status_code}"
-                    }
-                    
+                return {
+                    "allowed": False,
+                    "reason": f"Validation failed with status {response.status_code}"
+                }
+
         except Exception as e:
             logger.exception(f"Failed to validate threshold creation: {e}")
             return {
                 "allowed": False,
                 "reason": f"Validation error: {str(e)}"
             }
-    
-    async def allocate_signal_resources(self, user_id: str, computation_request: dict) -> Dict[str, Any]:
+
+    async def allocate_signal_resources(self, user_id: str, computation_request: dict) -> dict[str, Any]:
         """
         Request resource allocation for signal computation
-        
+
         Args:
             user_id: User requesting computation
             computation_request: Details of computation to be performed
-            
+
         Returns:
             Dict with allocation result and resource limits
         """
@@ -147,7 +141,7 @@ class SignalSubscriptionClient:
                     },
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     return {
@@ -159,28 +153,27 @@ class SignalSubscriptionClient:
                         "resource_limits": data.get("resource_limits", {}),
                         "fallback_options": data.get("fallback_options", {})
                     }
-                else:
-                    error_data = response.json()
-                    return {
-                        "granted": False,
-                        "reason": error_data.get("error", {}).get("message", "Resource allocation denied")
-                    }
-                    
+                error_data = response.json()
+                return {
+                    "granted": False,
+                    "reason": error_data.get("error", {}).get("message", "Resource allocation denied")
+                }
+
         except Exception as e:
             logger.exception(f"Failed to allocate signal resources: {e}")
             return {
                 "granted": False,
                 "reason": f"Allocation error: {str(e)}"
             }
-    
+
     async def update_signal_usage(self, user_id: str, computation_result: dict) -> bool:
         """
         Update signal usage after computation completion
-        
+
         Args:
             user_id: User who performed computation
             computation_result: Results and metrics from computation
-            
+
         Returns:
             True if usage was recorded successfully
         """
@@ -207,27 +200,26 @@ class SignalSubscriptionClient:
                     },
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     logger.info(f"Signal usage recorded for user {user_id}: {data.get('updated_quotas', {})}")
                     return True
-                else:
-                    logger.warning(f"Failed to record signal usage: {response.status_code}")
-                    return False
-                    
+                logger.warning(f"Failed to record signal usage: {response.status_code}")
+                return False
+
         except Exception as e:
             logger.exception(f"Failed to update signal usage: {e}")
             return False
-    
-    async def check_signal_quotas(self, user_id: str, period: str = "today") -> Dict[str, Any]:
+
+    async def check_signal_quotas(self, user_id: str, period: str = "today") -> dict[str, Any]:
         """
         Check user's current signal computation quotas
-        
+
         Args:
             user_id: User to check quotas for
             period: Time period ('today', 'this_hour', 'this_month')
-            
+
         Returns:
             Dict with quota usage and limits
         """
@@ -238,17 +230,16 @@ class SignalSubscriptionClient:
                     params={"period": period},
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     return response.json()
-                else:
-                    logger.warning(f"Failed to check signal quotas: {response.status_code}")
-                    return {
-                        "user_id": user_id,
-                        "signal_usage": {},
-                        "error": f"Failed to retrieve quotas: {response.status_code}"
-                    }
-                    
+                logger.warning(f"Failed to check signal quotas: {response.status_code}")
+                return {
+                    "user_id": user_id,
+                    "signal_usage": {},
+                    "error": f"Failed to retrieve quotas: {response.status_code}"
+                }
+
         except Exception as e:
             logger.exception(f"Failed to check signal quotas: {e}")
             return {
@@ -256,14 +247,14 @@ class SignalSubscriptionClient:
                 "signal_usage": {},
                 "error": str(e)
             }
-    
-    async def get_threshold_monitoring_status(self, user_id: str) -> Dict[str, Any]:
+
+    async def get_threshold_monitoring_status(self, user_id: str) -> dict[str, Any]:
         """
         Get user's threshold monitoring status and capacity
-        
+
         Args:
             user_id: User to check status for
-            
+
         Returns:
             Dict with threshold monitoring status
         """
@@ -273,20 +264,19 @@ class SignalSubscriptionClient:
                     f"{self.base_url}/api/thresholds/status/{user_id}",
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     return response.json()
-                else:
-                    return {
-                        "user_id": user_id,
-                        "active_thresholds": [],
-                        "monitoring_capacity": {
-                            "thresholds_active": 0,
-                            "thresholds_limit": 0
-                        },
-                        "error": f"Failed to retrieve status: {response.status_code}"
-                    }
-                    
+                return {
+                    "user_id": user_id,
+                    "active_thresholds": [],
+                    "monitoring_capacity": {
+                        "thresholds_active": 0,
+                        "thresholds_limit": 0
+                    },
+                    "error": f"Failed to retrieve status: {response.status_code}"
+                }
+
         except Exception as e:
             logger.exception(f"Failed to get threshold monitoring status: {e}")
             return {
@@ -294,15 +284,15 @@ class SignalSubscriptionClient:
                 "active_thresholds": [],
                 "error": str(e)
             }
-    
-    async def request_resource_optimization(self, user_id: str, current_thresholds: List[str]) -> Dict[str, Any]:
+
+    async def request_resource_optimization(self, user_id: str, current_thresholds: list[str]) -> dict[str, Any]:
         """
         Request optimization recommendations for user's thresholds
-        
+
         Args:
             user_id: User to optimize for
             current_thresholds: List of current threshold IDs
-            
+
         Returns:
             Dict with optimization suggestions
         """
@@ -323,30 +313,29 @@ class SignalSubscriptionClient:
                     },
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     return response.json()
-                else:
-                    return {
-                        "optimization_suggestions": [],
-                        "error": f"Optimization request failed: {response.status_code}"
-                    }
-                    
+                return {
+                    "optimization_suggestions": [],
+                    "error": f"Optimization request failed: {response.status_code}"
+                }
+
         except Exception as e:
             logger.exception(f"Failed to request resource optimization: {e}")
             return {
                 "optimization_suggestions": [],
                 "error": str(e)
             }
-    
+
     async def check_feature_access(self, user_id: str, feature: str) -> bool:
         """
         Check if user has access to a specific signal feature
-        
+
         Args:
             user_id: User to check
             feature: Feature name (e.g., 'greeks_calculation', 'real_time_alerts')
-            
+
         Returns:
             True if user has access to the feature
         """
@@ -356,41 +345,38 @@ class SignalSubscriptionClient:
                     f"{self.base_url}/api/features/check/{user_id}/{feature}",
                     headers=self._get_headers(user_id)
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     return data.get("allowed", False)
-                else:
-                    logger.warning(f"Feature access check failed: {response.status_code}")
-                    return False
-                    
+                logger.warning(f"Feature access check failed: {response.status_code}")
+                return False
+
         except Exception as e:
             logger.exception(f"Failed to check feature access: {e}")
             return False
-    
+
     def _determine_monitoring_frequency(self, threshold_config: dict) -> str:
         """Determine monitoring frequency based on threshold configuration"""
         signal_type = threshold_config.get("signal_type", "technical_indicators")
         time_sensitivity = threshold_config.get("time_sensitivity", "periodic")
-        
+
         if signal_type == "greeks" and time_sensitivity == "immediate":
             return "real_time"
-        elif time_sensitivity in ["immediate", "near_term"]:
+        if time_sensitivity in ["immediate", "near_term"]:
             return "high_frequency"
-        else:
-            return "periodic"
-    
+        return "periodic"
+
     def _assess_computation_intensity(self, computation_request: dict) -> str:
         """Assess computation intensity based on request details"""
         computation_type = computation_request.get("computation_type", "technical_indicators")
         symbols_count = len(computation_request.get("symbols", []))
-        
+
         if computation_type == "greeks" and symbols_count > 20:
             return "high"
-        elif computation_type == "greeks" or symbols_count > 10:
+        if computation_type == "greeks" or symbols_count > 10:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
 
 # Global client instance

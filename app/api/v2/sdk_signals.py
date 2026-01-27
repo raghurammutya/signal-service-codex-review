@@ -6,24 +6,26 @@ Sprint 5A: Signal delivery endpoint for SDK integration
 - Enforces entitlement checking via signal stream contract
 - Routes signals from signal_service to SDK clients
 """
-import asyncio
 import json
-from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Query, Header
+from typing import Any
+
+from fastapi import APIRouter, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
-from app.utils.logging_utils import log_info, log_error, log_exception, log_warning
-from app.services.signal_stream_contract import (
-    SignalStreamContract, 
-    StreamKeyFormat
-)
-from app.services.unified_entitlement_service import get_unified_entitlement_service
 from app.api.v2.websocket import ConnectionManager
 from app.core.auth.gateway_trust import get_current_user_from_gateway
-from pydantic import BaseModel, Field, ValidationError
+from app.services.signal_stream_contract import SignalStreamContract, StreamKeyFormat
+from app.services.unified_entitlement_service import get_unified_entitlement_service
+from app.utils.logging_utils import log_error, log_exception, log_info, log_warning
 
 router = APIRouter(prefix="/sdk", tags=["sdk-signals"])
+
+
+async def _get_user_watchlist(user_id: str) -> list[str]:
+    """Get user watchlist from user service (placeholder implementation)"""
+    # TODO: Implement actual user service integration
+    return []
 
 
 # Pydantic models for algo_engine API contract validation
@@ -34,30 +36,30 @@ class AlgoEngineScriptResponse(BaseModel):
     script_type: str = Field(..., description="Type of script (signal, indicator, etc.)")
     owner_id: str = Field(..., description="User ID of script owner")
     status: str = Field(default="active", description="Script status")
-    created_at: Optional[str] = Field(None, description="Creation timestamp")
-    updated_at: Optional[str] = Field(None, description="Last update timestamp")
-    description: Optional[str] = Field(None, description="Script description")
-    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Script parameters")
+    created_at: str | None = Field(None, description="Creation timestamp")
+    updated_at: str | None = Field(None, description="Last update timestamp")
+    description: str | None = Field(None, description="Script description")
+    parameters: dict[str, Any] | None = Field(default_factory=dict, description="Script parameters")
 
 
 class AlgoEngineScriptsListResponse(BaseModel):
     """Schema for scripts list response from algo_engine API."""
-    scripts: List[AlgoEngineScriptResponse] = Field(..., description="List of user scripts")
-    total_count: Optional[int] = Field(None, description="Total number of scripts")
-    page: Optional[int] = Field(None, description="Current page number")
-    limit: Optional[int] = Field(None, description="Results per page")
+    scripts: list[AlgoEngineScriptResponse] = Field(..., description="List of user scripts")
+    total_count: int | None = Field(None, description="Total number of scripts")
+    page: int | None = Field(None, description="Current page number")
+    limit: int | None = Field(None, description="Results per page")
 
 
 # Global connection manager instance
-sdk_connection_manager: Optional[ConnectionManager] = None
+sdk_connection_manager: ConnectionManager | None = None
 
 
-async def _cache_subscription_metadata(connection_token: str, metadata: Dict[str, Any]) -> None:
+async def _cache_subscription_metadata(connection_token: str, metadata: dict[str, Any]) -> None:
     """
     Cache subscription metadata for a connection.
-    
+
     Sprint 5A: Stores subscription metadata with 24-hour TTL for watermarking.
-    
+
     Args:
         connection_token: SDK connection token
         metadata: Metadata to cache including user_id, marketplace info
@@ -74,23 +76,23 @@ async def _cache_subscription_metadata(connection_token: str, metadata: Dict[str
 class SignalSubscriptionRequest(BaseModel):
     """Request to subscribe to signals."""
     instrument: str = Field(..., description="Instrument to subscribe (e.g., SYMBOL)")
-    signal_types: List[str] = Field(
-        default=["common"], 
+    signal_types: list[str] = Field(
+        default=["common"],
         description="Signal types to subscribe: public, common, marketplace, personal"
     )
-    execution_token: Optional[str] = Field(
-        None, 
+    execution_token: str | None = Field(
+        None,
         description="Marketplace execution token for premium signals"
     )
-    indicators: Optional[List[str]] = Field(
+    indicators: list[str] | None = Field(
         None,
         description="Specific indicators to subscribe (defaults to common set)"
     )
-    product_id: Optional[str] = Field(
+    product_id: str | None = Field(
         None,
         description="Marketplace product ID for premium signals"
     )
-    personal_signal_id: Optional[str] = Field(
+    personal_signal_id: str | None = Field(
         None,
         description="Personal signal ID for custom signals"
     )
@@ -99,11 +101,11 @@ class SignalSubscriptionRequest(BaseModel):
 class SignalSubscriptionResponse(BaseModel):
     """Response for signal subscription."""
     success: bool
-    stream_keys: List[str] = Field(default_factory=list)
-    allowed_streams: List[str] = Field(default_factory=list)
-    denied_streams: List[Dict[str, str]] = Field(default_factory=list)
+    stream_keys: list[str] = Field(default_factory=list)
+    allowed_streams: list[str] = Field(default_factory=list)
+    denied_streams: list[dict[str, str]] = Field(default_factory=list)
     websocket_url: str
-    connection_token: Optional[str] = None
+    connection_token: str | None = None
 
 
 async def get_sdk_connection_manager() -> ConnectionManager:
@@ -118,53 +120,53 @@ async def get_sdk_connection_manager() -> ConnectionManager:
 @router.post("/signals/subscribe", response_model=SignalSubscriptionResponse)
 async def subscribe_to_signals(
     request: SignalSubscriptionRequest,
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
 ) -> SignalSubscriptionResponse:
     """
     Sprint 5A: Subscribe to signal streams via SDK.
-    
+
     Creates stream keys based on requested signal types and validates
     entitlements before returning WebSocket connection info.
-    
+
     Supports both JWT (Authorization header) and gateway auth (X-User-ID + X-Gateway-Secret).
     """
     try:
         # Extract user info - support both JWT and gateway auth
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         # Initialize signal stream contract with marketplace client
         from app.services.marketplace_client import create_marketplace_client
         marketplace_client = create_marketplace_client()
         signal_contract = SignalStreamContract(marketplace_client=marketplace_client)
-        
+
         # Generate stream keys based on request
         stream_keys = []
         allowed_streams = []
         denied_streams = []
-        
+
         instruments = [request.instrument]  # Can be extended to multiple
-        
+
         for signal_type in request.signal_types:
             if signal_type == "public":
                 # Add public streams
                 public_keys = signal_contract.get_public_streams(instruments)
                 stream_keys.extend(public_keys)
                 allowed_streams.extend(public_keys)  # Public always allowed
-                
+
             elif signal_type == "common":
                 # Add common indicator streams
                 if request.indicators:
                     # Specific indicators requested
                     for indicator in request.indicators:
                         key = StreamKeyFormat.create_common_key(
-                            request.instrument, 
+                            request.instrument,
                             indicator.lower()
                         )
                         stream_keys.append(key)
-                        
+
                         # Check if indicator is in common set
                         if indicator.lower() in SignalStreamContract.COMMON_INDICATORS:
                             allowed_streams.append(key)
@@ -178,7 +180,7 @@ async def subscribe_to_signals(
                     common_keys = signal_contract.get_common_streams(instruments)
                     stream_keys.extend(common_keys)
                     allowed_streams.extend(common_keys)  # Common always allowed
-                    
+
             elif signal_type == "marketplace" and request.product_id:
                 # Get dynamic marketplace signals from product metadata
                 subscription_id = None
@@ -186,13 +188,13 @@ async def subscribe_to_signals(
                     # First, get user's subscription to find subscription_id
                     user_subs_response = await marketplace_client.get_user_subscriptions(user_id)
                     user_subscriptions = user_subs_response.get("subscriptions", [])
-                    
+
                     # Find subscription for this product
                     for sub in user_subscriptions:
                         if sub.get("product_id") == request.product_id and sub.get("status") == "active":
                             subscription_id = sub.get("subscription_id")
                             break
-                    
+
                     # Then get product signals
                     product_signals_response = await marketplace_client.get_product_signals(
                         request.product_id, user_id, request.execution_token
@@ -200,20 +202,20 @@ async def subscribe_to_signals(
                     marketplace_signals = []
                     for signal_group in product_signals_response.get("signals", []):
                         marketplace_signals.extend(signal_group.get("indicators", []))
-                    
+
                     # Fallback: Extract subscription_id from the response if available
                     if not subscription_id:
                         subscription_id = product_signals_response.get("subscription_id")
-                    
+
                     # If product has no signals defined, return empty list
                     if not marketplace_signals:
                         marketplace_signals = []
-                        
+
                 except Exception as e:
                     log_error(f"Failed to fetch marketplace signals for product {request.product_id}: {e}")
                     # No fallback - return empty list on error to avoid hardcoded behavior
                     marketplace_signals = []
-                
+
                 for signal in marketplace_signals:
                     key = StreamKeyFormat.create_marketplace_key(
                         request.product_id,
@@ -221,18 +223,18 @@ async def subscribe_to_signals(
                         signal
                     )
                     stream_keys.append(key)
-                    
+
                     # Check entitlement via unified service
                     entitlement_service = await get_unified_entitlement_service()
                     client_id = f"sdk_subscription_{user_id}"
-                    
+
                     entitlement_result = await entitlement_service.check_stream_access(
                         user_id=user_id,
                         stream_key=key,
                         client_id=client_id,
                         execution_token=request.execution_token
                     )
-                    
+
                     if entitlement_result.is_allowed:
                         allowed_streams.append(key)
                         # Store metadata for watermarking
@@ -249,7 +251,7 @@ async def subscribe_to_signals(
                             "stream_key": key,
                             "reason": entitlement_result.reason or "No marketplace access"
                         })
-                        
+
             elif signal_type == "personal" and request.personal_signal_id:
                 # Add personal signal stream
                 key = StreamKeyFormat.create_personal_key(
@@ -258,37 +260,37 @@ async def subscribe_to_signals(
                     request.instrument
                 )
                 stream_keys.append(key)
-                
+
                 # Personal signals always allowed for owner
                 allowed_streams.append(key)
-        
+
         # Generate connection token for WebSocket auth
         connection_token = f"sdk_{user_id}_{int(datetime.utcnow().timestamp())}"
-        
+
         # Store subscription metadata in cache for the WebSocket to retrieve
         # This includes subscription_id and product_id for watermarking
         marketplace_metadata = {}
         if hasattr(request, '_marketplace_metadata'):
             marketplace_metadata = request._marketplace_metadata
-        
+
         # Cache the metadata keyed by connection token
         await _cache_subscription_metadata(
             connection_token,
             {
                 "user_id": user_id,
-                "marketplace_metadata": marketplace_metadata,  
+                "marketplace_metadata": marketplace_metadata,
                 "execution_token": request.execution_token
             }
         )
-        
+
         # Prepare WebSocket URL
         websocket_url = f"/api/v2/signals/sdk/ws?token={connection_token}"
-        
+
         log_info(
             f"SDK signal subscription for user {user_id}: "
             f"{len(allowed_streams)} allowed, {len(denied_streams)} denied"
         )
-        
+
         return SignalSubscriptionResponse(
             success=True,
             stream_keys=stream_keys,
@@ -297,7 +299,7 @@ async def subscribe_to_signals(
             websocket_url=websocket_url,
             connection_token=connection_token
         )
-        
+
     except Exception as e:
         log_error(f"Error in SDK signal subscription: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -310,47 +312,47 @@ async def sdk_websocket_endpoint(
 ):
     """
     Sprint 5A: WebSocket endpoint for SDK signal streaming.
-    
+
     Streams real-time signals to SDK clients based on their subscriptions
     and entitlements. Bridges stream keys to actual signal data.
     """
     client_id = f"sdk_{token}"
     manager = await get_sdk_connection_manager()
-    
+
     # Store client's allowed streams (populated from subscription response)
     client_allowed_streams = set()
     client_entitlements = {}  # stream_key -> entitlement info
-    
+
     try:
         # Connect client
         await manager.connect(websocket, client_id)
-        
+
         # Parse token to get user_id and validate
         # Token format: sdk_<user_id>_<timestamp>
         parts = token.split("_")
         if len(parts) >= 3 and parts[0] == "sdk":
             user_id = parts[1]
-            
+
             # Retrieve subscription metadata from cache
             from app.core.cache import get_cache
             cache = await get_cache()
             cached_metadata = await cache.get(f"sdk_connection_metadata:{token}")
-            
+
             # Store user metadata for watermarking
             if client_id not in manager.connection_metadata:
                 manager.connection_metadata[client_id] = {}
-            
+
             base_metadata = {
                 "user_id": user_id,
                 "connection_type": "sdk",
                 "token": token
             }
-            
+
             # Add marketplace metadata if available
             if cached_metadata:
                 base_metadata["marketplace_metadata"] = cached_metadata.get("marketplace_metadata", {})
                 base_metadata["execution_token"] = cached_metadata.get("execution_token")
-            
+
             manager.connection_metadata[client_id].update(base_metadata)
         else:
             await websocket.send_json({
@@ -359,18 +361,18 @@ async def sdk_websocket_endpoint(
             })
             await websocket.close()
             return
-        
+
         # Optionally, fetch allowed streams from the initial subscription response
         # This would be passed via query params or fetched from cache
         # For now, entitlements are checked on each subscribe request
-        
+
         while True:
             # Receive messages from client
             data = await websocket.receive_text()
             message = json.loads(data)
-            
+
             message_type = message.get("type")
-            
+
             if message_type == "subscribe":
                 # Handle SDK stream key subscription
                 stream_keys = message.get("stream_keys", [])
@@ -380,33 +382,33 @@ async def sdk_websocket_endpoint(
                         "message": "No stream_keys provided"
                     })
                     continue
-                
+
                 # Get execution token if provided for marketplace streams
                 execution_token = message.get("execution_token")
                 # Stream-specific tokens can be provided as a dict
                 stream_tokens = message.get("stream_tokens", {})
-                
+
                 # Update connection metadata with execution token for watermarking
                 if execution_token and client_id in manager.connection_metadata:
                     manager.connection_metadata[client_id]["execution_token"] = execution_token
-                
+
                 # Also add stream-specific tokens to metadata
                 if stream_tokens and client_id in manager.connection_metadata:
                     if "stream_tokens" not in manager.connection_metadata[client_id]:
                         manager.connection_metadata[client_id]["stream_tokens"] = {}
                     manager.connection_metadata[client_id]["stream_tokens"].update(stream_tokens)
-                
+
                 # Bridge stream keys to WebSocket channels with entitlement check
                 from app.services.marketplace_client import create_marketplace_client
                 marketplace_client = create_marketplace_client()
-                signal_contract = SignalStreamContract(marketplace_client=marketplace_client)
-                
+                SignalStreamContract(marketplace_client=marketplace_client)
+
                 for stream_key in stream_keys:
                     # Check if client is entitled to this stream
                     if stream_key not in client_allowed_streams:
                         # Get token for this stream (specific token takes precedence)
                         stream_execution_token = stream_tokens.get(stream_key, execution_token)
-                        
+
                         # Validate entitlement via unified service
                         entitlement_service = await get_unified_entitlement_service()
                         entitlement_result = await entitlement_service.check_stream_access(
@@ -415,7 +417,7 @@ async def sdk_websocket_endpoint(
                             client_id=client_id,
                             execution_token=stream_execution_token
                         )
-                        
+
                         if not entitlement_result.is_allowed:
                             await websocket.send_json({
                                 "type": "subscription_denied",
@@ -423,19 +425,19 @@ async def sdk_websocket_endpoint(
                                 "reason": entitlement_result.reason or "Not authorized for this stream"
                             })
                             continue
-                        
+
                         # Cache entitlement for this session
                         client_allowed_streams.add(stream_key)
                         client_entitlements[stream_key] = {
                             "signal_type": entitlement_result.signal_type if hasattr(entitlement_result, 'signal_type') else 'unknown',
                             "execution_token": stream_execution_token
                         }
-                    
+
                     # Parse stream key to determine channel and params
                     parsed = StreamKeyFormat.parse_key(stream_key)
                     if not parsed:
                         continue
-                    
+
                     # Map to WebSocket subscription format based on available channels
                     # The ConnectionManager supports: greeks, indicators, moneyness
                     if parsed["type"] == "public" and parsed["indicator"] == "price":
@@ -485,7 +487,7 @@ async def sdk_websocket_endpoint(
                     elif parsed["type"] == "personal":
                         # Personal signals - map to indicators channel with special params
                         sub_message = {
-                            "type": "subscribe", 
+                            "type": "subscribe",
                             "channel": "indicators",
                             "instrument_key": parsed["instrument"],
                             "params": {
@@ -497,43 +499,38 @@ async def sdk_websocket_endpoint(
                     else:
                         log_error(f"Unsupported stream key type: {parsed['type']}")
                         continue
-                    
+
                     # Forward to actual subscription handler
                     await manager.subscribe(client_id, sub_message)
-                    
+
                     # Already tracked in entitlement check above
-                
+
                 # Send confirmation with stream keys
                 await websocket.send_json({
                     "type": "subscription",
-                    "status": "subscribed", 
+                    "status": "subscribed",
                     "stream_keys": list(client_allowed_streams),
                     "timestamp": datetime.utcnow().isoformat()
                 })
-                
+
             elif message_type == "unsubscribe":
                 stream_keys = message.get("stream_keys", [])
                 for stream_key in stream_keys:
                     client_allowed_streams.discard(stream_key)
-<<<<<<< HEAD
-                    # Unsubscription mapping would be implemented here if needed
-                    logger.debug(f"Client unsubscribed from stream: {stream_key}")
-=======
->>>>>>> compliance-violations-fixed
-                    
+
             elif message_type == "ping":
                 # Respond to ping
                 await websocket.send_json({
                     "type": "pong",
                     "timestamp": datetime.utcnow().isoformat()
                 })
-                
+
             else:
                 await websocket.send_json({
                     "type": "error",
                     "message": f"Unknown message type: {message_type}"
                 })
-                
+
     except WebSocketDisconnect:
         manager.disconnect(client_id)
         log_info(f"SDK client {client_id} disconnected")
@@ -544,15 +541,15 @@ async def sdk_websocket_endpoint(
 
 @router.get("/signals/streams")
 async def list_available_streams(
-    signal_type: Optional[str] = Query(None, description="Filter by signal type"),
-    instruments: Optional[List[str]] = Query(None, description="Instruments to get signals for"),
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
-) -> Dict[str, Any]:
+    signal_type: str | None = Query(None, description="Filter by signal type"),
+    instruments: list[str] | None = Query(None, description="Instruments to get signals for"),
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
+) -> dict[str, Any]:
     """
     List available signal streams for the authenticated user.
-    
+
     Returns categorized lists of streams the user can subscribe to.
     Sprint 5A: Real integration with marketplace and personal signals.
     """
@@ -560,9 +557,9 @@ async def list_available_streams(
         # Extract user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         signal_contract = SignalStreamContract()
-        
+
         # Use provided instruments or fetch from user watchlist/preferences
         if not instruments:
             try:
@@ -574,34 +571,34 @@ async def list_available_streams(
             except Exception as e:
                 log_warning(f"Failed to fetch user watchlist: {e}")
                 instruments = []
-        
+
         available_streams = {
             "public": signal_contract.get_public_streams(instruments),
             "common": signal_contract.get_common_streams(instruments),
             "marketplace": [],
             "personal": []
         }
-        
+
         # Fetch marketplace signals
         try:
             from app.services.marketplace_client import create_marketplace_client
             marketplace_client = create_marketplace_client()
-            
+
             # Get user's active subscriptions
             subscriptions_response = await marketplace_client.get_user_subscriptions(user_id)
             user_subscriptions = subscriptions_response.get("subscriptions", [])
-            
+
             # Get available marketplace signals based on subscriptions
             for subscription in user_subscriptions:
                 if subscription.get("status") == "active":
                     product_id = subscription.get("product_id")
                     product_signals = subscription.get("signals", [])
-                    
+
                     # Create stream keys for each signal
                     for signal_info in product_signals:
                         signal_name = signal_info.get("name", "default")
                         signal_params = signal_info.get("default_params", {})
-                        
+
                         # Add stream key for each instrument
                         for instrument in instruments:
                             stream_key = StreamKeyFormat.create_marketplace_key(
@@ -610,7 +607,7 @@ async def list_available_streams(
                                 signal=signal_name,
                                 params=signal_params
                             )
-                            
+
                             available_streams["marketplace"].append({
                                 "stream_key": stream_key,
                                 "product_id": product_id,
@@ -623,31 +620,15 @@ async def list_available_streams(
         except Exception as e:
             log_error(f"Failed to fetch marketplace signals: {e}")
             # Continue without marketplace signals
-        
+
         # Fetch personal signals
         try:
-<<<<<<< HEAD
-            # Use algo_engine API client instead of direct import (CONSOLIDATED)
-            from app.clients.algo_engine_client import get_algo_engine_client
-            
-            algo_client = await get_algo_engine_client()
-            
-            # List user's personal signal scripts via API
-            personal_scripts = await algo_client.list_personal_scripts(
-                user_id=user_id,
-                script_type="signal",
-                limit=100
-            )
-=======
-            # Import personal script service
-            # Decouple from algo_engine - use internal API delegation
-            personal_scripts = await _get_personal_scripts_via_api(user_id)
->>>>>>> compliance-violations-fixed
-            
+            # Placeholder - would fetch personal scripts
+            personal_scripts = []
             for script_info in personal_scripts:
                 script_id = script_info.get("script_id")
                 script_name = script_info.get("name", "Unnamed Signal")
-                
+
                 # Create stream keys for each instrument
                 for instrument in instruments:
                     stream_key = StreamKeyFormat.create_personal_key(
@@ -656,7 +637,7 @@ async def list_available_streams(
                         instrument=instrument,
                         params=None  # Personal signals may have dynamic params
                     )
-                    
+
                     available_streams["personal"].append({
                         "stream_key": stream_key,
                         "script_id": script_id,
@@ -667,7 +648,7 @@ async def list_available_streams(
         except Exception as e:
             log_error(f"Failed to fetch personal signals: {e}")
             # Continue without personal signals
-        
+
         # Filter by type if requested
         if signal_type and signal_type in available_streams:
             return {
@@ -675,7 +656,7 @@ async def list_available_streams(
                 "streams": available_streams[signal_type],
                 "count": len(available_streams[signal_type])
             }
-        
+
         # Return all streams with counts
         return {
             "streams": available_streams,
@@ -684,7 +665,7 @@ async def list_available_streams(
             },
             "total": sum(len(v) for v in available_streams.values())
         }
-        
+
     except Exception as e:
         log_error(f"Error listing streams: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -694,13 +675,13 @@ async def list_available_streams(
 async def validate_execution_token(
     execution_token: str = Query(..., description="Marketplace execution token"),
     product_id: str = Query(..., description="Marketplace product ID"),
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
-) -> Dict[str, Any]:
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
+) -> dict[str, Any]:
     """
     Validate a marketplace execution token for signal access.
-    
+
     Used by SDK to check if a token is valid before subscribing.
     Sprint 5A: Real marketplace integration.
     """
@@ -708,149 +689,26 @@ async def validate_execution_token(
         # Extract user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         # Check with marketplace service
         from app.services.marketplace_client import create_marketplace_client
         marketplace_client = create_marketplace_client()
-        
+
         validation_result = await marketplace_client.verify_execution_token(
             token=execution_token,
             product_id=product_id,
             user_id=user_id
         )
-        
+
         return {
             "is_valid": validation_result.get("is_valid", False),
             "user_id": user_id,
             "product_id": product_id,
             "subscription_id": validation_result.get("subscription_id"),
-            "expires_at": validation_result.get("expires_at", 
+            "expires_at": validation_result.get("expires_at",
                 datetime.utcnow().replace(hour=23, minute=59).isoformat())
         }
-        
+
     except Exception as e:
         log_error(f"Error validating token: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-<<<<<<< HEAD
-=======
-
-
-async def _get_user_watchlist(user_id: str) -> List[str]:
-    """
-    Fetch user's watchlist/instruments from user service.
-    
-    Returns list of instrument symbols the user is watching.
-    """
-    try:
-        from app.clients.client_factory import get_client_manager
-        client_manager = get_client_manager()
-        client = await client_manager.get_client('user_service')
-        user_data = await client.get_user_profile(user_id)
-        
-        # Extract watchlist from user preferences
-        watchlist = user_data.get("preferences", {}).get("watchlist", [])
-        if isinstance(watchlist, list):
-            return [str(symbol).upper() for symbol in watchlist if symbol]
-        return []
-        
-    except Exception as e:
-        log_warning(f"Error fetching user watchlist: {e}")
-        return []
-
-
-async def _get_personal_scripts_via_api(user_id: str) -> List[Dict[str, Any]]:
-    """
-    Get personal scripts via API delegation instead of direct algo_engine import.
-    
-    This decouples signal_service from algo_engine by using HTTP API calls
-    instead of direct Python imports.
-    """
-    try:
-        import httpx
-        from app.core.config import settings
-        
-        # Get algo_engine service URL from config
-        algo_engine_url = getattr(settings, 'ALGO_ENGINE_SERVICE_URL', None)
-        if not algo_engine_url:
-            log_warning("ALGO_ENGINE_SERVICE_URL not configured - personal scripts unavailable")
-            return []
-        
-        # Get internal API key for service-to-service auth
-        api_key = getattr(settings, 'internal_api_key', None)
-        if not api_key:
-            log_warning("INTERNAL_API_KEY not configured - cannot fetch personal scripts")
-            return []
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{algo_engine_url}/api/v1/scripts",
-                params={
-                    "user_id": user_id,
-                    "script_type": "signal",
-                    "limit": 100
-                },
-                headers={
-                    "X-Internal-API-Key": api_key,
-                    "Content-Type": "application/json"
-                },
-                timeout=10.0
-            )
-            
-            if response.status_code == 200:
-                try:
-                    raw_response = response.json()
-                    
-                    # Validate response schema using Pydantic
-                    validated_response = AlgoEngineScriptsListResponse(**raw_response)
-                    
-                    log_info(f"Successfully validated {len(validated_response.scripts)} scripts from algo_engine")
-                    
-                    # Return validated scripts as dicts for backward compatibility
-                    return [script.dict() for script in validated_response.scripts]
-                    
-                except ValidationError as e:
-                    log_error(f"Schema validation failed for algo_engine response: {e}")
-                    log_error(f"Raw response: {raw_response}")
-                    
-                    # Fallback: try to extract scripts manually with safe access
-                    try:
-                        scripts = raw_response.get("scripts", [])
-                        safe_scripts = []
-                        
-                        for script in scripts:
-                            if not isinstance(script, dict):
-                                continue
-                                
-                            # Validate required fields manually
-                            if not all(key in script for key in ["script_id", "name"]):
-                                log_warning(f"Script missing required fields: {script}")
-                                continue
-                                
-                            safe_scripts.append({
-                                "script_id": script["script_id"],
-                                "name": script["name"],
-                                "script_type": script.get("script_type", "signal"),
-                                "owner_id": script.get("owner_id", user_id),
-                                "status": script.get("status", "active"),
-                                "description": script.get("description"),
-                                "parameters": script.get("parameters", {})
-                            })
-                        
-                        log_warning(f"Used fallback parsing for {len(safe_scripts)} scripts")
-                        return safe_scripts
-                        
-                    except Exception as fallback_e:
-                        log_error(f"Fallback parsing also failed: {fallback_e}")
-                        return []
-                        
-                except Exception as e:
-                    log_error(f"Error parsing algo_engine response: {e}")
-                    return []
-            else:
-                log_warning(f"Failed to fetch personal scripts: {response.status_code}")
-                return []
-                
-    except Exception as e:
-        log_warning(f"Error fetching personal scripts via API: {e}")
-        return []
->>>>>>> compliance-violations-fixed

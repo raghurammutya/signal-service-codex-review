@@ -3,13 +3,13 @@
 import asyncio
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 
-from app.utils.redis import get_redis_client
 from app.core.config import settings
+from app.utils.redis import get_redis_client
 
 # PRODUCTION SAFETY: Prevent test router from being used in production
 if settings.environment.lower() in ['production', 'prod', 'staging']:
@@ -21,17 +21,17 @@ if settings.environment.lower() in ['production', 'prod', 'staging']:
 router = APIRouter(prefix="/api/v2/signals", tags=["signals"])
 
 # Simple in-memory state so tests can observe side effects without external services.
-STATE: Dict[str, Any] = {
+STATE: dict[str, Any] = {
     "latest_greeks": {},          # instrument_key -> greeks payload
     "historical_greeks": {},      # instrument_key -> list of greeks snapshots
     "frequency_subs": [],         # list of subscription dicts
     "audit": [],                  # list of audit entries
     "ws_subscriptions": {},       # websocket -> list of subscription dicts
 }
-WS_CLIENTS: List[WebSocket] = []
+WS_CLIENTS: list[WebSocket] = []
 
 
-def _compute_stub_greeks(price: float) -> Dict[str, Any]:
+def _compute_stub_greeks(price: float) -> dict[str, Any]:
     """Deterministic but simple greeks calculation for tests."""
     delta = round(min(max(price / 1000.0, 0.05), 0.95), 3)
     return {
@@ -43,7 +43,7 @@ def _compute_stub_greeks(price: float) -> Dict[str, Any]:
     }
 
 
-async def _broadcast_signal(instrument_key: str, channel: str, payload: Dict[str, Any]):
+async def _broadcast_signal(instrument_key: str, channel: str, payload: dict[str, Any]):
     """Send updates to any subscribed websocket clients."""
     if not WS_CLIENTS:
         return
@@ -63,7 +63,7 @@ async def _broadcast_signal(instrument_key: str, channel: str, payload: Dict[str
         await asyncio.gather(*coros, return_exceptions=True)
 
 
-async def _cache_greeks(instrument_key: str, greeks: Dict[str, Any]):
+async def _cache_greeks(instrument_key: str, greeks: dict[str, Any]):
     """Persist latest greeks into fake Redis and in-memory history."""
     redis = await get_redis_client()
     greeks_payload = {**greeks, "timestamp": datetime.utcnow().isoformat()}
@@ -75,7 +75,7 @@ async def _cache_greeks(instrument_key: str, greeks: Dict[str, Any]):
 
 
 @router.post("/process-tick")
-async def process_tick(tick_data: Dict[str, Any]):
+async def process_tick(tick_data: dict[str, Any]):
     """Process a tick by computing simple greeks and caching the result."""
     instrument_key = tick_data.get("instrument_key")
     if not instrument_key or "last_price" not in tick_data:
@@ -88,7 +88,7 @@ async def process_tick(tick_data: Dict[str, Any]):
 
 
 @router.post("/subscriptions/frequency")
-async def set_frequency_subscription(subscription: Dict[str, Any]):
+async def set_frequency_subscription(subscription: dict[str, Any]):
     """Store a frequency subscription so tests can assert side effects."""
     STATE["frequency_subs"].append(subscription)
     user_id = subscription.get("user_id", "unknown")
@@ -100,7 +100,7 @@ async def set_frequency_subscription(subscription: Dict[str, Any]):
 
 
 @router.get("/realtime/greeks/{instrument_key}")
-async def realtime_greeks(instrument_key: str) -> Dict[str, Any]:
+async def realtime_greeks(instrument_key: str) -> dict[str, Any]:
     """Return the latest cached greeks for an instrument (or stub)."""
     if "INVALID" in instrument_key.upper():
         raise HTTPException(status_code=404, detail="instrument not found")
@@ -111,7 +111,7 @@ async def realtime_greeks(instrument_key: str) -> Dict[str, Any]:
 
 
 @router.get("/realtime/indicators/{instrument_token}/{indicator}")
-async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:
+async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> dict[str, Any]:
     """
     Real-time indicator calculation endpoint.
 
@@ -128,7 +128,6 @@ async def realtime_indicator(instrument_token: int, indicator: str, period: int 
 
     try:
         # Map common timeframes
-        timeframe_map = {"1": "1minute", "5": "5minute", "15": "15minute", "60": "60minute"}
         timeframe = "5minute"  # Default to 5-minute data
 
         # LEGACY: Fetch historical data using instrument_token
@@ -222,7 +221,7 @@ async def historical_greeks(instrument_key: str, start_time: str = "", end_time:
             {"timestamp": (now - timedelta(minutes=idx * 5)).isoformat(), "delta": 0.5, "gamma": 0.01, "iv": 0.2, "value": {"iv": 0.2, "strike_count": 3}}
             for idx in range(3)
         ]
-    metadata: Dict[str, Any] = {"timeframe": timeframe, "requested_start": start_time, "requested_end": end_time}
+    metadata: dict[str, Any] = {"timeframe": timeframe, "requested_start": start_time, "requested_end": end_time}
     if instrument_key.startswith("MONEYNESS@"):
         parts = instrument_key.split("@")
         metadata.update({"moneyness_level": parts[2] if len(parts) > 2 else "ATM", "underlying": parts[1] if len(parts) > 1 else ""})
@@ -264,7 +263,7 @@ async def available_timeframes(instrument_key: str, signal_type: str):
     }
 
 
-def _build_market_profile_payload(instrument_key: str) -> Dict[str, Any]:
+def _build_market_profile_payload(instrument_key: str) -> dict[str, Any]:
     price_levels = [100.0 + i for i in range(10)]
     volumes = [100 + i * 50 for i in range(10)]
     value_area = {"vah": max(price_levels), "val": min(price_levels), "poc": price_levels[volumes.index(max(volumes))], "volume_percentage": 70}
@@ -298,7 +297,7 @@ async def developing_profile(instrument_key: str, interval: str = "30m"):
 
 
 @router.post("/batch/compute")
-async def batch_compute(request: Dict[str, Any]):
+async def batch_compute(request: dict[str, Any]):
     instruments = request.get("instruments", [])
     results = []
     start = datetime.utcnow()
@@ -311,7 +310,7 @@ async def batch_compute(request: Dict[str, Any]):
 
 
 @router.post("/batch/historical-iv")
-async def batch_historical_iv(request: Dict[str, Any]):
+async def batch_historical_iv(request: dict[str, Any]):
     strikes = request.get("strikes", [])
     now = datetime.utcnow()
     surface = {
@@ -326,7 +325,7 @@ async def batch_historical_iv(request: Dict[str, Any]):
 
 
 @router.post("/batch/option-chain")
-async def option_chain(request: Dict[str, Any]):
+async def option_chain(request: dict[str, Any]):
     underlying = request.get("underlying")  # No default - require explicit underlying
     if not underlying:
         raise HTTPException(status_code=400, detail="underlying parameter is required")
@@ -338,8 +337,8 @@ async def option_chain(request: Dict[str, Any]):
 
 
 @router.post("/batch/iv-surface")
-async def iv_surface(request: Dict[str, Any]):
-    underlying = request.get("underlying")  # No default - require explicit underlying  
+async def iv_surface(request: dict[str, Any]):
+    underlying = request.get("underlying")  # No default - require explicit underlying
     if not underlying:
         raise HTTPException(status_code=400, detail="underlying parameter is required")
     analysis_type = request.get("analysis_type", "skew")
@@ -354,7 +353,7 @@ async def websocket_info():
 
 
 @router.websocket("/subscriptions/websocket")
-async def websocket_endpoint(websocket: WebSocket, client_id: Optional[str] = None):
+async def websocket_endpoint(websocket: WebSocket, client_id: str | None = None):
     await websocket.accept()
     WS_CLIENTS.append(websocket)
     STATE["ws_subscriptions"][websocket] = []

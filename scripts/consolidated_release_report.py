@@ -3,6 +3,7 @@ import re
 import sys
 from pathlib import Path
 
+
 def parse_readiness(summary_path: Path):
     text = summary_path.read_text()
     score = None

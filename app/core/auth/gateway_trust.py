@@ -16,8 +16,8 @@ SECURITY MODEL:
 4. Services trust X-User-ID as authenticated user identity
 """
 import logging
-from typing import Optional, Dict
-from fastapi import Header, HTTPException, Depends
+
+from fastapi import Depends, Header, HTTPException
 
 from app.core.config import settings
 
@@ -31,7 +31,7 @@ class GatewayAuthenticationError(HTTPException):
         super().__init__(status_code=403, detail=detail)
 
 
-def verify_gateway_secret(gateway_secret: Optional[str]) -> bool:
+def verify_gateway_secret(gateway_secret: str | None) -> bool:
     """
     Verify gateway secret header.
 
@@ -53,11 +53,11 @@ def verify_gateway_secret(gateway_secret: Optional[str]) -> bool:
     # (prevents timing attacks)
     import secrets
     expected = settings.gateway_secret
-    
+
     if not expected:
         logger.error("settings.gateway_secret is not configured - denying all requests")
         return False
-        
+
     is_valid = secrets.compare_digest(gateway_secret, expected)
 
     if not is_valid:
@@ -69,10 +69,10 @@ def verify_gateway_secret(gateway_secret: Optional[str]) -> bool:
 
 
 async def get_current_user_from_gateway(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret"),
-    authorization: Optional[str] = Header(None, alias="Authorization"),
-) -> Dict[str, str]:
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret"),
+    authorization: str | None = Header(None, alias="Authorization"),
+) -> dict[str, str]:
     """
     Get current user from API Gateway headers.
 
@@ -120,23 +120,6 @@ async def get_current_user_from_gateway(
             # ... your logic here
     """
     # =========================================================================
-<<<<<<< HEAD
-    # ARCHITECTURE COMPLIANCE: Gateway-only JWT validation (Architecture Principle #7)
-    # =========================================================================
-    # SECURITY: Fail-closed - verify gateway secret FIRST before processing any headers
-    
-=======
-    # PRODUCTION ENFORCEMENT: Strict gateway authentication only
-    # =========================================================================
-    # All requests must come through API Gateway with proper headers
-    # No development bypasses allowed
-
-    # =========================================================================
-    # PRODUCTION MODE: Strict gateway authentication
-    # =========================================================================
-
-    # SECURITY: Fail-closed - deny if gateway secret is invalid
->>>>>>> compliance-violations-fixed
     if not verify_gateway_secret(x_gateway_secret):
         logger.error(
             "Direct access attempt blocked - missing or invalid gateway secret. "
@@ -165,9 +148,9 @@ async def get_current_user_from_gateway(
 
 
 async def get_optional_user_from_gateway(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret"),
-) -> Optional[Dict[str, str]]:
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret"),
+) -> dict[str, str] | None:
     """
     Get optional user from API Gateway headers (for public endpoints).
 
@@ -220,10 +203,10 @@ async def get_optional_user_from_gateway(
 
 
 async def get_current_user_with_roles(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_roles: Optional[str] = Header(None, alias="X-User-Roles"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret"),
-) -> Dict[str, any]:
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_user_roles: str | None = Header(None, alias="X-User-Roles"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret"),
+) -> dict[str, any]:
     """
     Get current user with roles from API Gateway headers.
 
@@ -301,8 +284,8 @@ def require_role(required_role: str):
             # ... your logic here
     """
     async def _check_role(
-        user: Dict = Depends(get_current_user_with_roles)
-    ) -> Dict:
+        user: dict = Depends(get_current_user_with_roles)
+    ) -> dict:
         if required_role not in user.get("roles", []):
             raise HTTPException(
                 status_code=403,
@@ -318,7 +301,7 @@ def require_role(required_role: str):
 # =============================================================================
 
 async def verify_internal_api_key(
-    x_internal_api_key: Optional[str] = Header(None, alias="X-Internal-API-Key"),
+    x_internal_api_key: str | None = Header(None, alias="X-Internal-API-Key"),
 ) -> bool:
     """
     Verify internal API key for service-to-service communication.

@@ -4,15 +4,16 @@ Minimal resilience helpers for the signal service.
 
 import asyncio
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Tuple, Type, Any, Optional
+from typing import Any
 
 
 @dataclass
 class CircuitBreakerConfig:
     failure_threshold: int = 5
     recovery_timeout: float = 60.0
-    expected_exception: Tuple[Type[Exception], ...] = (Exception,)
+    expected_exception: tuple[type[Exception], ...] = (Exception,)
     name: str = "circuit_breaker"
 
 
@@ -23,7 +24,7 @@ class CircuitBreaker:
         self.config = config
         self.state = "CLOSED"
         self.failure_count = 0
-        self.last_failure_timestamp: Optional[float] = None
+        self.last_failure_timestamp: float | None = None
 
     def _open_circuit(self):
         self.state = "OPEN"
@@ -71,7 +72,7 @@ async def retry_with_exponential_backoff(
     initial_delay: float = 0.1,
     max_delay: float = 5.0,
     factor: float = 2.0,
-    exceptions: Tuple[Type[Exception], ...] = (Exception,),
+    exceptions: tuple[type[Exception], ...] = (Exception,),
     **kwargs: Any,
 ) -> Any:
     """Retry an async callable with exponential backoff."""
@@ -80,7 +81,7 @@ async def retry_with_exponential_backoff(
     while attempt < max_attempts:
         try:
             return await func(*args, **kwargs)
-        except exceptions as exc:
+        except exceptions:
             attempt += 1
             if attempt >= max_attempts:
                 raise

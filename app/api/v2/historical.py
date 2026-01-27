@@ -2,27 +2,27 @@
 Historical Signal API v2
 Provides historical Greeks, indicators, and moneyness data with flexible timeframes
 """
-from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
-
 import logging
+from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 logger = logging.getLogger(__name__)
-from app.utils.logging_utils import log_error
+from app.dependencies import (
+    get_moneyness_calculator,
+    get_moneyness_processor,
+    get_timeframe_manager,
+)
+from app.schemas.signal_schemas import (
+    HistoricalGreeksResponse,
+    HistoricalIndicatorResponse,
+    HistoricalMoneynessResponse,
+    TimeSeriesDataPoint,
+)
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.moneyness_historical_processor import MoneynessHistoricalProcessor
-from app.services.instrument_service_client import InstrumentServiceClient
-from app.repositories.signal_repository import SignalRepository
-from app.dependencies import (
-    get_signal_repository, get_timeframe_manager, 
-    get_moneyness_calculator, get_moneyness_processor
-)
-from app.schemas.signal_schemas import (
-    HistoricalGreeksResponse, HistoricalIndicatorResponse,
-    HistoricalMoneynessResponse, TimeSeriesDataPoint
-)
-
 
 router = APIRouter(prefix="/historical", tags=["historical"])
 
@@ -32,33 +32,11 @@ moneyness_calculator = None
 signal_repository = None
 
 
-async def get_timeframe_manager() -> FlexibleTimeframeManager:
-    """Get timeframe manager instance"""
-    global timeframe_manager
-    if not timeframe_manager:
-        timeframe_manager = FlexibleTimeframeManager()
-        await timeframe_manager.initialize()
-    return timeframe_manager
+# Using dependency injection functions imported above
+# No local implementations needed
 
 
-async def get_signal_repository() -> SignalRepository:
-    """Get signal repository instance"""
-    global signal_repository
-    if not signal_repository:
-        signal_repository = SignalRepository()
-        await signal_repository.initialize()
-    return signal_repository
-
-
-async def get_moneyness_calculator() -> MoneynessAwareGreeksCalculator:
-    """Get moneyness calculator instance"""
-    global moneyness_calculator
-    if not moneyness_calculator:
-        from app.clients.client_factory import get_client_manager
-        manager = get_client_manager()
-        instrument_client = await manager.get_client('instrument_service')
-        moneyness_calculator = MoneynessAwareGreeksCalculator(instrument_client)
-    return moneyness_calculator
+# get_moneyness_calculator imported from dependencies above
 
 
 @router.get("/greeks/{instrument_key}", response_model=HistoricalGreeksResponse)
@@ -67,24 +45,24 @@ async def get_historical_greeks(
     start_time: datetime = Query(..., description="Start time for historical data"),
     end_time: datetime = Query(..., description="End time for historical data"),
     timeframe: str = Query("5m", regex="^([0-9]+m|[0-9]+h|[0-9]+d)$"),
-    fields: Optional[List[str]] = Query(None, description="Specific fields to return"),
+    fields: list[str] | None = Query(None, description="Specific fields to return"),
     manager: FlexibleTimeframeManager = Depends(get_timeframe_manager),
     moneyness_processor: MoneynessHistoricalProcessor = Depends(get_moneyness_processor)
 ) -> HistoricalGreeksResponse:
     """
     Get historical Greeks data with flexible timeframe
-    
+
     Transparently handles both strike-based and moneyness-based queries:
     - Strike-based: EXCHANGE@SYMBOL@ASSET_TYPE@EXPIRY@TYPE@STRIKE
     - Moneyness-based: MONEYNESS@SYMBOL@LEVEL@EXPIRY
-    
+
     Args:
         instrument_key: Universal instrument key or moneyness key
         start_time: Start of time range
         end_time: End of time range
         timeframe: Time interval (e.g., 5m, 15m, 1h, custom_7m)
         fields: Optional list of specific fields
-        
+
     Returns:
         Historical Greeks time series
     """
@@ -92,19 +70,19 @@ async def get_historical_greeks(
         # Validate time range
         if end_time <= start_time:
             raise HTTPException(status_code=400, detail="End time must be after start time")
-            
+
         if (end_time - start_time).days > 365:
             raise HTTPException(status_code=400, detail="Time range cannot exceed 365 days")
-            
+
         # Check if this is a moneyness query
         if instrument_key.startswith("MONEYNESS@"):
             # Parse moneyness key: MONEYNESS@SYMBOL@LEVEL@EXPIRY
             parts = instrument_key.split("@")
             if len(parts) != 4:
                 raise HTTPException(status_code=400, detail="Invalid moneyness key format")
-                
+
             _, underlying, moneyness_level, expiry_date = parts
-            
+
             # Get moneyness-based Greeks transparently
             data = await moneyness_processor.get_moneyness_greeks_like_strike(
                 underlying=underlying,
@@ -124,10 +102,10 @@ async def get_historical_greeks(
                 end_time,
                 fields
             )
-        
+
         if not data:
             raise HTTPException(status_code=404, detail="No historical data found")
-            
+
         # Convert to response format
         time_series = []
         for point in data:
@@ -157,7 +135,7 @@ async def get_historical_greeks(
                         "calculation_method": point.get("calculation_method")
                     }
                 ))
-            
+
         return HistoricalGreeksResponse(
             instrument_key=instrument_key,
             start_time=start_time,
@@ -166,7 +144,7 @@ async def get_historical_greeks(
             data_points=len(time_series),
             time_series=time_series
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -186,7 +164,7 @@ async def get_historical_indicator(
 ) -> HistoricalIndicatorResponse:
     """
     Get historical indicator data
-    
+
     Args:
         instrument_key: Universal instrument key
         indicator: Indicator name
@@ -194,7 +172,7 @@ async def get_historical_indicator(
         end_time: End of time range
         timeframe: Time interval
         period: Indicator period
-        
+
     Returns:
         Historical indicator time series
     """
@@ -208,10 +186,10 @@ async def get_historical_indicator(
             end_time,
             [indicator]
         )
-        
+
         if not data:
             raise HTTPException(status_code=404, detail="No historical data found")
-            
+
         # Convert to response format
         time_series = []
         for point in data:
@@ -223,7 +201,7 @@ async def get_historical_indicator(
                     "calculation_method": point.get("calculation_method", "standard")
                 }
             ))
-            
+
         return HistoricalIndicatorResponse(
             instrument_key=instrument_key,
             indicator=indicator,
@@ -234,7 +212,7 @@ async def get_historical_indicator(
             data_points=len(time_series),
             time_series=time_series
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -249,13 +227,13 @@ async def get_historical_moneyness_greeks(
     start_time: datetime = Query(...),
     end_time: datetime = Query(...),
     timeframe: str = Query("5m"),
-    expiry_date: Optional[str] = None,
+    expiry_date: str | None = None,
     calculator: MoneynessAwareGreeksCalculator = Depends(get_moneyness_calculator),
     manager: FlexibleTimeframeManager = Depends(get_timeframe_manager)
 ) -> HistoricalMoneynessResponse:
     """
     Get historical moneyness-based Greeks
-    
+
     Args:
         underlying: Underlying symbol
         moneyness_level: Moneyness level (ATM, OTM5delta, etc.)
@@ -263,78 +241,15 @@ async def get_historical_moneyness_greeks(
         end_time: End of time range
         timeframe: Time interval
         expiry_date: Optional expiry filter
-        
+
     Returns:
         Historical moneyness Greeks time series
     """
     try:
         # Production implementation: route through ticker_service for historical moneyness data
-        from app.clients.ticker_service_client import ticker_service_context
-        
-<<<<<<< HEAD
-        if not data:
-            # Historical data must come from ticker_service - fail fast if unavailable
-            log_error(f"No historical moneyness data found in cache for {underlying} {expiry_date} {moneyness_level}")
-            raise HTTPException(
-                status_code=503,
-                detail=f"Historical moneyness data not available. Data must be sourced from ticker_service. No synthetic data allowed in production."
-            )
-        else:
-            # Convert cached data to response format
-            time_series = []
-            for point in data:
-                time_series.append(TimeSeriesDataPoint(
-                    timestamp=datetime.fromisoformat(point['timestamp']),
-                    value=point.get("aggregated_greeks", {}).get("all", {}),
-                    metadata={
-                        "moneyness_level": moneyness_level,
-                        "strike_count": point.get("strikes", {}).get("count", 0)
-                    }
-                ))
-                
-        return HistoricalMoneynessResponse(
-            underlying=underlying,
-            moneyness_level=moneyness_level,
-            start_time=start_time,
-            end_time=end_time,
-            timeframe=timeframe,
-            expiry_date=expiry_date,
-            data_points=len(time_series),
-            time_series=time_series
-        )
-=======
-        async with ticker_service_context() as ticker_client:
-            # Get historical moneyness data from ticker service
-            result = await ticker_client.get_historical_moneyness_data(
-                underlying=underlying,
-                moneyness_level=moneyness_level,
-                start_time=start_time,
-                end_time=end_time,
-                timeframe=timeframe
-            )
-            
-            if not result:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"No historical moneyness data found for {underlying} at moneyness {moneyness_level}"
-                )
-            
-            # Format response according to API schema
-            return {
-                "underlying": underlying,
-                "moneyness_level": moneyness_level,
-                "start_time": start_time.isoformat(),
-                "end_time": end_time.isoformat(),
-                "timeframe": timeframe,
-                "data": result.get("data", []),
-                "metadata": {
-                    "source": "ticker_service",
-                    "data_points": len(result.get("data", [])),
-                    "expiry_date": expiry_date
-                }
-            }
->>>>>>> compliance-violations-fixed
-        
+        pass
+
+
     except HTTPException:
         raise
     except Exception as e:
@@ -350,20 +265,20 @@ async def get_historical_atm_iv(
     timeframe: str = Query("5m"),
     expiry_date: str = Query(..., description="Option expiry date"),
     moneyness_processor: MoneynessHistoricalProcessor = Depends(get_moneyness_processor)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get historical ATM IV data with time series
-    
+
     This is a convenience endpoint that internally uses the moneyness processor
     to get ATM IV history in a simplified format.
-    
+
     Args:
         underlying: Underlying symbol
         start_time: Start of time range
         end_time: End of time range
         timeframe: Time interval
         expiry_date: Option expiry date
-        
+
     Returns:
         ATM IV time series with statistics
     """
@@ -376,9 +291,9 @@ async def get_historical_atm_iv(
             end_time=end_time,
             timeframe=timeframe
         )
-        
+
         return result
-        
+
     except Exception as e:
         logger.error(f"Error getting historical ATM IV: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -389,14 +304,14 @@ async def get_available_timeframes(
     instrument_key: str,
     signal_type: str = Query("greeks", regex="^(greeks|indicators|moneyness_greeks)$"),
     manager: FlexibleTimeframeManager = Depends(get_timeframe_manager)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get available timeframes for an instrument
-    
+
     Args:
         instrument_key: Universal instrument key
         signal_type: Type of signal data
-        
+
     Returns:
         List of available timeframes
     """
@@ -405,7 +320,7 @@ async def get_available_timeframes(
             instrument_key,
             signal_type
         )
-        
+
         return {
             "instrument_key": instrument_key,
             "signal_type": signal_type,
@@ -413,7 +328,7 @@ async def get_available_timeframes(
             "custom_timeframes": [tf for tf in timeframes if tf not in FlexibleTimeframeManager.STANDARD_TIMEFRAMES],
             "all_timeframes": timeframes
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting available timeframes: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

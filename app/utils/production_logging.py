@@ -3,21 +3,21 @@ Production Structured Logging for Signal Service
 Provides comprehensive logging with metrics, tracing, and observability
 """
 
-import logging
+import asyncio
 import json
+import logging
+import sys
 import time
 import traceback
-from typing import Dict, Any, Optional, Union
-from datetime import datetime, timezone
 from contextvars import ContextVar
+from datetime import UTC, datetime
 from functools import wraps
-import asyncio
-import sys
+from typing import Any
 
 # Context variables for request tracing
-request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
-user_id_var: ContextVar[Optional[str]] = ContextVar('user_id', default=None)
-operation_var: ContextVar[Optional[str]] = ContextVar('operation', default=None)
+request_id_var: ContextVar[str | None] = ContextVar('request_id', default=None)
+user_id_var: ContextVar[str | None] = ContextVar('user_id', default=None)
+operation_var: ContextVar[str | None] = ContextVar('operation', default=None)
 
 
 class ProductionJSONFormatter(logging.Formatter):
@@ -25,13 +25,13 @@ class ProductionJSONFormatter(logging.Formatter):
     JSON formatter for structured logging in production.
     Includes request tracing, metrics, and standardized fields.
     """
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as structured JSON"""
-        
+
         # Base log structure
         log_entry = {
-            'timestamp': datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            'timestamp': datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),
@@ -41,20 +41,20 @@ class ProductionJSONFormatter(logging.Formatter):
             'service': 'signal_service',
             'version': '2.0.0'
         }
-        
+
         # Add request context if available
         request_id = request_id_var.get()
         if request_id:
             log_entry['request_id'] = request_id
-            
+
         user_id = user_id_var.get()
         if user_id:
             log_entry['user_id'] = user_id
-            
+
         operation = operation_var.get()
         if operation:
             log_entry['operation'] = operation
-        
+
         # Add exception information if present
         if record.exc_info:
             log_entry['exception'] = {
@@ -62,19 +62,19 @@ class ProductionJSONFormatter(logging.Formatter):
                 'message': str(record.exc_info[1]),
                 'traceback': self.formatException(record.exc_info)
             }
-        
+
         # Add extra fields from the record
         extra_fields = {}
         for key, value in record.__dict__.items():
-            if key not in ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 
+            if key not in ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname',
                           'filename', 'module', 'lineno', 'funcName', 'created', 'msecs',
                           'relativeCreated', 'thread', 'threadName', 'processName',
                           'process', 'getMessage', 'exc_info', 'exc_text', 'stack_info']:
                 extra_fields[key] = value
-        
+
         if extra_fields:
             log_entry['extra'] = extra_fields
-        
+
         return json.dumps(log_entry, default=str, separators=(',', ':'))
 
 
@@ -83,10 +83,10 @@ class PerformanceLogger:
     Logger for performance metrics and Greeks calculation tracking.
     Provides structured metrics for observability and alerting.
     """
-    
+
     def __init__(self):
         self.logger = logging.getLogger('signal_service.performance')
-    
+
     def log_calculation_performance(
         self,
         calculation_type: str,
@@ -94,12 +94,12 @@ class PerformanceLogger:
         duration_ms: float,
         options_count: int = 1,
         success: bool = True,
-        model_name: Optional[str] = None,
-        error: Optional[str] = None,
-        additional_metrics: Optional[Dict[str, Any]] = None
+        model_name: str | None = None,
+        error: str | None = None,
+        additional_metrics: dict[str, Any] | None = None
     ):
         """Log Greeks calculation performance metrics"""
-        
+
         metrics = {
             'metric_type': 'calculation_performance',
             'calculation_type': calculation_type,  # 'vectorized', 'individual', 'bulk'
@@ -111,13 +111,13 @@ class PerformanceLogger:
             'model_name': model_name,
             'timestamp': datetime.utcnow().isoformat()
         }
-        
+
         if error:
             metrics['error'] = error
-            
+
         if additional_metrics:
             metrics.update(additional_metrics)
-        
+
         # Log at appropriate level
         if success:
             self.logger.info(
@@ -129,15 +129,15 @@ class PerformanceLogger:
                 f"{calculation_type} {operation} failed after {duration_ms:.2f}ms: {error}",
                 extra=metrics
             )
-    
+
     def log_circuit_breaker_event(
         self,
         breaker_type: str,
         event_type: str,  # 'opened', 'closed', 'half_open', 'request_rejected'
-        metrics: Dict[str, Any]
+        metrics: dict[str, Any]
     ):
         """Log circuit breaker state changes and events"""
-        
+
         log_data = {
             'metric_type': 'circuit_breaker_event',
             'breaker_type': breaker_type,
@@ -145,7 +145,7 @@ class PerformanceLogger:
             'breaker_metrics': metrics,
             'timestamp': datetime.utcnow().isoformat()
         }
-        
+
         if event_type == 'opened':
             self.logger.error(
                 f"Circuit breaker {breaker_type} OPENED due to failures",
@@ -166,16 +166,16 @@ class PerformanceLogger:
                 f"Circuit breaker {breaker_type} event: {event_type}",
                 extra=log_data
             )
-    
+
     def log_model_configuration_event(
         self,
         event_type: str,  # 'loaded', 'changed', 'validation_error'
         model_name: str,
-        parameters: Dict[str, Any],
-        error: Optional[str] = None
+        parameters: dict[str, Any],
+        error: str | None = None
     ):
         """Log model configuration events"""
-        
+
         log_data = {
             'metric_type': 'model_configuration_event',
             'event_type': event_type,
@@ -183,10 +183,10 @@ class PerformanceLogger:
             'parameters': parameters,
             'timestamp': datetime.utcnow().isoformat()
         }
-        
+
         if error:
             log_data['error'] = error
-        
+
         if event_type == 'validation_error' or error:
             self.logger.error(
                 f"Model configuration {event_type}: {model_name} - {error}",
@@ -202,19 +202,19 @@ class PerformanceLogger:
                 f"Model configuration {event_type}: {model_name}",
                 extra=log_data
             )
-    
+
     def log_api_request(
         self,
         endpoint: str,
         method: str,
         status_code: int,
         duration_ms: float,
-        user_id: Optional[str] = None,
-        request_size: Optional[int] = None,
-        response_size: Optional[int] = None
+        user_id: str | None = None,
+        request_size: int | None = None,
+        response_size: int | None = None
     ):
         """Log API request metrics"""
-        
+
         log_data = {
             'metric_type': 'api_request',
             'endpoint': endpoint,
@@ -226,7 +226,7 @@ class PerformanceLogger:
             'response_size_bytes': response_size,
             'timestamp': datetime.utcnow().isoformat()
         }
-        
+
         if status_code >= 500:
             self.logger.error(
                 f"API {method} {endpoint} failed with {status_code} in {duration_ms:.2f}ms",
@@ -249,22 +249,22 @@ class ErrorTracker:
     Tracks and analyzes errors for alerting and debugging.
     Provides error rate calculations and trend analysis.
     """
-    
+
     def __init__(self):
         self.logger = logging.getLogger('signal_service.errors')
         self.error_counts = {}
         self.error_window = 300  # 5 minutes
-    
+
     def log_error(
         self,
         error_type: str,
         error_message: str,
-        context: Dict[str, Any],
-        exception: Optional[Exception] = None,
+        context: dict[str, Any],
+        exception: Exception | None = None,
         severity: str = 'error'
     ):
         """Log and track errors with context"""
-        
+
         error_data = {
             'metric_type': 'error_event',
             'error_type': error_type,
@@ -273,29 +273,29 @@ class ErrorTracker:
             'context': context,
             'timestamp': datetime.utcnow().isoformat()
         }
-        
+
         if exception:
             error_data['exception_type'] = type(exception).__name__
             error_data['exception_traceback'] = traceback.format_exc()
-        
+
         # Track error frequency
         error_key = f"{error_type}:{error_message[:50]}"
         now = time.time()
-        
+
         if error_key not in self.error_counts:
             self.error_counts[error_key] = []
-        
+
         self.error_counts[error_key].append(now)
-        
+
         # Clean old errors outside window
         cutoff = now - self.error_window
         self.error_counts[error_key] = [
             t for t in self.error_counts[error_key] if t > cutoff
         ]
-        
+
         # Add frequency data
         error_data['error_frequency_5min'] = len(self.error_counts[error_key])
-        
+
         # Log at appropriate level
         if severity == 'critical':
             self.logger.critical(f"CRITICAL ERROR: {error_type} - {error_message}", extra=error_data)
@@ -303,17 +303,17 @@ class ErrorTracker:
             self.logger.warning(f"WARNING: {error_type} - {error_message}", extra=error_data)
         else:
             self.logger.error(f"ERROR: {error_type} - {error_message}", extra=error_data)
-    
-    def get_error_rate(self, error_type: Optional[str] = None) -> float:
+
+    def get_error_rate(self, error_type: str | None = None) -> float:
         """Get current error rate for monitoring"""
         now = time.time()
         cutoff = now - self.error_window
-        
+
         total_errors = 0
         for key, timestamps in self.error_counts.items():
             if error_type is None or key.startswith(error_type):
                 total_errors += len([t for t in timestamps if t > cutoff])
-        
+
         # This would ideally be compared against total requests
         # For now, return raw error count
         return total_errors
@@ -327,50 +327,50 @@ error_tracker = ErrorTracker()
 def setup_production_logging(
     log_level: str = "INFO",
     enable_console: bool = True,
-    log_file: Optional[str] = None
+    log_file: str | None = None
 ):
     """
     Setup production logging configuration.
-    
+
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
         enable_console: Whether to log to console
         log_file: Optional file path for logging
     """
-    
+
     # Create root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, log_level.upper()))
-    
+
     # Remove default handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # JSON formatter for structured logging
     formatter = ProductionJSONFormatter()
-    
+
     # Console handler
     if enable_console:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
-    
+
     # File handler if specified
     if log_file:
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
-    
+
     # Set specific logger levels
     logging.getLogger('signal_service').setLevel(getattr(logging, log_level.upper()))
     logging.getLogger('signal_service.performance').setLevel(logging.INFO)
     logging.getLogger('signal_service.errors').setLevel(logging.WARNING)
-    
+
     # Suppress noisy third-party loggers
     logging.getLogger('httpx').setLevel(logging.WARNING)
     logging.getLogger('asyncio').setLevel(logging.WARNING)
     logging.getLogger('urllib3').setLevel(logging.WARNING)
-    
+
     logging.info("Production logging configured", extra={
         'log_level': log_level,
         'console_enabled': enable_console,
@@ -378,9 +378,9 @@ def setup_production_logging(
     })
 
 
-def with_request_context(request_id: str, user_id: Optional[str] = None, operation: Optional[str] = None):
+def with_request_context(request_id: str, user_id: str | None = None, operation: str | None = None):
     """Context manager to set request context for logging"""
-    
+
     class RequestContext:
         def __enter__(self):
             request_id_var.set(request_id)
@@ -389,19 +389,19 @@ def with_request_context(request_id: str, user_id: Optional[str] = None, operati
             if operation:
                 operation_var.set(operation)
             return self
-        
+
         def __exit__(self, exc_type, exc_val, exc_tb):
             request_id_var.set(None)
             user_id_var.set(None)
             operation_var.set(None)
-    
+
     return RequestContext()
 
 
 def log_performance(calculation_type: str, operation: str = "unknown"):
     """
     Decorator to automatically log function performance.
-    
+
     Args:
         calculation_type: Type of calculation ('vectorized', 'individual', 'bulk')
         operation: Operation being performed ('delta', 'gamma', etc.)
@@ -412,7 +412,7 @@ def log_performance(calculation_type: str, operation: str = "unknown"):
             start_time = time.time()
             success = True
             error = None
-            
+
             try:
                 result = await func(*args, **kwargs)
                 return result
@@ -422,14 +422,14 @@ def log_performance(calculation_type: str, operation: str = "unknown"):
                 raise
             finally:
                 duration_ms = (time.time() - start_time) * 1000
-                
+
                 # Try to extract options count from args/kwargs
                 options_count = 1
                 if 'option_chain_data' in kwargs:
                     options_count = len(kwargs['option_chain_data'])
                 elif len(args) > 0 and isinstance(args[0], list):
                     options_count = len(args[0])
-                
+
                 performance_logger.log_calculation_performance(
                     calculation_type=calculation_type,
                     operation=operation,
@@ -438,13 +438,13 @@ def log_performance(calculation_type: str, operation: str = "unknown"):
                     success=success,
                     error=error
                 )
-        
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             start_time = time.time()
             success = True
             error = None
-            
+
             try:
                 result = func(*args, **kwargs)
                 return result
@@ -462,9 +462,9 @@ def log_performance(calculation_type: str, operation: str = "unknown"):
                     success=success,
                     error=error
                 )
-        
+
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
-    
+
     return decorator
 
 
@@ -483,11 +483,11 @@ def log_greeks_calculation(
     )
 
 
-def log_error(error_type: str, message: str, context: Dict[str, Any], exception: Optional[Exception] = None):
+def log_error(error_type: str, message: str, context: dict[str, Any], exception: Exception | None = None):
     """Convenience function for error logging"""
     error_tracker.log_error(error_type, message, context, exception)
 
 
-def log_circuit_breaker(breaker_type: str, event_type: str, metrics: Dict[str, Any]):
+def log_circuit_breaker(breaker_type: str, event_type: str, metrics: dict[str, Any]):
     """Convenience function for circuit breaker logging"""
     performance_logger.log_circuit_breaker_event(breaker_type, event_type, metrics)

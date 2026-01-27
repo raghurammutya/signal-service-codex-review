@@ -6,18 +6,18 @@ import json
 import os
 import socket
 import threading
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import pytest_asyncio
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
-from unittest.mock import AsyncMock, MagicMock, patch
-
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
 import uvicorn
 import websockets
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
 from app.utils.redis import get_redis_client
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -26,17 +26,16 @@ os.environ.setdefault("SIGNAL_SERVICE_PORT", "8003")
 
 # Import Signal Service components
 from app.main import app
-from app.core.config import settings
-from app.models.signal_models import SignalGreeks, SignalIndicators, MoneynessHistory
-
+from app.models.signal_models import SignalGreeks
+from app.scaling.backpressure_monitor import BackpressureMonitor
+from app.scaling.consistent_hash_manager import ConsistentHashManager
+from app.services.frequency_feed_manager import FrequencyFeedManager
 from app.services.market_profile_calculator import MarketProfileCalculator
 from app.services.moneyness_calculator_local import LocalMoneynessCalculator
-from app.scaling.consistent_hash_manager import ConsistentHashManager
-from app.scaling.backpressure_monitor import BackpressureMonitor
 
 # Test database configuration
 TEST_DATABASE_URL = os.getenv(
-    'TEST_DATABASE_URL', 
+    'TEST_DATABASE_URL',
     'sqlite+aiosqlite:///:memory:'
 )
 TEST_REDIS_URL = os.getenv('TEST_REDIS_URL', 'redis://localhost:6379/0')
@@ -437,8 +436,8 @@ def load_test_data():
 async def websocket_client():
     """Create WebSocket test client"""
     from fastapi.testclient import TestClient
-    from app.api.v2.websocket import websocket_endpoint
-    
+
+
     client = TestClient(app)
     yield client
 

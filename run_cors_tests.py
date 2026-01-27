@@ -5,12 +5,11 @@ CORS Test Suite Runner
 Comprehensive test runner for all CORS validation tests in the signal service.
 Executes all CORS-related test files and provides detailed reporting.
 """
-import os
-import sys
-import subprocess
-import time
-from typing import Dict, List, Tuple
 import json
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 # Add project root to Python path
@@ -20,18 +19,18 @@ sys.path.insert(0, str(project_root))
 
 class CORSTestRunner:
     """Comprehensive CORS test runner and reporter."""
-    
+
     def __init__(self):
         self.test_files = [
             "tests/unit/test_comprehensive_cors_validation.py",
-            "tests/unit/test_cors_middleware_integration.py", 
+            "tests/unit/test_cors_middleware_integration.py",
             "tests/unit/test_cors_environment_validation.py",
             "tests/unit/test_cors_security_validation.py",
             "tests/unit/test_cors_env_var_validation.py",
             "tests/unit/test_cors_validation_coverage.py",
             "tests/unit/test_service_integrations_cors.py"
         ]
-        
+
         self.results = {
             "total_files": len(self.test_files),
             "executed_files": 0,
@@ -43,7 +42,7 @@ class CORSTestRunner:
             "coverage_summary": {}
         }
 
-    def run_single_test_file(self, test_file: str) -> Dict[str, any]:
+    def run_single_test_file(self, test_file: str) -> dict[str, any]:
         """Run a single test file and return results."""
         file_result = {
             "file": test_file,
@@ -55,11 +54,11 @@ class CORSTestRunner:
             "passed_count": 0,
             "failed_count": 0
         }
-        
+
         print(f"\n🔍 Running {test_file}...")
-        
+
         start_time = time.time()
-        
+
         try:
             # Check if file exists
             if not os.path.exists(test_file):
@@ -67,36 +66,36 @@ class CORSTestRunner:
                 file_result["error_output"] = f"Test file not found: {test_file}"
                 print(f"  ❌ File not found: {test_file}")
                 return file_result
-            
+
             # Run pytest on the specific file
             cmd = [
-                sys.executable, "-m", "pytest", 
+                sys.executable, "-m", "pytest",
                 test_file,
                 "-v",
                 "--tb=short",
                 "--no-header",
                 "--disable-warnings"
             ]
-            
+
             result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True, 
+                cmd,
+                capture_output=True,
+                text=True,
                 timeout=300  # 5 minute timeout
             )
-            
+
             file_result["execution_time"] = time.time() - start_time
             file_result["output"] = result.stdout
             file_result["error_output"] = result.stderr
-            
+
             # Parse pytest output for test counts
             if result.returncode == 0:
                 file_result["status"] = "passed"
                 print(f"  ✅ {test_file} - All tests passed")
             else:
-                file_result["status"] = "failed" 
+                file_result["status"] = "failed"
                 print(f"  ❌ {test_file} - Some tests failed")
-            
+
             # Extract test counts from output
             output_lines = result.stdout.split('\n')
             for line in output_lines:
@@ -120,22 +119,22 @@ class CORSTestRunner:
                                 file_result["passed_count"] = int(parts[i-1])
                     except (ValueError, IndexError):
                         pass
-            
+
             file_result["test_count"] = file_result["passed_count"] + file_result["failed_count"]
-            
+
         except subprocess.TimeoutExpired:
             file_result["status"] = "timeout"
-            file_result["error_output"] = f"Test file timed out after 300 seconds"
+            file_result["error_output"] = "Test file timed out after 300 seconds"
             print(f"  ⏱️  {test_file} - Timed out")
-            
+
         except Exception as e:
             file_result["status"] = "error"
             file_result["error_output"] = str(e)
             print(f"  💥 {test_file} - Error: {e}")
-        
+
         return file_result
 
-    def run_direct_execution(self, test_file: str) -> Dict[str, any]:
+    def run_direct_execution(self, test_file: str) -> dict[str, any]:
         """Run test file directly as Python module."""
         file_result = {
             "file": test_file,
@@ -147,31 +146,31 @@ class CORSTestRunner:
             "passed_count": 0,
             "failed_count": 0
         }
-        
+
         start_time = time.time()
-        
+
         try:
             # Run the test file directly
             cmd = [sys.executable, test_file]
-            
+
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=300
             )
-            
+
             file_result["execution_time"] = time.time() - start_time
             file_result["output"] = result.stdout
             file_result["error_output"] = result.stderr
-            
+
             if result.returncode == 0:
                 file_result["status"] = "passed"
                 print(f"  ✅ {test_file} - Direct execution passed")
             else:
                 file_result["status"] = "failed"
                 print(f"  ❌ {test_file} - Direct execution failed")
-            
+
             # Try to extract test counts from output
             output = result.stdout
             if "tests passed" in output:
@@ -185,7 +184,7 @@ class CORSTestRunner:
                         file_result["failed_count"] = file_result["test_count"] - file_result["passed_count"]
                 except Exception:
                     pass
-            
+
         except subprocess.TimeoutExpired:
             file_result["status"] = "timeout"
             print(f"  ⏱️  {test_file} - Direct execution timed out")
@@ -193,38 +192,38 @@ class CORSTestRunner:
             file_result["status"] = "error"
             file_result["error_output"] = str(e)
             print(f"  💥 {test_file} - Direct execution error: {e}")
-        
+
         return file_result
 
-    def run_all_tests(self) -> Dict[str, any]:
+    def run_all_tests(self) -> dict[str, any]:
         """Run all CORS tests and compile results."""
         print("🚀 Running Comprehensive CORS Test Suite")
         print("=" * 60)
-        
+
         start_time = time.time()
-        
+
         for test_file in self.test_files:
             self.results["executed_files"] += 1
-            
+
             # Try pytest first, then direct execution as fallback
             file_result = self.run_single_test_file(test_file)
-            
+
             # If pytest failed, try direct execution
             if file_result["status"] in ["failed", "error", "missing"]:
                 print(f"  🔄 Trying direct execution for {test_file}...")
                 direct_result = self.run_direct_execution(test_file)
                 if direct_result["status"] == "passed":
                     file_result = direct_result
-            
+
             self.results["file_results"].append(file_result)
-            
+
             if file_result["status"] == "passed":
                 self.results["passed_files"] += 1
             else:
                 self.results["failed_files"] += 1
-        
+
         self.results["execution_time"] = time.time() - start_time
-        
+
         # Determine overall status
         if self.results["failed_files"] == 0:
             self.results["overall_status"] = "passed"
@@ -232,16 +231,16 @@ class CORSTestRunner:
             self.results["overall_status"] = "partial"
         else:
             self.results["overall_status"] = "failed"
-        
+
         return self.results
 
     def generate_report(self) -> str:
         """Generate comprehensive test report."""
         report = []
-        
+
         report.append("📊 CORS Test Suite Results")
         report.append("=" * 60)
-        
+
         # Overall summary
         report.append(f"📋 Overall Status: {self.results['overall_status'].upper()}")
         report.append(f"📁 Test Files: {self.results['executed_files']}/{self.results['total_files']}")
@@ -249,32 +248,32 @@ class CORSTestRunner:
         report.append(f"❌ Failed Files: {self.results['failed_files']}")
         report.append(f"⏱️  Total Execution Time: {self.results['execution_time']:.2f} seconds")
         report.append("")
-        
+
         # File-by-file results
         report.append("📁 File Results:")
         report.append("-" * 40)
-        
+
         for file_result in self.results["file_results"]:
             status_icon = {
                 "passed": "✅",
-                "failed": "❌", 
+                "failed": "❌",
                 "error": "💥",
                 "timeout": "⏱️",
                 "missing": "❓"
             }.get(file_result["status"], "❓")
-            
+
             report.append(f"{status_icon} {file_result['file']}")
             report.append(f"    Status: {file_result['status']}")
             report.append(f"    Time: {file_result['execution_time']:.2f}s")
-            
+
             if file_result['test_count'] > 0:
                 report.append(f"    Tests: {file_result['passed_count']}/{file_result['test_count']} passed")
-            
+
             if file_result["status"] in ["failed", "error"] and file_result["error_output"]:
                 report.append(f"    Error: {file_result['error_output'][:200]}...")
-            
+
             report.append("")
-        
+
         # Coverage summary
         report.append("🛡️ CORS Security Coverage Areas:")
         report.append("-" * 40)
@@ -290,12 +289,12 @@ class CORSTestRunner:
             "✓ Environment variable validation",
             "✓ Error handling and logging"
         ]
-        
+
         for area in coverage_areas:
             report.append(area)
-        
+
         report.append("")
-        
+
         # Recommendations
         if self.results["overall_status"] != "passed":
             report.append("💡 Recommendations:")
@@ -305,7 +304,7 @@ class CORSTestRunner:
             report.append("• Verify CORS configuration meets security requirements")
             report.append("• Run individual test files for detailed diagnostics")
             report.append("")
-        
+
         return "\n".join(report)
 
     def save_results(self, filename: str = "cors_test_results.json"):
@@ -323,20 +322,20 @@ def main():
     print("🔍 CORS Configuration Validation Test Suite")
     print("Testing comprehensive CORS security and configuration handling")
     print("=" * 80)
-    
+
     # Initialize test runner
     runner = CORSTestRunner()
-    
+
     # Run all tests
     results = runner.run_all_tests()
-    
+
     # Generate and display report
     report = runner.generate_report()
     print("\n" + report)
-    
+
     # Save results
     runner.save_results()
-    
+
     # Exit with appropriate code
     if results["overall_status"] == "passed":
         print("\n🎉 All CORS tests completed successfully!")

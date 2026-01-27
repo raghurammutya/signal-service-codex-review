@@ -4,13 +4,14 @@ Signal Version Policy API
 Sprint 5A: Expose author-controlled version policy for signals.
 Allows signal authors to control versioning and upgrade behavior.
 """
-from typing import Optional, Dict, Any, List
-from fastapi import APIRouter, HTTPException, Depends, Header
+from typing import Any
+
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user_from_gateway
+from app.core.logging import log_error, log_info
 from app.services.marketplace_client import create_marketplace_client
-from app.core.logging import log_info, log_error
 
 router = APIRouter(prefix="/api/v2/signals/version-policy", tags=["signal-version-policy"])
 
@@ -19,9 +20,9 @@ class VersionPolicyRequest(BaseModel):
     """Request to set version policy for a signal."""
     signal_id: str = Field(..., description="Signal script ID")
     policy: str = Field(..., description="Version policy: locked, auto, or range")
-    min_version: Optional[str] = Field(None, description="Minimum version for range policy")
-    max_version: Optional[str] = Field(None, description="Maximum version for range policy")
-    pinned_version: Optional[str] = Field(None, description="Specific version for locked policy")
+    min_version: str | None = Field(None, description="Minimum version for range policy")
+    max_version: str | None = Field(None, description="Maximum version for range policy")
+    pinned_version: str | None = Field(None, description="Specific version for locked policy")
 
 
 class VersionPolicyResponse(BaseModel):
@@ -30,11 +31,11 @@ class VersionPolicyResponse(BaseModel):
     policy: str
     current_version: str
     effective_version: str
-    min_version: Optional[str] = None
-    max_version: Optional[str] = None
-    pinned_version: Optional[str] = None
+    min_version: str | None = None
+    max_version: str | None = None
+    pinned_version: str | None = None
     auto_upgrade_enabled: bool
-    last_updated: Optional[str] = None
+    last_updated: str | None = None
 
 
 class SignalVersionInfo(BaseModel):
@@ -42,21 +43,21 @@ class SignalVersionInfo(BaseModel):
     version: str
     status: str  # draft, published, deprecated
     created_at: str
-    description: Optional[str] = None
+    description: str | None = None
     breaking_changes: bool = False
-    min_compatible_version: Optional[str] = None
+    min_compatible_version: str | None = None
 
 
 @router.get("/{signal_id}")
 async def get_signal_version_policy(
     signal_id: str,
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
 ) -> VersionPolicyResponse:
     """
     Get version policy for a signal.
-    
+
     Returns the current version policy settings including:
     - Policy type (locked, auto, range)
     - Version constraints
@@ -66,29 +67,29 @@ async def get_signal_version_policy(
         # Get user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         # Get signal info from marketplace (signals are products)
         marketplace_client = create_marketplace_client()
-        
+
         # Fetch signal product info
         signal_product = await marketplace_client.get_product_definition(
             product_id=signal_id,
             user_id=user_id
         )
-        
+
         if not signal_product:
             raise HTTPException(status_code=404, detail="Signal not found")
-        
+
         # Check ownership
         if signal_product.get("creator_id") != user_id:
             raise HTTPException(status_code=403, detail="Not authorized to view this signal's policy")
-        
+
         # Extract version policy info
         version_info = signal_product.get("version_info", {})
         policy = version_info.get("policy", "auto")
         current_version = version_info.get("current_version", "1.0.0")
         effective_version = version_info.get("effective_version", current_version)
-        
+
         return VersionPolicyResponse(
             signal_id=signal_id,
             policy=policy,
@@ -100,7 +101,7 @@ async def get_signal_version_policy(
             auto_upgrade_enabled=(policy == "auto"),
             last_updated=version_info.get("last_updated")
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -112,13 +113,13 @@ async def get_signal_version_policy(
 async def update_signal_version_policy(
     signal_id: str,
     request: VersionPolicyRequest,
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
 ) -> VersionPolicyResponse:
     """
     Update version policy for a signal.
-    
+
     Allows signal authors to control:
     - How their signal versions are managed (locked/auto/range)
     - Version constraints for range-based policies
@@ -128,41 +129,41 @@ async def update_signal_version_policy(
         # Get user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         log_info(f"Updating version policy for signal {signal_id}: {request.policy}")
-        
+
         # Validate policy
         if request.policy not in ["locked", "auto", "range"]:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid policy. Must be: locked, auto, or range"
             )
-        
+
         # Validate policy-specific requirements
         if request.policy == "locked" and not request.pinned_version:
             raise HTTPException(
                 status_code=400,
                 detail="Locked policy requires pinned_version"
             )
-        
+
         if request.policy == "range" and not request.min_version:
             raise HTTPException(
                 status_code=400,
                 detail="Range policy requires at least min_version"
             )
-        
+
         # Update via marketplace service
         marketplace_client = create_marketplace_client()
-        
+
         # First verify ownership
         signal_product = await marketplace_client.get_product_definition(
             product_id=signal_id,
             user_id=user_id
         )
-        
+
         if not signal_product or signal_product.get("creator_id") != user_id:
             raise HTTPException(status_code=403, detail="Not authorized to update this signal")
-        
+
         # Update version policy
         update_data = {
             "version_policy": request.policy,
@@ -170,7 +171,7 @@ async def update_signal_version_policy(
             "max_version": request.max_version,
             "pinned_version": request.pinned_version
         }
-        
+
         # Call marketplace API to update
         async with marketplace_client._get_client() as client:
             response = await client.put(
@@ -181,15 +182,15 @@ async def update_signal_version_policy(
                     "X-Gateway-Secret": x_gateway_secret or ""
                 }
             )
-            
+
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=response.status_code,
                     detail=f"Failed to update version policy: {response.text}"
                 )
-            
+
             result = response.json()
-        
+
         # Return updated policy
         return VersionPolicyResponse(
             signal_id=signal_id,
@@ -202,7 +203,7 @@ async def update_signal_version_policy(
             auto_upgrade_enabled=(result.get("policy") == "auto"),
             last_updated=result.get("last_updated")
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -213,13 +214,13 @@ async def update_signal_version_policy(
 @router.get("/{signal_id}/versions")
 async def list_signal_versions(
     signal_id: str,
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
-) -> List[SignalVersionInfo]:
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
+) -> list[SignalVersionInfo]:
     """
     List all versions of a signal.
-    
+
     Returns version history including:
     - Version numbers
     - Status (draft, published, deprecated)
@@ -230,10 +231,10 @@ async def list_signal_versions(
         # Get user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         # Get versions from marketplace
         marketplace_client = create_marketplace_client()
-        
+
         async with marketplace_client._get_client() as client:
             response = await client.get(
                 f"/api/v1/products/{signal_id}/versions",
@@ -242,18 +243,18 @@ async def list_signal_versions(
                     "X-Gateway-Secret": x_gateway_secret or ""
                 }
             )
-            
+
             if response.status_code == 404:
                 raise HTTPException(status_code=404, detail="Signal not found")
-            
+
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=response.status_code,
                     detail=f"Failed to fetch versions: {response.text}"
                 )
-            
+
             versions_data = response.json()
-        
+
         # Transform to our schema
         versions = []
         for v in versions_data.get("versions", []):
@@ -265,9 +266,9 @@ async def list_signal_versions(
                 breaking_changes=v.get("breaking_changes", False),
                 min_compatible_version=v.get("min_compatible_version")
             ))
-        
+
         return versions
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -280,13 +281,13 @@ async def publish_signal_version(
     signal_id: str,
     version: str,
     breaking_changes: bool = False,
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
 ) -> SignalVersionInfo:
     """
     Publish a signal version.
-    
+
     Marks a version as published and available for use.
     Authors can indicate if there are breaking changes.
     """
@@ -294,12 +295,12 @@ async def publish_signal_version(
         # Get user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         log_info(f"Publishing signal {signal_id} version {version}")
-        
+
         # Publish via marketplace
         marketplace_client = create_marketplace_client()
-        
+
         async with marketplace_client._get_client() as client:
             response = await client.post(
                 f"/api/v1/products/{signal_id}/versions/{version}/publish",
@@ -309,18 +310,18 @@ async def publish_signal_version(
                     "X-Gateway-Secret": x_gateway_secret or ""
                 }
             )
-            
+
             if response.status_code == 403:
                 raise HTTPException(status_code=403, detail="Not authorized to publish this signal")
-            
+
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=response.status_code,
                     detail=f"Failed to publish version: {response.text}"
                 )
-            
+
             version_data = response.json()
-        
+
         return SignalVersionInfo(
             version=version_data.get("version"),
             status="published",
@@ -329,7 +330,7 @@ async def publish_signal_version(
             breaking_changes=breaking_changes,
             min_compatible_version=version_data.get("min_compatible_version")
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -340,14 +341,14 @@ async def publish_signal_version(
 @router.get("/recommendations/{signal_id}")
 async def get_version_policy_recommendations(
     signal_id: str,
-    subscriber_count: Optional[int] = None,
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_gateway_secret: Optional[str] = Header(None, alias="X-Gateway-Secret")
-) -> Dict[str, Any]:
+    subscriber_count: int | None = None,
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
+) -> dict[str, Any]:
     """
     Get recommended version policy for a signal.
-    
+
     Provides intelligent recommendations based on:
     - Signal type and risk level
     - Number of subscribers
@@ -358,21 +359,21 @@ async def get_version_policy_recommendations(
         # Get user info
         user_info = await get_current_user_from_gateway(x_user_id, x_gateway_secret, authorization)
         user_id = str(user_info.get("user_id", user_info.get("id")))
-        
+
         # Get signal info
         marketplace_client = create_marketplace_client()
         signal_product = await marketplace_client.get_product_definition(
             product_id=signal_id,
             user_id=user_id
         )
-        
+
         if not signal_product:
             raise HTTPException(status_code=404, detail="Signal not found")
-        
+
         # Determine recommendations
         risk_level = signal_product.get("risk_level", "medium")
         actual_subscriber_count = subscriber_count or signal_product.get("subscriber_count", 0)
-        
+
         # High subscriber count suggests more conservative policy
         if actual_subscriber_count > 100:
             recommended_policy = "range"
@@ -391,7 +392,7 @@ async def get_version_policy_recommendations(
             else:
                 recommended_policy = "auto"
                 reason = "Low risk signal - auto updates for latest improvements"
-        
+
         return {
             "signal_id": signal_id,
             "recommended_policy": recommended_policy,
@@ -407,7 +408,7 @@ async def get_version_policy_recommendations(
                 "range": "Stay within version range - balanced approach"
             }
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:

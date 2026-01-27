@@ -10,9 +10,10 @@ import json
 import os
 import sys
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
-def get_service_contracts() -> Dict[str, Dict[str, Any]]:
+
+def get_service_contracts() -> dict[str, dict[str, Any]]:
     """Define all service contracts and their validation criteria."""
     return {
         "config_service": {
@@ -26,7 +27,7 @@ def get_service_contracts() -> Dict[str, Dict[str, Any]]:
                     "sla_p95_ms": 100
                 },
                 "/api/v1/secrets/{key}/value": {
-                    "method": "GET", 
+                    "method": "GET",
                     "auth_required": True,
                     "expected_status": 200,
                     "expected_schema": {"secret_value": "str"},
@@ -34,7 +35,7 @@ def get_service_contracts() -> Dict[str, Dict[str, Any]]:
                 },
                 "/api/v1/notifications/health": {
                     "method": "GET",
-                    "auth_required": True, 
+                    "auth_required": True,
                     "expected_status": 200,
                     "expected_schema": {"redis_connected": "bool"},
                     "sla_p95_ms": 150
@@ -59,7 +60,7 @@ def get_service_contracts() -> Dict[str, Dict[str, Any]]:
                     "sla_p95_ms": 500
                 },
                 "/api/v1/internal/context/{instrument_key}": {
-                    "method": "GET", 
+                    "method": "GET",
                     "auth_required": True,
                     "expected_status": 200,
                     "expected_schema": {"context": "object"},
@@ -93,7 +94,7 @@ def get_service_contracts() -> Dict[str, Dict[str, Any]]:
                     "method": "GET",
                     "auth_required": False,
                     "expected_status": 200,
-                    "expected_schema": {"status": "str"}, 
+                    "expected_schema": {"status": "str"},
                     "sla_p95_ms": 100
                 },
                 "/api/v1/entitlements/{user_id}": {
@@ -128,7 +129,7 @@ def get_service_contracts() -> Dict[str, Dict[str, Any]]:
             "base_url": "http://localhost:8093",
             "endpoints": {
                 "/health": {
-                    "method": "GET", 
+                    "method": "GET",
                     "auth_required": False,
                     "expected_status": 200,
                     "expected_schema": {"status": "str"},
@@ -167,18 +168,18 @@ def get_service_contracts() -> Dict[str, Dict[str, Any]]:
 def generate_contract_matrix() -> str:
     """Generate service contract matrix in markdown format."""
     contracts = get_service_contracts()
-    
+
     matrix = f"""# Service Contract Matrix
 
-**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}  
-**Environment**: {os.getenv('ENVIRONMENT', 'development')}  
+**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+**Environment**: {os.getenv('ENVIRONMENT', 'development')}
 **Signal Service Version**: v1.0.0-hot-reload-secure
 
 ## Overview
 
 This matrix documents all external service contracts that Signal Service integrates with, including:
 - Request/response schemas
-- Authentication requirements  
+- Authentication requirements
 - SLA expectations
 - Validation criteria
 
@@ -195,23 +196,23 @@ This matrix documents all external service contracts that Signal Service integra
         endpoint_count = len(service_config["endpoints"])
         auth_status = "🔒 REQUIRED" if any(ep.get("auth_required") for ep in service_config["endpoints"].values()) else "📂 PUBLIC"
         matrix += f"| {service_name} | {endpoint_count} endpoints | {auth_status} | ✅ VALIDATED | ✅ COMPLIANT |\n"
-    
+
     matrix += "\n---\n\n"
 
     # Detailed contract specifications
     for service_name, service_config in contracts.items():
         matrix += f"## {service_name.title()}\n\n"
         matrix += f"**Base URL**: `{service_config['base_url']}`\n\n"
-        
+
         matrix += "| Endpoint | Method | Auth | Status | Schema | SLA (p95) |\n"
         matrix += "|----------|--------|------|--------|--------|----------|\n"
-        
+
         for endpoint, config in service_config["endpoints"].items():
             auth_icon = "🔒" if config["auth_required"] else "📂"
             schema_summary = ", ".join([f"{k}: {v}" for k, v in config["expected_schema"].items()])
-            
+
             matrix += f"| `{endpoint}` | {config['method']} | {auth_icon} | {config['expected_status']} | {schema_summary} | {config['sla_p95_ms']}ms |\n"
-        
+
         matrix += "\n"
 
     # SLA Summary
@@ -221,7 +222,7 @@ This matrix documents all external service contracts that Signal Service integra
 
 ### Response Time SLAs (p95)
 - **Health endpoints**: ≤ 100ms
-- **Data retrieval**: ≤ 500ms  
+- **Data retrieval**: ≤ 500ms
 - **User operations**: ≤ 300ms
 - **Notification delivery**: ≤ 400ms
 
@@ -255,7 +256,7 @@ pytest tests/integration/test_{service_name}_integration.py -v
 
 ### SLA Monitoring
 - **Real-time**: Prometheus metrics collection
-- **Alerting**: Circuit breaker trips on SLA violations  
+- **Alerting**: Circuit breaker trips on SLA violations
 - **Reporting**: Daily SLA compliance reports
 
 ---
@@ -291,8 +292,8 @@ pytest tests/integration/test_{service_name}_integration.py -v
 - **Performance**: Response times tracked
 - **Errors**: Error rates and patterns analyzed
 
-**Last Validated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}  
-**Next Review**: {datetime.now().strftime('%Y-%m-%d')} + 30 days  
+**Last Validated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+**Next Review**: {datetime.now().strftime('%Y-%m-%d')} + 30 days
 **Validation Status**: ✅ ALL CONTRACTS COMPLIANT
 """
 

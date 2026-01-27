@@ -3,16 +3,15 @@ Direct pandas_ta testing without complex dependencies
 Tests all major indicator categories with realistic data
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import json
 import time
+
+import numpy as np
+import pandas as pd
 
 try:
     import pandas_ta as ta
     PANDAS_TA_AVAILABLE = True
-    print(f"✅ pandas_ta loaded successfully")
+    print("✅ pandas_ta loaded successfully")
 except ImportError:
     PANDAS_TA_AVAILABLE = False
     print("❌ pandas_ta not available")
@@ -21,47 +20,47 @@ except ImportError:
 def create_test_data(periods: int = 100, base_price: float = 100.0) -> pd.DataFrame:
     """Create realistic OHLCV test data"""
     print(f"📊 Generating {periods} periods of test data...")
-    
+
     dates = pd.date_range(start='2024-01-01', periods=periods, freq='5T')
-    
+
     # Generate realistic price movement
     prices = []
     current_price = base_price
-    
+
     for i in range(periods):
         # Add trend and volatility
         trend = 0.0005  # Small upward trend
         volatility = np.random.normal(0, 0.015)
         change = trend + volatility
-        
+
         current_price *= (1 + change)
         current_price = max(current_price, base_price * 0.5)  # Floor price
         prices.append(current_price)
-    
+
     # Create OHLCV from closes
     data = []
-    for i, (date, close) in enumerate(zip(dates, prices)):
+    for i, (date, close) in enumerate(zip(dates, prices, strict=False)):
         if i == 0:
             open_price = close
         else:
             gap = np.random.normal(0, 0.003)  # Small gap between periods
             open_price = prices[i-1] * (1 + gap)
-        
+
         # Generate high/low with realistic relationships
         daily_range = abs(np.random.normal(0, 0.012))
         high = max(open_price, close) * (1 + daily_range)
         low = min(open_price, close) * (1 - daily_range)
-        
+
         # Ensure OHLC relationships
         high = max(high, open_price, close)
         low = min(low, open_price, close)
-        
+
         # Generate volume correlated with price movement
         price_change = abs(close - open_price) / open_price if open_price > 0 else 0
         base_volume = 100000
         volume_multiplier = 1 + price_change * 4
         volume = int(base_volume * volume_multiplier * np.random.uniform(0.4, 2.5))
-        
+
         data.append({
             'open': round(open_price, 4),
             'high': round(high, 4),
@@ -69,38 +68,38 @@ def create_test_data(periods: int = 100, base_price: float = 100.0) -> pd.DataFr
             'close': round(close, 4),
             'volume': volume
         })
-    
+
     df = pd.DataFrame(data, index=dates)
     print(f"   Created data from {df.index[0]} to {df.index[-1]}")
     print(f"   Price range: {df['close'].min():.2f} - {df['close'].max():.2f}")
-    
+
     return df
 
 
 def test_indicator_category(category_name: str, indicators: list, test_data: pd.DataFrame) -> dict:
     """Test a category of indicators"""
     print(f"\n📈 Testing {category_name}...")
-    
+
     results = {}
     successful = 0
     total = len(indicators)
-    
+
     for indicator in indicators:
         name = indicator['name']
         params = indicator.get('params', {})
-        
+
         try:
             print(f"   Testing {name:12s}...", end='')
-            
+
             start_time = time.time()
-            
+
             # Get the indicator function
             if hasattr(ta, name):
                 indicator_func = getattr(ta, name)
-                
+
                 # Try different parameter combinations
                 result = None
-                
+
                 # Try with all OHLCV data
                 try:
                     result = indicator_func(
@@ -128,9 +127,9 @@ def test_indicator_category(category_name: str, indicators: list, test_data: pd.
                         except TypeError as e:
                             print(f" ❌ Parameter error: {e}")
                             continue
-                
+
                 exec_time = (time.time() - start_time) * 1000
-                
+
                 if result is not None:
                     # Validate result
                     if isinstance(result, pd.Series):
@@ -148,9 +147,9 @@ def test_indicator_category(category_name: str, indicators: list, test_data: pd.
                             print(f" ✅ {last_value:.4f} ({exec_time:.1f}ms)")
                             successful += 1
                         else:
-                            print(f" ⚠️  All NaN values")
+                            print(" ⚠️  All NaN values")
                             results[name] = {'status': 'warning', 'issue': 'all_nan'}
-                    
+
                     elif isinstance(result, pd.DataFrame):
                         non_null_cols = result.count().sum()
                         if non_null_cols > 0:
@@ -159,7 +158,7 @@ def test_indicator_category(category_name: str, indicators: list, test_data: pd.
                             for col in result.columns:
                                 if result[col].count() > 0:
                                     last_row[col] = float(result[col].dropna().iloc[-1])
-                            
+
                             results[name] = {
                                 'status': 'success',
                                 'type': 'dataframe',
@@ -171,9 +170,9 @@ def test_indicator_category(category_name: str, indicators: list, test_data: pd.
                             print(f" ✅ {list(result.columns)} ({exec_time:.1f}ms)")
                             successful += 1
                         else:
-                            print(f" ⚠️  Empty DataFrame")
+                            print(" ⚠️  Empty DataFrame")
                             results[name] = {'status': 'warning', 'issue': 'empty_dataframe'}
-                    
+
                     else:
                         results[name] = {
                             'status': 'success',
@@ -183,30 +182,30 @@ def test_indicator_category(category_name: str, indicators: list, test_data: pd.
                         }
                         print(f" ✅ {str(result)} ({exec_time:.1f}ms)")
                         successful += 1
-                
+
                 else:
-                    print(f" ❌ Returned None")
+                    print(" ❌ Returned None")
                     results[name] = {'status': 'failed', 'error': 'returned_none'}
-            
+
             else:
-                print(f" ❌ Not found in pandas_ta")
+                print(" ❌ Not found in pandas_ta")
                 results[name] = {'status': 'failed', 'error': 'not_found'}
-        
+
         except Exception as e:
             print(f" ❌ Error: {str(e)[:50]}")
             results[name] = {'status': 'failed', 'error': str(e)}
-    
+
     print(f"   📊 {category_name} Results: {successful}/{total} successful ({(successful/total)*100:.1f}%)")
-    
+
     return results
 
 
 def validate_indicator_ranges(results: dict):
     """Validate indicator values are within expected ranges"""
-    print(f"\n🔍 VALIDATING INDICATOR RANGES")
-    
+    print("\n🔍 VALIDATING INDICATOR RANGES")
+
     validations = []
-    
+
     # RSI should be 0-100
     if 'rsi' in results and results['rsi']['status'] == 'success':
         rsi_value = results['rsi']['last_value']
@@ -215,7 +214,7 @@ def validate_indicator_ranges(results: dict):
                 validations.append(f"✅ RSI in valid range: {rsi_value:.2f}")
             else:
                 validations.append(f"❌ RSI out of range: {rsi_value:.2f}")
-    
+
     # Williams %R should be -100 to 0
     if 'willr' in results and results['willr']['status'] == 'success':
         willr_value = results['willr']['last_value']
@@ -224,7 +223,7 @@ def validate_indicator_ranges(results: dict):
                 validations.append(f"✅ Williams %R in valid range: {willr_value:.2f}")
             else:
                 validations.append(f"❌ Williams %R out of range: {willr_value:.2f}")
-    
+
     # ATR should be positive
     if 'atr' in results and results['atr']['status'] == 'success':
         atr_value = results['atr']['last_value']
@@ -233,7 +232,7 @@ def validate_indicator_ranges(results: dict):
                 validations.append(f"✅ ATR is positive: {atr_value:.4f}")
             else:
                 validations.append(f"❌ ATR should be positive: {atr_value:.4f}")
-    
+
     # CCI should typically be between -200 and +200 (though can exceed)
     if 'cci' in results and results['cci']['status'] == 'success':
         cci_value = results['cci']['last_value']
@@ -242,11 +241,11 @@ def validate_indicator_ranges(results: dict):
                 validations.append(f"✅ CCI in reasonable range: {cci_value:.2f}")
             else:
                 validations.append(f"⚠️  CCI outside typical range: {cci_value:.2f}")
-    
+
     # Bollinger Bands relationships
     if 'bbands' in results and results['bbands']['status'] == 'success':
         bb_values = results['bbands']['last_values']
-        
+
         # Find upper, middle, lower bands
         upper = middle = lower = None
         for key, value in bb_values.items():
@@ -256,16 +255,16 @@ def validate_indicator_ranges(results: dict):
                 middle = value
             elif 'L' in key or 'lower' in key.lower():
                 lower = value
-        
+
         if all(x is not None for x in [upper, middle, lower]):
             if lower <= middle <= upper:
                 validations.append(f"✅ Bollinger Bands relationships: L={lower:.2f} ≤ M={middle:.2f} ≤ U={upper:.2f}")
             else:
                 validations.append(f"❌ Bollinger Bands invalid relationships: L={lower:.2f}, M={middle:.2f}, U={upper:.2f}")
-    
+
     for validation in validations:
         print(f"   {validation}")
-    
+
     return validations
 
 
@@ -273,14 +272,14 @@ def main():
     """Main test function"""
     print("🚀 Direct pandas_ta Integration Test")
     print("=" * 50)
-    
+
     if not PANDAS_TA_AVAILABLE:
         print("❌ pandas_ta not available. Install with: pip install pandas_ta")
         return False
-    
+
     # Generate test data
     test_data = create_test_data(periods=100)
-    
+
     # Define indicator categories to test
     indicator_categories = [
         {
@@ -352,84 +351,83 @@ def main():
             ]
         }
     ]
-    
+
     # Test each category
     all_results = {}
     total_indicators = 0
     successful_indicators = 0
-    
+
     for category in indicator_categories:
         category_results = test_indicator_category(
-            category['name'], 
-            category['indicators'], 
+            category['name'],
+            category['indicators'],
             test_data
         )
         all_results.update(category_results)
-        
+
         # Count successes
         category_success = sum(1 for r in category_results.values() if r['status'] == 'success')
         successful_indicators += category_success
         total_indicators += len(category['indicators'])
-    
+
     # Overall results
-    print(f"\n🎯 OVERALL RESULTS")
+    print("\n🎯 OVERALL RESULTS")
     print(f"   Total Indicators Tested: {total_indicators}")
     print(f"   Successful: {successful_indicators}")
     print(f"   Failed: {total_indicators - successful_indicators}")
     print(f"   Success Rate: {(successful_indicators/total_indicators)*100:.1f}%")
-    
+
     # Performance summary
     execution_times = [r.get('execution_time_ms', 0) for r in all_results.values() if r.get('execution_time_ms')]
     if execution_times:
-        print(f"\n⏱️  PERFORMANCE SUMMARY")
+        print("\n⏱️  PERFORMANCE SUMMARY")
         print(f"   Average Execution Time: {np.mean(execution_times):.1f} ms")
         print(f"   Median Execution Time: {np.median(execution_times):.1f} ms")
         print(f"   Fastest Indicator: {min(execution_times):.1f} ms")
         print(f"   Slowest Indicator: {max(execution_times):.1f} ms")
-    
+
     # Validate ranges
     validate_indicator_ranges(all_results)
-    
+
     # Show some successful examples
-    print(f"\n✅ SUCCESSFUL INDICATORS (Sample):")
-    successful_examples = [(name, result) for name, result in all_results.items() 
+    print("\n✅ SUCCESSFUL INDICATORS (Sample):")
+    successful_examples = [(name, result) for name, result in all_results.items()
                           if result['status'] == 'success'][:10]
-    
+
     for name, result in successful_examples:
         if result['type'] == 'series' and result['last_value'] is not None:
             print(f"   {name:12s}: {result['last_value']:8.4f}")
         elif result['type'] == 'dataframe':
             cols = ', '.join(result['columns'][:3])
             print(f"   {name:12s}: {cols}...")
-    
+
     if len(successful_examples) < len([r for r in all_results.values() if r['status'] == 'success']):
         remaining = len([r for r in all_results.values() if r['status'] == 'success']) - len(successful_examples)
         print(f"   ... and {remaining} more")
-    
+
     # Show failures
-    failed_indicators = [(name, result) for name, result in all_results.items() 
+    failed_indicators = [(name, result) for name, result in all_results.items()
                         if result['status'] == 'failed']
-    
+
     if failed_indicators:
-        print(f"\n❌ FAILED INDICATORS:")
+        print("\n❌ FAILED INDICATORS:")
         for name, result in failed_indicators[:5]:
             print(f"   {name:12s}: {result.get('error', 'Unknown error')[:50]}")
-        
+
         if len(failed_indicators) > 5:
             print(f"   ... and {len(failed_indicators) - 5} more")
-    
+
     print(f"\n{'='*50}")
-    
+
     success_rate = (successful_indicators/total_indicators)*100
     if success_rate >= 80:
         print("🎉 EXCELLENT: pandas_ta integration working very well!")
         return True
-    elif success_rate >= 60:
+    if success_rate >= 60:
         print("✅ GOOD: pandas_ta integration working well with some issues!")
         return True
-    else:
-        print("⚠️  NEEDS WORK: Multiple pandas_ta integration issues!")
-        return False
+    print("⚠️  NEEDS WORK: Multiple pandas_ta integration issues!")
+    return False
 
 
 if __name__ == "__main__":

@@ -2,15 +2,15 @@
 Sandbox Configuration and Security Policies
 Defines security policies and configuration for different execution environments
 """
-from typing import Dict, Any, Optional, List
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any
 
 
 class SecurityLevel(Enum):
     """Security levels for custom script execution"""
     MINIMAL = "minimal"      # Basic RestrictedPython only
-    STANDARD = "standard"    # Process limits + RestrictedPython  
+    STANDARD = "standard"    # Process limits + RestrictedPython
     HIGH = "high"           # Cgroups + enhanced monitoring
     MAXIMUM = "maximum"     # Docker container isolation
 
@@ -18,7 +18,7 @@ class SecurityLevel(Enum):
 class ExecutionEnvironment(Enum):
     """Execution environment types"""
     DEVELOPMENT = "development"
-    TESTING = "testing" 
+    TESTING = "testing"
     STAGING = "staging"
     LIVE = "live"
 
@@ -35,20 +35,20 @@ class SandboxPolicy:
     file_write_access: bool
     max_script_lines: int
     max_file_size_kb: int
-    allowed_imports: List[str]
+    allowed_imports: list[str]
     monitoring_enabled: bool
     audit_logging: bool
 
 
 class SandboxConfigManager:
     """Manages sandbox configurations for different environments and use cases"""
-    
+
     # Predefined security policies
     SECURITY_POLICIES = {
         SecurityLevel.MINIMAL: SandboxPolicy(
             security_level=SecurityLevel.MINIMAL,
             memory_limit_mb=32,
-            cpu_time_seconds=2, 
+            cpu_time_seconds=2,
             wall_time_seconds=5,
             max_processes=1,
             network_access=False,
@@ -59,12 +59,12 @@ class SandboxConfigManager:
             monitoring_enabled=False,
             audit_logging=False
         ),
-        
+
         SecurityLevel.STANDARD: SandboxPolicy(
             security_level=SecurityLevel.STANDARD,
             memory_limit_mb=64,
             cpu_time_seconds=5,
-            wall_time_seconds=10, 
+            wall_time_seconds=10,
             max_processes=1,
             network_access=False,
             file_write_access=False,
@@ -74,7 +74,7 @@ class SandboxConfigManager:
             monitoring_enabled=True,
             audit_logging=True
         ),
-        
+
         SecurityLevel.HIGH: SandboxPolicy(
             security_level=SecurityLevel.HIGH,
             memory_limit_mb=128,
@@ -89,7 +89,7 @@ class SandboxConfigManager:
             monitoring_enabled=True,
             audit_logging=True
         ),
-        
+
         SecurityLevel.MAXIMUM: SandboxPolicy(
             security_level=SecurityLevel.MAXIMUM,
             memory_limit_mb=256,
@@ -105,7 +105,7 @@ class SandboxConfigManager:
             audit_logging=True
         )
     }
-    
+
     # Environment-specific defaults
     ENVIRONMENT_DEFAULTS = {
         ExecutionEnvironment.DEVELOPMENT: SecurityLevel.MINIMAL,
@@ -113,24 +113,24 @@ class SandboxConfigManager:
         ExecutionEnvironment.STAGING: SecurityLevel.HIGH,
         ExecutionEnvironment.LIVE: SecurityLevel.MAXIMUM
     }
-    
+
     def __init__(self, environment: ExecutionEnvironment = ExecutionEnvironment.LIVE):
         self.environment = environment
         self.default_security_level = self.ENVIRONMENT_DEFAULTS[environment]
-    
-    def get_policy(self, security_level: Optional[SecurityLevel] = None) -> SandboxPolicy:
+
+    def get_policy(self, security_level: SecurityLevel | None = None) -> SandboxPolicy:
         """Get sandbox policy for specified security level"""
         level = security_level or self.default_security_level
         return self.SECURITY_POLICIES[level]
-    
+
     def create_custom_policy(
         self,
         base_level: SecurityLevel,
-        overrides: Dict[str, Any]
+        overrides: dict[str, Any]
     ) -> SandboxPolicy:
         """Create custom policy based on existing level with overrides"""
         base_policy = self.SECURITY_POLICIES[base_level]
-        
+
         # Create new policy with overrides
         policy_dict = {
             'security_level': base_level,
@@ -146,47 +146,47 @@ class SandboxConfigManager:
             'monitoring_enabled': overrides.get('monitoring_enabled', base_policy.monitoring_enabled),
             'audit_logging': overrides.get('audit_logging', base_policy.audit_logging)
         }
-        
+
         return SandboxPolicy(**policy_dict)
-    
-    def validate_policy(self, policy: SandboxPolicy) -> List[str]:
+
+    def validate_policy(self, policy: SandboxPolicy) -> list[str]:
         """Validate sandbox policy and return any issues"""
         issues = []
-        
+
         # Check resource limits
         if policy.memory_limit_mb > 512:
             issues.append("Memory limit too high (max: 512MB)")
-        
+
         if policy.cpu_time_seconds > 30:
             issues.append("CPU time limit too high (max: 30s)")
-        
+
         if policy.wall_time_seconds > 60:
             issues.append("Wall time limit too high (max: 60s)")
-        
+
         if policy.max_processes > 1:
             issues.append("Multiple processes not allowed")
-        
+
         if policy.network_access and self.environment == ExecutionEnvironment.LIVE:
             issues.append("Network access not allowed in live environment")
-        
+
         if policy.file_write_access:
             issues.append("File write access not recommended")
-        
+
         if policy.max_script_lines > 1000:
             issues.append("Script too large (max: 1000 lines)")
-        
+
         # Check imports
         dangerous_imports = ['os', 'sys', 'subprocess', 'socket', 'urllib', 'requests']
         for imp in policy.allowed_imports:
             if imp in dangerous_imports:
                 issues.append(f"Dangerous import not allowed: {imp}")
-        
+
         return issues
-    
-    def get_environment_config(self) -> Dict[str, Any]:
+
+    def get_environment_config(self) -> dict[str, Any]:
         """Get complete environment configuration"""
         default_policy = self.get_policy()
-        
+
         return {
             'environment': self.environment.value,
             'default_security_level': self.default_security_level.value,
@@ -208,7 +208,7 @@ class SandboxConfigManager:
 # User tier-based security mapping
 USER_TIER_SECURITY = {
     'free': SecurityLevel.MINIMAL,
-    'basic': SecurityLevel.STANDARD, 
+    'basic': SecurityLevel.STANDARD,
     'professional': SecurityLevel.HIGH,
     'enterprise': SecurityLevel.MAXIMUM
 }
@@ -222,34 +222,34 @@ def get_security_level_for_user(user_tier: str) -> SecurityLevel:
 def create_sandbox_config(
     environment: str = "production",
     user_tier: str = "free",
-    custom_overrides: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    custom_overrides: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Create complete sandbox configuration for user request
-    
+
     Args:
         environment: Execution environment (development, testing, staging, production)
         user_tier: User subscription tier (free, basic, professional, enterprise)
         custom_overrides: Custom policy overrides
-        
+
     Returns:
         Complete sandbox configuration
     """
     env = ExecutionEnvironment(environment.lower())
     security_level = get_security_level_for_user(user_tier)
-    
+
     config_manager = SandboxConfigManager(env)
-    
+
     if custom_overrides:
         policy = config_manager.create_custom_policy(security_level, custom_overrides)
-        
+
         # Validate custom policy
         validation_issues = config_manager.validate_policy(policy)
         if validation_issues:
             raise ValueError(f"Policy validation failed: {', '.join(validation_issues)}")
     else:
         policy = config_manager.get_policy(security_level)
-    
+
     return {
         'environment': environment,
         'user_tier': user_tier,

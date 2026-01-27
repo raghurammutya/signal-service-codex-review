@@ -5,8 +5,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ class ProfileType(Enum):
 @dataclass
 class SessionProfile:
     session_date: datetime
-    profile: Dict[str, Any]
+    profile: dict[str, Any]
 
 
 class MarketProfileCalculator:
@@ -28,9 +27,9 @@ class MarketProfileCalculator:
     def __init__(self, repository=None):
         self.repository = repository
 
-    def _calculate_volume_profile(self, ohlcv: List[Dict[str, Any]], tick_size: float = 1.0) -> Dict[str, Any]:
-        price_levels: List[float] = []
-        volumes: List[float] = []
+    def _calculate_volume_profile(self, ohlcv: list[dict[str, Any]], tick_size: float = 1.0) -> dict[str, Any]:
+        price_levels: list[float] = []
+        volumes: list[float] = []
         if not ohlcv:
             return {"price_levels": [], "volumes": [], "poc": None, "total_volume": 0}
         # Anchor to first close and step by tick_size so consecutive diffs match tick_size
@@ -51,9 +50,9 @@ class MarketProfileCalculator:
             **va,
         }
 
-    def _calculate_tpo_profile(self, ohlcv: List[Dict[str, Any]], tick_size: float = 1.0, interval: str = "30m") -> Dict[str, Any]:
+    def _calculate_tpo_profile(self, ohlcv: list[dict[str, Any]], tick_size: float = 1.0, interval: str = "30m") -> dict[str, Any]:
         tpo_counts: Counter = Counter()
-        letter_mapping: Dict[float, str] = {}
+        letter_mapping: dict[float, str] = {}
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         for idx, item in enumerate(ohlcv):
             price_level = round(float(item["close"]) / tick_size) * tick_size
@@ -62,12 +61,12 @@ class MarketProfileCalculator:
         poc = max(tpo_counts, key=tpo_counts.get) if tpo_counts else None
         return {"tpo_counts": dict(tpo_counts), "letter_mapping": letter_mapping, "poc": poc}
 
-    def _calculate_value_areas(self, profile: Dict[str, Any]) -> Dict[str, Any]:
+    def _calculate_value_areas(self, profile: dict[str, Any]) -> dict[str, Any]:
         price_levels = profile["price_levels"]
         volumes = profile["volumes"]
         total_volume = profile.get("total_volume", 0) or 1
         # Sort by volume descending but stop when ~70% accumulated
-        pairs = sorted(zip(price_levels, volumes), key=lambda x: x[1], reverse=True)
+        pairs = sorted(zip(price_levels, volumes, strict=False), key=lambda x: x[1], reverse=True)
         running = 0
         included = []
         for price, vol in pairs:
@@ -85,13 +84,13 @@ class MarketProfileCalculator:
         }
         return {"value_area": value_area}
 
-    def _calculate_composite_profile(self, ohlcv: List[Dict[str, Any]], tick_size: float = 1.0) -> Dict[str, Any]:
-        sessions: Dict[str, List[Dict[str, Any]]] = {}
+    def _calculate_composite_profile(self, ohlcv: list[dict[str, Any]], tick_size: float = 1.0) -> dict[str, Any]:
+        sessions: dict[str, list[dict[str, Any]]] = {}
         for item in ohlcv:
             session_key = item["timestamp"].date().isoformat() if isinstance(item["timestamp"], datetime) else "unknown"
             sessions.setdefault(session_key, []).append(item)
 
-        session_profiles: List[Dict[str, Any]] = []
+        session_profiles: list[dict[str, Any]] = []
         for date_key, data in sessions.items():
             profile = self._calculate_volume_profile(data, tick_size)
             session_profiles.append({"session_date": date_key, "profile": profile, "poc": profile.get("poc")})
@@ -100,10 +99,10 @@ class MarketProfileCalculator:
         composite_value_area = self._calculate_value_areas(composite)
         return {"profile": composite, "sessions": session_profiles, "composite_poc": composite.get("poc"), "composite_value_area": composite_value_area}
 
-    def _detect_market_structure(self, profile: Dict[str, Any]) -> Dict[str, Any]:
+    def _detect_market_structure(self, profile: dict[str, Any]) -> dict[str, Any]:
         volumes = profile.get("volumes", [])
         pattern = "Normal Day"
-        peaks: List[float] = []
+        peaks: list[float] = []
         if volumes:
             midpoint = len(volumes) // 2
             left = sum(volumes[:midpoint])
@@ -119,7 +118,7 @@ class MarketProfileCalculator:
             peaks.extend([profile["price_levels"][i] for i, v in enumerate(volumes) if v >= max_vol * 0.8 and profile["price_levels"][i] not in peaks])
         return {"pattern": pattern, "distribution_shape": "balanced", "balance_area": {}, "peaks": peaks}
 
-    async def calculate_market_profile(self, instrument_key: str, interval: str, lookback_period: str, profile_type: ProfileType = ProfileType.VOLUME) -> Dict[str, Any]:
+    async def calculate_market_profile(self, instrument_key: str, interval: str, lookback_period: str, profile_type: ProfileType = ProfileType.VOLUME) -> dict[str, Any]:
         if interval not in {"30m", "1h", "5m", "15m"}:
             raise ValueError("Invalid interval")
         if not self.repository:

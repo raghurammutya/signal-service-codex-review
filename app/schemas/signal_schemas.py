@@ -1,18 +1,19 @@
 """
 Pydantic schemas for Signal Service v2 API
 """
-from pydantic import BaseModel, Field, validator
-from typing import Dict, List, Optional, Any, Union, Literal
 from datetime import datetime
 from enum import Enum
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, validator
 
 
 class BaseResponse(BaseModel):
     """Base response model for API endpoints"""
     success: bool = True
-    message: Optional[str] = None
-    data: Optional[Any] = None
-    error: Optional[str] = None
+    message: str | None = None
+    data: Any | None = None
+    error: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -31,12 +32,12 @@ class TimeframeType(str, Enum):
 
 class GreeksData(BaseModel):
     """Greeks values"""
-    delta: Optional[float] = Field(None, ge=-1, le=1)
-    gamma: Optional[float] = Field(None, ge=0)
-    theta: Optional[float] = Field(None)
-    vega: Optional[float] = Field(None, ge=0)
-    rho: Optional[float] = Field(None)
-    implied_volatility: Optional[float] = Field(None, ge=0, le=5, alias="iv")
+    delta: float | None = Field(None, ge=-1, le=1)
+    gamma: float | None = Field(None, ge=0)
+    theta: float | None = Field(None)
+    vega: float | None = Field(None, ge=0)
+    rho: float | None = Field(None)
+    implied_volatility: float | None = Field(None, ge=0, le=5, alias="iv")
 
 
 class GreeksResponse(BaseModel):
@@ -44,9 +45,9 @@ class GreeksResponse(BaseModel):
     instrument_key: str
     timestamp: datetime
     greeks: GreeksData
-    underlying_price: Optional[float] = None
-    option_price: Optional[float] = None
-    
+    underlying_price: float | None = None
+    option_price: float | None = None
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -59,9 +60,9 @@ class IndicatorResponse(BaseModel):
     indicator: str
     period: int
     timestamp: datetime
-    value: Union[float, Dict[str, float]]
-    metadata: Optional[Dict[str, Any]] = None
-    
+    value: float | dict[str, float]
+    metadata: dict[str, Any] | None = None
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -81,9 +82,9 @@ class AggregatedGreeks(BaseModel):
 
 class MoneynessGreeksData(BaseModel):
     """Moneyness Greeks aggregation"""
-    all: Optional[AggregatedGreeks] = None
-    calls: Optional[AggregatedGreeks] = None
-    puts: Optional[AggregatedGreeks] = None
+    all: AggregatedGreeks | None = None
+    calls: AggregatedGreeks | None = None
+    puts: AggregatedGreeks | None = None
 
 
 class MoneynessGreeksResponse(BaseModel):
@@ -93,8 +94,8 @@ class MoneynessGreeksResponse(BaseModel):
     moneyness_level: str
     timestamp: datetime
     aggregated_greeks: MoneynessGreeksData
-    strikes: Optional[Dict[str, Any]] = None
-    
+    strikes: dict[str, Any] | None = None
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -104,9 +105,9 @@ class MoneynessGreeksResponse(BaseModel):
 class TimeSeriesDataPoint(BaseModel):
     """Single data point in time series"""
     timestamp: datetime
-    value: Union[float, Dict[str, Any]]
-    metadata: Optional[Dict[str, Any]] = None
-    
+    value: float | dict[str, Any]
+    metadata: dict[str, Any] | None = None
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -120,8 +121,8 @@ class HistoricalGreeksResponse(BaseModel):
     end_time: datetime
     timeframe: str
     data_points: int
-    time_series: List[TimeSeriesDataPoint]
-    
+    time_series: list[TimeSeriesDataPoint]
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -137,8 +138,8 @@ class HistoricalIndicatorResponse(BaseModel):
     end_time: datetime
     timeframe: str
     data_points: int
-    time_series: List[TimeSeriesDataPoint]
-    
+    time_series: list[TimeSeriesDataPoint]
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -152,10 +153,10 @@ class HistoricalMoneynessResponse(BaseModel):
     start_time: datetime
     end_time: datetime
     timeframe: str
-    expiry_date: Optional[str] = None
+    expiry_date: str | None = None
     data_points: int
-    time_series: List[TimeSeriesDataPoint]
-    
+    time_series: list[TimeSeriesDataPoint]
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -167,7 +168,7 @@ class SubscriptionRequest(BaseModel):
     type: Literal["subscribe"] = "subscribe"
     channel: SignalType
     instrument_key: str
-    params: Optional[Dict[str, Any]] = None
+    params: dict[str, Any] | None = None
 
 
 class SubscriptionResponse(BaseModel):
@@ -176,9 +177,9 @@ class SubscriptionResponse(BaseModel):
     status: str
     channel: str
     instrument_key: str
-    subscription_key: Optional[str] = None
+    subscription_key: str | None = None
     timestamp: datetime
-    
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -189,8 +190,8 @@ class WebSocketMessage(BaseModel):
     """Generic WebSocket message"""
     type: str
     timestamp: datetime
-    data: Optional[Dict[str, Any]] = None
-    
+    data: dict[str, Any] | None = None
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -200,17 +201,17 @@ class WebSocketMessage(BaseModel):
 class SignalComputeRequest(BaseModel):
     """Request to compute signals"""
     instrument_key: str
-    signal_types: List[SignalType]
-    params: Optional[Dict[str, Any]] = None
+    signal_types: list[SignalType]
+    params: dict[str, Any] | None = None
 
 
 class SignalComputeResponse(BaseModel):
     """Response for signal computation"""
     instrument_key: str
     timestamp: datetime
-    results: Dict[str, Any]
+    results: dict[str, Any]
     computation_time_ms: float
-    
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -220,7 +221,7 @@ class SignalComputeResponse(BaseModel):
 class TimeframeRequest(BaseModel):
     """Request for custom timeframe"""
     timeframe: str
-    
+
     @validator('timeframe')
     def validate_timeframe(cls, v):
         """Validate timeframe format"""
@@ -252,17 +253,17 @@ class TimeframeRequest(BaseModel):
 
 class BatchGreeksRequest(BaseModel):
     """Request for batch Greeks calculation"""
-    instrument_keys: List[str] = Field(..., min_items=1, max_items=100)
+    instrument_keys: list[str] = Field(..., min_items=1, max_items=100)
     compute_moneyness: bool = False
-    
-    
+
+
 class BatchGreeksResponse(BaseModel):
     """Response for batch Greeks calculation"""
     timestamp: datetime
-    results: Dict[str, GreeksData]
-    errors: Optional[Dict[str, str]] = None
+    results: dict[str, GreeksData]
+    errors: dict[str, str] | None = None
     computation_time_ms: float
-    
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
@@ -276,25 +277,25 @@ class SignalExecutionRequest(BaseModel):
     execution_token: str = Field(..., description="Token from marketplace subscription")
     product_id: str = Field(..., description="Marketplace product ID")
     instrument: str = Field(..., description="Instrument to run signal for")
-    params: Optional[Dict[str, Any]] = Field(None, description="Signal parameters")
-    subscription_id: Optional[str] = Field(None, description="Subscription ID for watermarking")
+    params: dict[str, Any] | None = Field(None, description="Signal parameters")
+    subscription_id: str | None = Field(None, description="Subscription ID for watermarking")
 
 
 class PersonalSignalExecutionRequest(BaseModel):
     """Request to execute personal signal script"""
     script_id: str = Field(..., description="Personal script ID from MinIO")
     instrument: str = Field(..., description="Instrument to run signal for")
-    params: Optional[Dict[str, Any]] = Field(None, description="Signal parameters")
+    params: dict[str, Any] | None = Field(None, description="Signal parameters")
 
 
 class SignalExecutionResponse(BaseModel):
     """Response for signal execution"""
     success: bool
     message: str
-    execution_id: Optional[str] = None
-    stream_keys: Optional[List[str]] = Field(None, description="Redis stream keys for results")
-    error: Optional[str] = None
-    
+    execution_id: str | None = None
+    stream_keys: list[str] | None = Field(None, description="Redis stream keys for results")
+    error: str | None = None
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()

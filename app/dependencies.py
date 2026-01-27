@@ -1,25 +1,24 @@
 """
 FastAPI dependency injection for Signal Service
 """
-from typing import Optional
 
-from app.utils.redis import get_redis_client
-from common.storage.database import get_timescaledb_session
 from app.repositories.signal_repository import SignalRepository
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
+from app.services.formula_engine import FormulaEngine
+from app.services.instrument_service_client import InstrumentServiceClient
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.moneyness_historical_processor import MoneynessHistoricalProcessor
-from app.services.instrument_service_client import InstrumentServiceClient
-
+from app.services.universal_calculator import UniversalCalculator
+from app.utils.redis import get_redis_client
 
 # Global instances
-_signal_repository: Optional[SignalRepository] = None
-_timeframe_manager: Optional[FlexibleTimeframeManager] = None
-_moneyness_calculator: Optional[MoneynessAwareGreeksCalculator] = None
-_moneyness_processor: Optional[MoneynessHistoricalProcessor] = None
-_instrument_client: Optional[InstrumentServiceClient] = None
-_universal_calculator: Optional['UniversalCalculator'] = None
-_formula_engine: Optional['FormulaEngine'] = None
+_signal_repository: SignalRepository | None = None
+_timeframe_manager: FlexibleTimeframeManager | None = None
+_moneyness_calculator: MoneynessAwareGreeksCalculator | None = None
+_moneyness_processor: MoneynessHistoricalProcessor | None = None
+_instrument_client: InstrumentServiceClient | None = None
+_universal_calculator: UniversalCalculator | None = None
+_formula_engine: FormulaEngine | None = None
 
 
 async def get_signal_repository() -> SignalRepository:
@@ -67,7 +66,7 @@ async def get_moneyness_processor() -> MoneynessHistoricalProcessor:
         signal_repository = await get_signal_repository()
         timeframe_manager = await get_timeframe_manager()
         instrument_client = await get_instrument_client()
-        
+
         _moneyness_processor = MoneynessHistoricalProcessor(
             moneyness_calculator,
             signal_repository,

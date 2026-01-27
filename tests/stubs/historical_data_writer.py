@@ -2,8 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Set, Optional
+from datetime import datetime
 
 from app.utils.redis import get_redis_client
 
@@ -15,8 +14,8 @@ class HistoricalDataWriter:
 
     def __init__(self):
         self.cluster_manager = None
-        self.active_instruments: Set[str] = set()
-        self.tick_buffer: Dict[str, List[Dict]] = {}
+        self.active_instruments: set[str] = set()
+        self.tick_buffer: dict[str, list[dict]] = {}
         self.running = False
 
     async def initialize(self):
@@ -24,9 +23,9 @@ class HistoricalDataWriter:
         self.cluster_manager = type("Cluster", (), {"client": redis_client})
         logger.info("Historical data writer initialized")
 
-    async def _get_active_instruments(self) -> Set[str]:
+    async def _get_active_instruments(self) -> set[str]:
         """Return active instruments from Redis or in-memory set."""
-        instruments: Set[str] = set(self.active_instruments)
+        instruments: set[str] = set(self.active_instruments)
         try:
             keys = await self.cluster_manager.client.keys("subscription_service:active_subscriptions:*")
             for key in keys:
@@ -38,11 +37,11 @@ class HistoricalDataWriter:
             logger.debug("Falling back to in-memory active instruments")
         return instruments
 
-    async def _get_minute_ticks(self, instrument_key: str, minute: datetime) -> List[Dict]:
+    async def _get_minute_ticks(self, instrument_key: str, minute: datetime) -> list[dict]:
         """Fetch buffered ticks for the minute (stubbed)."""
         return self.tick_buffer.get(instrument_key, [])
 
-    def _aggregate_to_candle(self, ticks: List[Dict], minute: datetime, instrument_key: str) -> Optional[Dict]:
+    def _aggregate_to_candle(self, ticks: list[dict], minute: datetime, instrument_key: str) -> dict | None:
         """Aggregate tick list into a simple OHLCV candle."""
         if not ticks:
             return None
@@ -59,7 +58,7 @@ class HistoricalDataWriter:
             "volume": sum(volumes),
         }
 
-    async def _write_to_timescale(self, candles: List[Dict]):
+    async def _write_to_timescale(self, candles: list[dict]):
         """Stubbed persistence."""
         logger.debug("Pretending to write %s candles", len(candles))
 
@@ -68,7 +67,7 @@ class HistoricalDataWriter:
         if not active_instruments:
             return
 
-        candles: List[Dict] = []
+        candles: list[dict] = []
         for instrument_key in active_instruments:
             ticks = await self._get_minute_ticks(instrument_key, minute_timestamp)
             candle = self._aggregate_to_candle(ticks, minute_timestamp, instrument_key)

@@ -1,13 +1,13 @@
 """Global test configuration and fixtures."""
 import asyncio
 import os
-import pytest
-import json
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
-from unittest.mock import Mock, AsyncMock, patch
-import pandas as pd
+from datetime import datetime
+from typing import Any
+from unittest.mock import AsyncMock, Mock
+
 import numpy as np
+import pandas as pd
+import pytest
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
@@ -31,30 +31,30 @@ async def test_database():
         username="test_user",
         password="test_password"
     )
-    
+
     postgres.start()
-    
+
     # Setup database schema
     connection_url = postgres.get_connection_url()
-    
+
     yield {
         "url": connection_url,
         "container": postgres
     }
-    
+
     postgres.stop()
 
-@pytest.fixture(scope="session")  
+@pytest.fixture(scope="session")
 async def test_redis():
     """Set up test Redis container."""
     redis = RedisContainer("redis:7-alpine")
     redis.start()
-    
+
     yield {
         "url": redis.get_connection_url(),
         "container": redis
     }
-    
+
     redis.stop()
 
 @pytest.fixture
@@ -95,22 +95,22 @@ def sample_market_data():
     """Sample market data for testing."""
     dates = pd.date_range('2024-01-01', periods=100, freq='5T')
     base_price = 20000
-    
+
     # Generate realistic price movement
     price_changes = np.random.normal(0, 0.005, 100)  # 0.5% volatility
     prices = [base_price]
-    
+
     for change in price_changes[:-1]:
         new_price = prices[-1] * (1 + change)
         prices.append(new_price)
-    
+
     ohlcv_data = []
-    for i, (date, price) in enumerate(zip(dates, prices)):
+    for i, (date, price) in enumerate(zip(dates, prices, strict=False)):
         high = price * (1 + abs(np.random.normal(0, 0.002)))
         low = price * (1 - abs(np.random.normal(0, 0.002)))
         close = low + (high - low) * np.random.random()
         volume = np.random.randint(50000, 200000)
-        
+
         ohlcv_data.append({
             "timestamp": date.isoformat(),
             "open": round(price, 2),
@@ -119,7 +119,7 @@ def sample_market_data():
             "close": round(close, 2),
             "volume": volume
         })
-    
+
     return pd.DataFrame(ohlcv_data)
 
 @pytest.fixture
@@ -158,7 +158,7 @@ def mock_config_service():
             "INTERNAL_API_KEY": "test_internal_api_key"
         }
         return secrets.get(key)
-    
+
     def _mock_get_config(key: str):
         configs = {
             "PORT": "8003",
@@ -167,12 +167,12 @@ def mock_config_service():
             "MAX_BATCH_SIZE": "100"
         }
         return configs.get(key)
-    
+
     mock_client = Mock()
     mock_client.get_secret.side_effect = _mock_get_secret
     mock_client.get_config.side_effect = _mock_get_config
     mock_client.health_check.return_value = True
-    
+
     return mock_client
 
 @pytest.fixture
@@ -189,7 +189,7 @@ def mock_ticker_service():
             'close': np.random.uniform(19900, 20100, 50),
             'volume': np.random.randint(50000, 200000, 50)
         })
-    
+
     mock_service = AsyncMock()
     mock_service.get_historical_data.side_effect = _mock_historical_data
     return mock_service
@@ -198,12 +198,12 @@ def mock_ticker_service():
 def mock_database_session():
     """Mock database session for unit tests."""
     mock_session = AsyncMock()
-    
+
     # Mock connection acquisition
     mock_conn = AsyncMock()
     mock_session.acquire.return_value.__aenter__.return_value = mock_conn
     mock_session.acquire.return_value.__aexit__.return_value = None
-    
+
     return mock_session, mock_conn
 
 @pytest.fixture
@@ -215,9 +215,9 @@ def clean_database(test_database):
 
 class TestDataFactory:
     """Factory for generating test data."""
-    
+
     @staticmethod
-    def create_option_data(spot_price: float = 20000, **kwargs) -> Dict[str, Any]:
+    def create_option_data(spot_price: float = 20000, **kwargs) -> dict[str, Any]:
         """Create option data for testing."""
         defaults = {
             "spot_price": spot_price,
@@ -230,9 +230,9 @@ class TestDataFactory:
         }
         defaults.update(kwargs)
         return defaults
-    
+
     @staticmethod
-    def create_instrument_keys(count: int = 10) -> List[str]:
+    def create_instrument_keys(count: int = 10) -> list[str]:
         """Create list of test instrument keys."""
         keys = []
         for i in range(count):

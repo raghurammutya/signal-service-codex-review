@@ -8,24 +8,24 @@ breaker open count, backpressure activation, and 5xx/latency SLO breaches.
 import json
 import os
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 class OnCallAlertsSetup:
     """On-call alerting configuration for critical production events."""
-    
+
     def __init__(self):
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.alerts_dir = "alerting"
         os.makedirs(self.alerts_dir, exist_ok=True)
-        
+
         self.alert_rules = {}
         self.notification_channels = {}
-    
-    def create_alertmanager_config(self) -> Dict[str, Any]:
+
+    def create_alertmanager_config(self) -> dict[str, Any]:
         """Create AlertManager configuration for routing alerts to on-call."""
         print("🚨 Creating AlertManager Configuration...")
-        
+
         alertmanager_config = {
             "global": {
                 "smtp_smarthost": "${SMTP_HOST}:587",
@@ -105,21 +105,21 @@ class OnCallAlertsSetup:
                 }
             ]
         }
-        
+
         config_file = os.path.join(self.alerts_dir, "alertmanager.yml")
         with open(config_file, 'w') as f:
             json.dump(alertmanager_config, f, indent=2)
-        
+
         print(f"    ✅ AlertManager config: {config_file}")
-        print(f"    🔔 Critical alerts → PagerDuty + Slack")
-        print(f"    ⚠️ Warning alerts → Slack + Email")
-        
+        print("    🔔 Critical alerts → PagerDuty + Slack")
+        print("    ⚠️ Warning alerts → Slack + Email")
+
         return alertmanager_config
-    
-    def create_config_service_alerts(self) -> Dict[str, Any]:
+
+    def create_config_service_alerts(self) -> dict[str, Any]:
         """Create config service reachability alerts."""
         print("⚙️ Creating Config Service Alerts...")
-        
+
         alerts = {
             "groups": [
                 {
@@ -204,20 +204,20 @@ class OnCallAlertsSetup:
                 }
             ]
         }
-        
+
         alerts_file = os.path.join(self.alerts_dir, "config_service_alerts.yml")
         with open(alerts_file, 'w') as f:
             json.dump(alerts, f, indent=2)
-        
+
         print(f"    ✅ Config service alerts: {alerts_file}")
         print(f"    🚨 {len(alerts['groups'][0]['rules'])} alert rules created")
-        
+
         return alerts
-    
-    def create_pool_exhaustion_alerts(self) -> Dict[str, Any]:
+
+    def create_pool_exhaustion_alerts(self) -> dict[str, Any]:
         """Create database and Redis pool exhaustion alerts."""
         print("🔋 Creating Pool Exhaustion Alerts...")
-        
+
         alerts = {
             "groups": [
                 {
@@ -302,20 +302,20 @@ class OnCallAlertsSetup:
                 }
             ]
         }
-        
+
         alerts_file = os.path.join(self.alerts_dir, "pool_exhaustion_alerts.yml")
         with open(alerts_file, 'w') as f:
             json.dump(alerts, f, indent=2)
-        
+
         print(f"    ✅ Pool exhaustion alerts: {alerts_file}")
         print(f"    🚨 {len(alerts['groups'][0]['rules'])} alert rules created")
-        
+
         return alerts
-    
-    def create_circuit_breaker_alerts(self) -> Dict[str, Any]:
+
+    def create_circuit_breaker_alerts(self) -> dict[str, Any]:
         """Create circuit breaker open count alerts."""
         print("🔌 Creating Circuit Breaker Alerts...")
-        
+
         alerts = {
             "groups": [
                 {
@@ -385,20 +385,20 @@ class OnCallAlertsSetup:
                 }
             ]
         }
-        
+
         alerts_file = os.path.join(self.alerts_dir, "circuit_breaker_alerts.yml")
         with open(alerts_file, 'w') as f:
             json.dump(alerts, f, indent=2)
-        
+
         print(f"    ✅ Circuit breaker alerts: {alerts_file}")
         print(f"    🚨 {len(alerts['groups'][0]['rules'])} alert rules created")
-        
+
         return alerts
-    
-    def create_backpressure_alerts(self) -> Dict[str, Any]:
+
+    def create_backpressure_alerts(self) -> dict[str, Any]:
         """Create backpressure activation alerts."""
         print("⏸️ Creating Backpressure Alerts...")
-        
+
         alerts = {
             "groups": [
                 {
@@ -498,20 +498,20 @@ class OnCallAlertsSetup:
                 }
             ]
         }
-        
+
         alerts_file = os.path.join(self.alerts_dir, "backpressure_alerts.yml")
         with open(alerts_file, 'w') as f:
             json.dump(alerts, f, indent=2)
-        
+
         print(f"    ✅ Backpressure alerts: {alerts_file}")
         print(f"    🚨 {len(alerts['groups'][0]['rules'])} alert rules created")
-        
+
         return alerts
-    
-    def create_slo_breach_alerts(self) -> Dict[str, Any]:
+
+    def create_slo_breach_alerts(self) -> dict[str, Any]:
         """Create 5xx/latency SLO breach alerts."""
         print("📊 Creating SLO Breach Alerts...")
-        
+
         alerts = {
             "groups": [
                 {
@@ -596,20 +596,20 @@ class OnCallAlertsSetup:
                 }
             ]
         }
-        
+
         alerts_file = os.path.join(self.alerts_dir, "slo_breach_alerts.yml")
         with open(alerts_file, 'w') as f:
             json.dump(alerts, f, indent=2)
-        
+
         print(f"    ✅ SLO breach alerts: {alerts_file}")
         print(f"    🚨 {len(alerts['groups'][0]['rules'])} alert rules created")
-        
+
         return alerts
-    
+
     def create_prometheus_alerts_config(self) -> str:
         """Create Prometheus alerts configuration file."""
         print("📊 Creating Prometheus Alerts Configuration...")
-        
+
         prometheus_config = '''# Prometheus Alert Rules Configuration
 global:
   scrape_interval: 15s
@@ -617,7 +617,7 @@ global:
 
 rule_files:
   - "alerting/config_service_alerts.yml"
-  - "alerting/pool_exhaustion_alerts.yml" 
+  - "alerting/pool_exhaustion_alerts.yml"
   - "alerting/circuit_breaker_alerts.yml"
   - "alerting/backpressure_alerts.yml"
   - "alerting/slo_breach_alerts.yml"
@@ -634,26 +634,26 @@ scrape_configs:
       - targets: ['signal-service:8080']
     metrics_path: '/api/v1/metrics'
     scrape_interval: 15s
-    
+
   - job_name: 'config-service'
     static_configs:
       - targets: ['config-service:8100']
     metrics_path: '/metrics'
     scrape_interval: 30s
 '''
-        
+
         config_file = os.path.join(self.alerts_dir, "prometheus.yml")
         with open(config_file, 'w') as f:
             f.write(prometheus_config)
-        
+
         print(f"    ✅ Prometheus config: {config_file}")
-        
+
         return config_file
-    
+
     def create_deployment_script(self) -> str:
         """Create script to deploy alerts to production."""
         print("🚀 Creating Alerts Deployment Script...")
-        
+
         deployment_script = '''#!/bin/bash
 """
 Production Alerts Deployment Script
@@ -696,7 +696,7 @@ cp $ALERTS_DIR/alertmanager.yml $ALERTMANAGER_CONFIG_PATH/
 echo "🔄 Reloading Prometheus configuration..."
 curl -X POST http://prometheus:9090/-/reload
 
-# Reload AlertManager  
+# Reload AlertManager
 echo "🔄 Reloading AlertManager configuration..."
 curl -X POST http://alertmanager:9093/-/reload
 
@@ -710,53 +710,53 @@ curl -s http://prometheus:9090/api/v1/rules | jq '.data.groups[].rules[] | selec
 
 echo "🎉 Production alerts deployment complete!"
 '''
-        
+
         script_path = os.path.join(self.alerts_dir, "deploy_alerts.sh")
         with open(script_path, 'w') as f:
             f.write(deployment_script)
-        
+
         os.chmod(script_path, 0o755)
-        
+
         print(f"    🚀 Deployment script: {script_path}")
-        
+
         return script_path
-    
-    def run_on_call_alerts_setup(self) -> Dict[str, Any]:
+
+    def run_on_call_alerts_setup(self) -> dict[str, Any]:
         """Execute complete on-call alerts setup."""
         print("🚨 On-Call Alerts Setup")
         print("=" * 60)
-        
+
         # Create AlertManager configuration
-        alertmanager_config = self.create_alertmanager_config()
+        self.create_alertmanager_config()
         print()
-        
+
         # Create all alert rule groups
         self.alert_rules["config_service"] = self.create_config_service_alerts()
         print()
-        
+
         self.alert_rules["pool_exhaustion"] = self.create_pool_exhaustion_alerts()
         print()
-        
+
         self.alert_rules["circuit_breaker"] = self.create_circuit_breaker_alerts()
         print()
-        
+
         self.alert_rules["backpressure"] = self.create_backpressure_alerts()
         print()
-        
+
         self.alert_rules["slo_breach"] = self.create_slo_breach_alerts()
         print()
-        
+
         # Create Prometheus configuration
         prometheus_config = self.create_prometheus_alerts_config()
         print()
-        
+
         # Create deployment script
         deployment_script = self.create_deployment_script()
         print()
-        
+
         # Create setup summary
         total_alerts = sum(len(group['groups'][0]['rules']) for group in self.alert_rules.values())
-        
+
         summary = {
             "setup_timestamp": datetime.now().isoformat(),
             "alert_groups": len(self.alert_rules),
@@ -767,23 +767,23 @@ echo "🎉 Production alerts deployment complete!"
             "deployment_script": deployment_script,
             "notification_channels": {
                 "pagerduty": "Critical alerts",
-                "slack_critical": "#signal-service-alerts", 
+                "slack_critical": "#signal-service-alerts",
                 "slack_warning": "#signal-service-monitoring",
                 "email": "Warning alerts to on-call"
             },
             "alert_coverage": {
                 "config_service": "Reachability, latency, cache, errors, bootstrap",
-                "pool_exhaustion": "DB/Redis connection pools, leaks, latency", 
+                "pool_exhaustion": "DB/Redis connection pools, leaks, latency",
                 "circuit_breaker": "Open states, failure rates, recovery",
                 "backpressure": "Budget guard, memory/CPU pressure, queue depth",
                 "slo_breach": "Latency SLO, error rate SLO, 5xx errors"
             }
         }
-        
+
         summary_file = os.path.join(self.alerts_dir, f"on_call_alerts_summary_{self.timestamp}.json")
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2)
-        
+
         print("=" * 60)
         print("🎯 On-Call Alerts Setup Complete")
         print(f"🚨 Alert groups: {len(self.alert_rules)}")
@@ -791,7 +791,7 @@ echo "🎉 Production alerts deployment complete!"
         print(f"📁 Directory: {self.alerts_dir}")
         print(f"🚀 Deploy: {deployment_script}")
         print(f"📄 Summary: {summary_file}")
-        
+
         return summary
 
 
@@ -800,20 +800,20 @@ def main():
     try:
         setup = OnCallAlertsSetup()
         results = setup.run_on_call_alerts_setup()
-        
-        print(f"\\n🎉 ON-CALL ALERTS SETUP COMPLETE")
+
+        print("\\n🎉 ON-CALL ALERTS SETUP COMPLETE")
         print(f"🚨 {results['total_alert_rules']} alert rules created")
         print(f"📁 All files in: {results['alerting_directory']}")
-        print(f"\\n🚀 Next steps:")
-        print(f"   1. Set environment variables:")
-        print(f"      - PAGERDUTY_SERVICE_KEY")
-        print(f"      - SLACK_WEBHOOK_URL") 
-        print(f"      - ON_CALL_EMAIL")
+        print("\\n🚀 Next steps:")
+        print("   1. Set environment variables:")
+        print("      - PAGERDUTY_SERVICE_KEY")
+        print("      - SLACK_WEBHOOK_URL")
+        print("      - ON_CALL_EMAIL")
         print(f"   2. Run: ./{results['deployment_script']}")
-        print(f"   3. Verify alerts at: http://prometheus:9090/alerts")
-        
+        print("   3. Verify alerts at: http://prometheus:9090/alerts")
+
         return 0
-        
+
     except Exception as e:
         print(f"💥 On-call alerts setup failed: {e}")
         return 1

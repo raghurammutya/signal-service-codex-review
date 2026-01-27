@@ -8,10 +8,11 @@ and creates measurable migration tasks.
 
 import json
 import os
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Dict, List
+
 
 @dataclass
 class MigrationTask:
@@ -22,31 +23,31 @@ class MigrationTask:
     service: str
     priority: str  # critical, high, medium, low
     estimated_hours: int
-    dependencies: List[str]
-    acceptance_criteria: List[str]
+    dependencies: list[str]
+    acceptance_criteria: list[str]
     assignee: str = ""
     status: str = "pending"
 
 class Phase0ChecklistGenerator:
     """Generates comprehensive Phase 0 execution checklists"""
-    
+
     def __init__(self, token_inventory_file: str):
         self.inventory_data = self._load_inventory_data(token_inventory_file)
-        self.tasks: List[MigrationTask] = []
+        self.tasks: list[MigrationTask] = []
         self.checklist_sections = {}
-        
-    def _load_inventory_data(self, inventory_file: str) -> Dict[str, Any]:
+
+    def _load_inventory_data(self, inventory_file: str) -> dict[str, Any]:
         """Load token usage inventory data"""
         try:
-            with open(inventory_file, 'r') as f:
+            with open(inventory_file) as f:
                 return json.load(f)
         except FileNotFoundError:
             print(f"❌ Token inventory file not found: {inventory_file}")
             return {}
-    
-    def generate_complete_checklist(self) -> Dict[str, Any]:
+
+    def generate_complete_checklist(self) -> dict[str, Any]:
         """Generate complete Phase 0 execution checklist"""
-        
+
         # Generate all checklist sections
         sections_raw = {
             "audit_tasks": self._generate_audit_tasks(),
@@ -55,24 +56,24 @@ class Phase0ChecklistGenerator:
             "testing_framework_tasks": self._generate_testing_tasks(),
             "governance_tasks": self._generate_governance_tasks()
         }
-        
+
         # Convert sections to serializable format
         self.checklist_sections = {
             section_name: [self._task_to_dict(task) for task in tasks]
             for section_name, tasks in sections_raw.items()
         }
-        
+
         # Combine all tasks (already in dict format)
         all_tasks = []
         for section_tasks in self.checklist_sections.values():
             all_tasks.extend(section_tasks)
-        
+
         # Generate timeline using original task objects
         original_tasks = []
         for section_tasks in sections_raw.values():
             original_tasks.extend(section_tasks)
         timeline = self._generate_timeline(original_tasks)
-        
+
         return {
             "phase": "Phase 0: Token Usage Audit & Contract Enforcement",
             "duration": "1 week",
@@ -83,11 +84,11 @@ class Phase0ChecklistGenerator:
             "timeline": timeline,
             "success_criteria": self._define_success_criteria()
         }
-    
-    def _generate_audit_tasks(self) -> List[MigrationTask]:
+
+    def _generate_audit_tasks(self) -> list[MigrationTask]:
         """Generate token usage audit tasks"""
         tasks = []
-        
+
         # Base audit tasks
         base_tasks = [
             MigrationTask(
@@ -105,7 +106,7 @@ class Phase0ChecklistGenerator:
                 ]
             ),
             MigrationTask(
-                task_id="AUDIT_002", 
+                task_id="AUDIT_002",
                 title="Database Schema Token Analysis",
                 description="Analyze all database schemas for token column usage and dependencies",
                 service="infrastructure",
@@ -121,7 +122,7 @@ class Phase0ChecklistGenerator:
             ),
             MigrationTask(
                 task_id="AUDIT_003",
-                title="API Endpoint Token Parameter Analysis", 
+                title="API Endpoint Token Parameter Analysis",
                 description="Audit all API endpoints for token parameter usage",
                 service="infrastructure",
                 priority="high",
@@ -134,7 +135,7 @@ class Phase0ChecklistGenerator:
                 ]
             )
         ]
-        
+
         # Generate service-specific audit tasks based on inventory
         if self.inventory_data:
             for service_data in self.inventory_data.get('migration_priorities', []):
@@ -155,10 +156,10 @@ class Phase0ChecklistGenerator:
                         ]
                     )
                     tasks.append(task)
-        
+
         return base_tasks + tasks
-    
-    def _generate_contract_tasks(self) -> List[MigrationTask]:
+
+    def _generate_contract_tasks(self) -> list[MigrationTask]:
         """Generate API contract definition tasks"""
         return [
             MigrationTask(
@@ -207,8 +208,8 @@ class Phase0ChecklistGenerator:
                 ]
             )
         ]
-    
-    def _generate_documentation_tasks(self) -> List[MigrationTask]:
+
+    def _generate_documentation_tasks(self) -> list[MigrationTask]:
         """Generate documentation update tasks"""
         return [
             MigrationTask(
@@ -216,7 +217,7 @@ class Phase0ChecklistGenerator:
                 title="Update INSTRUMENT_DATA_ARCHITECTURE.md",
                 description="Codify instrument_key primacy in data architecture documentation",
                 service="documentation",
-                priority="high", 
+                priority="high",
                 estimated_hours=3,
                 dependencies=["CONTRACT_001"],
                 acceptance_criteria=[
@@ -230,7 +231,7 @@ class Phase0ChecklistGenerator:
                 task_id="DOC_002",
                 title="Update INSTRUMENT_SUBSCRIPTION_ARCHITECTURE.md",
                 description="Define key-based subscription patterns and architecture",
-                service="documentation", 
+                service="documentation",
                 priority="high",
                 estimated_hours=3,
                 dependencies=["CONTRACT_001"],
@@ -257,8 +258,8 @@ class Phase0ChecklistGenerator:
                 ]
             )
         ]
-    
-    def _generate_testing_tasks(self) -> List[MigrationTask]:
+
+    def _generate_testing_tasks(self) -> list[MigrationTask]:
         """Generate testing framework tasks"""
         return [
             MigrationTask(
@@ -277,7 +278,7 @@ class Phase0ChecklistGenerator:
                 ]
             ),
             MigrationTask(
-                task_id="TEST_002", 
+                task_id="TEST_002",
                 title="Performance Impact Testing Framework",
                 description="Create testing for registry lookup performance impact",
                 service="testing",
@@ -307,8 +308,8 @@ class Phase0ChecklistGenerator:
                 ]
             )
         ]
-    
-    def _generate_governance_tasks(self) -> List[MigrationTask]:
+
+    def _generate_governance_tasks(self) -> list[MigrationTask]:
         """Generate governance and compliance tasks"""
         return [
             MigrationTask(
@@ -330,7 +331,7 @@ class Phase0ChecklistGenerator:
                 task_id="GOV_002",
                 title="Create Deployment Gate Integration",
                 description="Integrate contract compliance into deployment gates",
-                service="governance", 
+                service="governance",
                 priority="high",
                 estimated_hours=5,
                 dependencies=["TEST_001"],
@@ -346,7 +347,7 @@ class Phase0ChecklistGenerator:
                 title="Establish Violation Monitoring",
                 description="Implement real-time monitoring for contract violations",
                 service="governance",
-                priority="medium", 
+                priority="medium",
                 estimated_hours=6,
                 dependencies=["CONTRACT_002"],
                 acceptance_criteria=[
@@ -357,19 +358,18 @@ class Phase0ChecklistGenerator:
                 ]
             )
         ]
-    
+
     def _map_priority_from_score(self, score: float) -> str:
         """Map migration priority score to task priority"""
         if score > 50:
             return "critical"
-        elif score > 25:
+        if score > 25:
             return "high"
-        elif score > 10:
+        if score > 10:
             return "medium"
-        else:
-            return "low"
-    
-    def _task_to_dict(self, task: MigrationTask) -> Dict[str, Any]:
+        return "low"
+
+    def _task_to_dict(self, task: MigrationTask) -> dict[str, Any]:
         """Convert task to dictionary format"""
         return {
             "task_id": task.task_id,
@@ -383,17 +383,17 @@ class Phase0ChecklistGenerator:
             "assignee": task.assignee,
             "status": task.status
         }
-    
-    def _generate_timeline(self, tasks: List[MigrationTask]) -> Dict[str, Any]:
+
+    def _generate_timeline(self, tasks: list[MigrationTask]) -> dict[str, Any]:
         """Generate week-long timeline for Phase 0 tasks"""
-        
+
         # Group tasks by priority and dependencies
         timeline = {
             "week_overview": "Phase 0: Token Usage Audit & Contract Enforcement",
             "total_estimated_hours": sum(task.estimated_hours for task in tasks),
             "daily_schedule": {}
         }
-        
+
         # Create 5-day schedule
         start_date = datetime.now()
         for day in range(1, 6):  # Monday to Friday
@@ -404,40 +404,40 @@ class Phase0ChecklistGenerator:
                 "key_tasks": self._get_daily_tasks(day, tasks),
                 "deliverables": self._get_daily_deliverables(day)
             }
-        
+
         return timeline
-    
+
     def _get_daily_focus(self, day: int) -> str:
         """Get daily focus area"""
         focus_areas = {
             1: "Automated scanning and inventory generation",
-            2: "Database and API analysis", 
+            2: "Database and API analysis",
             3: "Contract definition and validation framework",
             4: "Documentation updates and testing framework",
             5: "Governance implementation and validation"
         }
         return focus_areas.get(day, "Miscellaneous tasks")
-    
-    def _get_daily_tasks(self, day: int, tasks: List[MigrationTask]) -> List[str]:
+
+    def _get_daily_tasks(self, day: int, tasks: list[MigrationTask]) -> list[str]:
         """Get key tasks for specific day"""
         daily_task_mapping = {
             1: ["AUDIT_001"],
             2: ["AUDIT_002", "AUDIT_003"],
             3: ["CONTRACT_001", "CONTRACT_002"],
-            4: ["DOC_001", "DOC_002", "TEST_001"], 
+            4: ["DOC_001", "DOC_002", "TEST_001"],
             5: ["GOV_001", "GOV_002", "TEST_003"]
         }
-        
+
         task_ids = daily_task_mapping.get(day, [])
         task_titles = []
-        
+
         for task in tasks:
             if task.task_id in task_ids:
                 task_titles.append(f"{task.task_id}: {task.title}")
-        
+
         return task_titles
-    
-    def _get_daily_deliverables(self, day: int) -> List[str]:
+
+    def _get_daily_deliverables(self, day: int) -> list[str]:
         """Get expected deliverables for specific day"""
         deliverables = {
             1: [
@@ -447,7 +447,7 @@ class Phase0ChecklistGenerator:
             ],
             2: [
                 "Database schema token analysis",
-                "API endpoint token inventory", 
+                "API endpoint token inventory",
                 "Data migration requirements"
             ],
             3: [
@@ -467,24 +467,24 @@ class Phase0ChecklistGenerator:
             ]
         }
         return deliverables.get(day, [])
-    
-    def _generate_inventory_summary(self) -> Dict[str, Any]:
+
+    def _generate_inventory_summary(self) -> dict[str, Any]:
         """Generate summary of token usage inventory"""
         if not self.inventory_data:
             return {"status": "inventory_not_available"}
-        
+
         return {
             "scan_timestamp": self.inventory_data.get('scan_timestamp'),
             "total_findings": self.inventory_data.get('summary_statistics', {}).get('total_findings', 0),
             "critical_issues": self.inventory_data.get('summary_statistics', {}).get('critical_issues', 0),
             "services_affected": len(self.inventory_data.get('findings_by_service', {})),
             "top_priority_services": [
-                service['service'] for service in 
+                service['service'] for service in
                 self.inventory_data.get('migration_priorities', [])[:3]
             ]
         }
-    
-    def _define_success_criteria(self) -> List[str]:
+
+    def _define_success_criteria(self) -> list[str]:
         """Define Phase 0 success criteria"""
         return [
             "Complete token usage inventory across all services with 100% code coverage",
@@ -499,19 +499,19 @@ class Phase0ChecklistGenerator:
 
 def generate_phase0_checklist(token_inventory_file: str, output_file: str = None) -> str:
     """Generate comprehensive Phase 0 execution checklist"""
-    
+
     generator = Phase0ChecklistGenerator(token_inventory_file)
     checklist = generator.generate_complete_checklist()
-    
+
     # Generate output filename if not provided
     if not output_file:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_file = f'phase0_execution_checklist_{timestamp}.json'
-    
+
     # Write checklist to file
     with open(output_file, 'w') as f:
         json.dump(checklist, f, indent=2)
-    
+
     # Generate summary display
     summary = f"""
 📋 PHASE 0 EXECUTION CHECKLIST GENERATED
@@ -523,7 +523,7 @@ def generate_phase0_checklist(token_inventory_file: str, output_file: str = None
 
 🎯 INVENTORY SUMMARY:
 """
-    
+
     inventory = checklist['inventory_summary']
     if 'total_findings' in inventory:
         summary += f"   • Total token findings: {inventory['total_findings']}\n"
@@ -532,44 +532,44 @@ def generate_phase0_checklist(token_inventory_file: str, output_file: str = None
         summary += f"   • Top priority services: {', '.join(inventory['top_priority_services'])}\n"
     else:
         summary += "   • Inventory data will be generated during execution\n"
-    
-    summary += f"""
+
+    summary += """
 📅 DAILY SCHEDULE:
 """
-    
+
     for day_key, day_info in checklist['timeline']['daily_schedule'].items():
         day_num = day_key.split('_')[1]
         summary += f"   Day {day_num} ({day_info['date']}): {day_info['focus']}\n"
         for task in day_info['key_tasks'][:2]:  # Show first 2 tasks
             summary += f"      • {task}\n"
-    
-    summary += f"""
+
+    summary += """
 ✅ SUCCESS CRITERIA:
 """
     for criterion in checklist['success_criteria'][:3]:  # Show first 3 criteria
         summary += f"   • {criterion}\n"
-    
+
     summary += f"   • [and {len(checklist['success_criteria'])-3} more criteria...]\n"
-    
+
     summary += f"""
 📁 Detailed checklist saved to: {output_file}
 """
-    
+
     print(summary)
     return output_file
 
 # CLI interface
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='Generate Phase 0 execution checklist')
     parser.add_argument('--inventory', '-i', required=True,
                        help='Token usage inventory JSON file')
     parser.add_argument('--output', '-o',
                        help='Output file for checklist (JSON)')
-    
+
     args = parser.parse_args()
-    
+
     print("📋 Generating Phase 0 execution checklist...")
     output_file = generate_phase0_checklist(args.inventory, args.output)
     print(f"✅ Phase 0 checklist generated: {output_file}")

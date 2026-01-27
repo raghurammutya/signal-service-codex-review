@@ -1,7 +1,5 @@
 """Updated historical data manager methods to use continuous aggregates (stub)."""
 
-from datetime import datetime, timedelta
-from typing import List
 
 
 async def get_async_db():

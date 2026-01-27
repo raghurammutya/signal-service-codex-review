@@ -2,7 +2,6 @@
 
 import hashlib
 from bisect import bisect_right
-from typing import Dict, List, Set
 
 
 class ConsistentHashManager:
@@ -10,9 +9,9 @@ class ConsistentHashManager:
 
     def __init__(self, virtual_nodes: int = 150):
         self.virtual_nodes = virtual_nodes
-        self.ring: Dict[int, str] = {}
-        self.sorted_keys: List[int] = []
-        self.nodes: Set[str] = set()
+        self.ring: dict[int, str] = {}
+        self.sorted_keys: list[int] = []
+        self.nodes: set[str] = set()
 
     def _hash(self, key: str) -> int:
         return int(hashlib.md5(key.encode()).hexdigest(), 16)

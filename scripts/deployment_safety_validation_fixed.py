@@ -5,13 +5,13 @@ Deployment Safety Validation Script - Config Service Architecture
 Validates signal_service deployment readiness using StocksBlitz config service pattern.
 Only validates bootstrap environment variables; all other config from config service.
 """
-import os
-import sys
 import json
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+import os
+import sys
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 # Setup logging
 logging.basicConfig(
@@ -32,8 +32,8 @@ class ValidationResult:
     passed: bool
     message: str
     critical: bool = False
-    suggestions: List[str] = None
-    
+    suggestions: list[str] = None
+
     def __post_init__(self):
         if self.suggestions is None:
             self.suggestions = []
@@ -41,10 +41,10 @@ class ValidationResult:
 
 class ConfigServiceDeploymentValidator:
     """Validates deployment using StocksBlitz config service architecture."""
-    
+
     def __init__(self, environment: str = None):
         self.environment = environment or os.getenv("ENVIRONMENT", "production")
-        self.validation_results: List[ValidationResult] = []
+        self.validation_results: list[ValidationResult] = []
         self.critical_failures = 0
         self.warnings = 0
 
@@ -57,10 +57,10 @@ class ConfigServiceDeploymentValidator:
             else:
                 self.warnings += 1
 
-    def validate_bootstrap_environment_variables(self) -> List[ValidationResult]:
+    def validate_bootstrap_environment_variables(self) -> list[ValidationResult]:
         """Validate only the 4 required bootstrap environment variables."""
         logger.info("Validating bootstrap environment variables...")
-        
+
         # ONLY 4 BOOTSTRAP VARIABLES (per docker-compose.production.yml pattern)
         required_bootstrap_vars = {
             "ENVIRONMENT": "Environment selection (production/staging/development)",
@@ -68,12 +68,12 @@ class ConfigServiceDeploymentValidator:
             "INTERNAL_API_KEY": "StocksBlitz service-to-service authentication key",
             "SERVICE_NAME": "Service identification (signal_service)"
         }
-        
+
         results = []
-        
+
         for var, description in required_bootstrap_vars.items():
             value = os.getenv(var)
-            
+
             if not value or not value.strip():
                 results.append(ValidationResult(
                     name=f"bootstrap_{var.lower()}",
@@ -103,7 +103,7 @@ class ConfigServiceDeploymentValidator:
                             passed=True,
                             message=f"ENVIRONMENT properly set to: {value}"
                         ))
-                        
+
                 elif var == "CONFIG_SERVICE_URL":
                     if not (value.startswith("http://") or value.startswith("https://")):
                         results.append(ValidationResult(
@@ -119,7 +119,7 @@ class ConfigServiceDeploymentValidator:
                             passed=True,
                             message=f"CONFIG_SERVICE_URL properly formatted: {value}"
                         ))
-                        
+
                 elif var == "SERVICE_NAME":
                     if value != "signal_service":
                         results.append(ValidationResult(
@@ -135,7 +135,7 @@ class ConfigServiceDeploymentValidator:
                             passed=True,
                             message="SERVICE_NAME correctly set to signal_service"
                         ))
-                        
+
                 elif var == "INTERNAL_API_KEY":
                     if len(value) < 32:
                         results.append(ValidationResult(
@@ -151,17 +151,17 @@ class ConfigServiceDeploymentValidator:
                             passed=True,
                             message="INTERNAL_API_KEY properly configured"
                         ))
-        
+
         return results
 
-    def validate_config_service_connectivity(self) -> List[ValidationResult]:
+    def validate_config_service_connectivity(self) -> list[ValidationResult]:
         """Test connection to config service."""
         logger.info("Validating config service connectivity...")
-        
+
         results = []
         config_service_url = os.getenv("CONFIG_SERVICE_URL")
         internal_api_key = os.getenv("INTERNAL_API_KEY")
-        
+
         if not config_service_url or not internal_api_key:
             results.append(ValidationResult(
                 name="config_service_prerequisites",
@@ -171,24 +171,24 @@ class ConfigServiceDeploymentValidator:
                 suggestions=["Ensure CONFIG_SERVICE_URL and INTERNAL_API_KEY are set"]
             ))
             return results
-        
+
         try:
             import httpx
-            
+
             with httpx.Client(timeout=10) as client:
                 # Test health endpoint
                 health_response = client.get(
                     f"{config_service_url}/api/v1/health",
                     headers={"X-Internal-API-Key": internal_api_key}
                 )
-                
+
                 if health_response.status_code == 200:
                     results.append(ValidationResult(
                         name="config_service_health",
                         passed=True,
                         message="Config service health check passed"
                     ))
-                    
+
                     # Test configuration access
                     try:
                         config_response = client.get(
@@ -198,7 +198,7 @@ class ConfigServiceDeploymentValidator:
                                 "X-Environment": self.environment
                             }
                         )
-                        
+
                         if config_response.status_code == 200:
                             results.append(ValidationResult(
                                 name="config_service_access",
@@ -216,7 +216,7 @@ class ConfigServiceDeploymentValidator:
                                     "Check internal API key permissions"
                                 ]
                             ))
-                            
+
                     except Exception as e:
                         results.append(ValidationResult(
                             name="config_service_access_test",
@@ -225,7 +225,7 @@ class ConfigServiceDeploymentValidator:
                             critical=False,
                             suggestions=["Check config service configuration"]
                         ))
-                        
+
                 else:
                     results.append(ValidationResult(
                         name="config_service_health",
@@ -238,7 +238,7 @@ class ConfigServiceDeploymentValidator:
                             "Verify config service URL"
                         ]
                     ))
-                    
+
         except Exception as e:
             results.append(ValidationResult(
                 name="config_service_connectivity",
@@ -251,27 +251,27 @@ class ConfigServiceDeploymentValidator:
                     "Verify CONFIG_SERVICE_URL is correct"
                 ]
             ))
-        
+
         return results
 
-    def validate_architecture_compliance(self) -> List[ValidationResult]:
+    def validate_architecture_compliance(self) -> list[ValidationResult]:
         """Validate compliance with StocksBlitz config service architecture."""
         logger.info("Validating architecture compliance...")
-        
+
         results = []
-        
+
         # Check for old environment variables that should NOT be present
         deprecated_env_vars = [
-            "DATABASE_URL", "REDIS_URL", "CORS_ALLOWED_ORIGINS", 
+            "DATABASE_URL", "REDIS_URL", "CORS_ALLOWED_ORIGINS",
             "ALERT_SERVICE_URL", "COMMS_SERVICE_URL", "MARKETPLACE_SERVICE_URL",
             "JWT_SECRET_KEY", "GATEWAY_SECRET", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY"
         ]
-        
+
         found_deprecated = []
         for var in deprecated_env_vars:
             if os.getenv(var):
                 found_deprecated.append(var)
-        
+
         if found_deprecated:
             results.append(ValidationResult(
                 name="architecture_deprecated_env_vars",
@@ -290,21 +290,21 @@ class ConfigServiceDeploymentValidator:
                 passed=True,
                 message="No deprecated environment variables found - architecture compliant"
             ))
-        
+
         return results
 
     def run_all_validations(self) -> bool:
         """Run all config service architecture validations."""
         logger.info(f"Starting config service deployment validation for environment: {self.environment}")
         start_time = datetime.now()
-        
+
         # Updated validation methods for config service architecture
         validation_methods = [
             self.validate_bootstrap_environment_variables,
             self.validate_config_service_connectivity,
             self.validate_architecture_compliance
         ]
-        
+
         for method in validation_methods:
             try:
                 results = method()
@@ -319,15 +319,15 @@ class ConfigServiceDeploymentValidator:
                     critical=True,
                     suggestions=["Check validation method implementation"]
                 ))
-        
+
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        
+
         logger.info(f"Deployment validation completed in {duration:.2f}s")
-        
+
         # Print results
         self.print_summary()
-        
+
         # Return success/failure
         return self.critical_failures == 0
 
@@ -335,40 +335,40 @@ class ConfigServiceDeploymentValidator:
         """Print validation summary."""
         passed = len([r for r in self.validation_results if r.passed])
         total = len(self.validation_results)
-        
+
         print("\n" + "="*80)
         print(f"CONFIG SERVICE DEPLOYMENT VALIDATION SUMMARY ({self.environment.upper()})")
         print("="*80)
-        
+
         if self.critical_failures == 0:
             print("Overall Status: ✅ PASS")
         else:
             print("Overall Status: ❌ FAIL")
-            
+
         print(f"Environment: {self.environment}")
         print(f"Total Checks: {total}")
         print(f"Passed: {passed}")
         print(f"Warnings: {self.warnings}")
         print(f"Critical Failures: {self.critical_failures}")
-        
+
         if self.critical_failures > 0:
-            print(f"\n🚨 CRITICAL FAILURES:")
+            print("\n🚨 CRITICAL FAILURES:")
             for result in self.validation_results:
                 if not result.passed and result.critical:
                     print(f"  ❌ {result.name}: {result.message}")
                     for suggestion in result.suggestions:
                         print(f"     💡 {suggestion}")
-        
+
         if self.warnings > 0:
-            print(f"\n⚠️  WARNINGS:")
+            print("\n⚠️  WARNINGS:")
             for result in self.validation_results:
                 if not result.passed and not result.critical:
                     print(f"  ⚠️  {result.name}: {result.message}")
                     for suggestion in result.suggestions:
                         print(f"     💡 {suggestion}")
-        
+
         print("\n" + "="*80)
-        
+
         if self.critical_failures == 0:
             print("✅ Deployment validation PASSED for", self.environment)
             print("🎯 Config service architecture compliance verified")
@@ -380,15 +380,15 @@ class ConfigServiceDeploymentValidator:
 def main():
     """Main execution function."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="StocksBlitz Config Service Deployment Validation")
     parser.add_argument("--environment", default=None, help="Environment (development/staging/production)")
-    
+
     args = parser.parse_args()
-    
+
     validator = ConfigServiceDeploymentValidator(environment=args.environment)
     success = validator.run_all_validations()
-    
+
     sys.exit(0 if success else 1)
 
 

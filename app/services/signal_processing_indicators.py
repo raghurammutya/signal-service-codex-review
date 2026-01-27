@@ -13,15 +13,12 @@ Features:
 Library: scipy.signal (already installed)
 """
 import logging
-from typing import Dict, Any, Tuple, Optional
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from scipy import signal
 
-from app.services.indicator_registry import (
-    register_indicator,
-    IndicatorCategory
-)
+from app.services.indicator_registry import IndicatorCategory, register_indicator
 
 logger = logging.getLogger(__name__)
 

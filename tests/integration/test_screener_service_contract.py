@@ -1,22 +1,20 @@
 """
 Screener Service Contract Integration Tests
 
-Validates that signal_service maintains API contract compatibility 
+Validates that signal_service maintains API contract compatibility
 with screener_service backend for cross-service signal consumption.
 """
+import sys
+from unittest.mock import patch
+
 import pytest
-import asyncio
-import json
-import websockets
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
-import aiohttp
 
 try:
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
     from app.api.v2.sdk_signals import router as signals_router
     from app.core.config import settings
-    from fastapi.testclient import TestClient
-    from fastapi import FastAPI
     CONTRACT_TESTING_AVAILABLE = True
 except ImportError:
     CONTRACT_TESTING_AVAILABLE = False
@@ -30,7 +28,7 @@ class TestScreenerServiceContract:
         """Create test FastAPI app with signal routes."""
         if not CONTRACT_TESTING_AVAILABLE:
             pytest.skip("Contract testing dependencies not available")
-        
+
         app = FastAPI()
         app.include_router(signals_router, prefix="/api/v2")
         return app
@@ -51,22 +49,22 @@ class TestScreenerServiceContract:
         # Mock authentication and user service
         with patch('app.core.auth.verify_jwt_token') as mock_auth:
             mock_auth.return_value = {"user_id": "test_user", "sub": "test_user"}
-            
+
             response = client.get(
                 "/api/v2/signals/stream/available",
                 headers={"Authorization": mock_user_token}
             )
-            
+
             # Contract validation
             assert response.status_code == 200
             data = response.json()
-            
+
             # Required top-level structure
             required_keys = ["public", "common", "marketplace", "personal"]
             for key in required_keys:
                 assert key in data, f"Missing required key: {key}"
                 assert isinstance(data[key], list), f"{key} must be a list"
-            
+
             # Validate stream object structure if streams exist
             all_streams = data["public"] + data["common"] + data["marketplace"] + data["personal"]
             for stream in all_streams:
@@ -75,7 +73,7 @@ class TestScreenerServiceContract:
                 assert "name" in stream
                 assert "instruments" in stream
                 assert isinstance(stream["instruments"], list)
-                
+
                 # Optional but expected fields
                 expected_fields = ["description", "frequency", "availability"]
                 for field in expected_fields:
@@ -102,7 +100,7 @@ class TestScreenerServiceContract:
                 "timeframe": "1h"
             }
         }
-        
+
         # Validate contract compliance
         self._validate_signal_format(mock_signal)
 
@@ -113,19 +111,19 @@ class TestScreenerServiceContract:
         for field in required_fields:
             assert field in signal, f"Missing required field: {field}"
             assert signal[field] is not None, f"Required field {field} cannot be null"
-        
+
         # Data type validation
         assert isinstance(signal["signal_id"], str)
         assert isinstance(signal["symbol"], str)
         assert isinstance(signal["signal_type"], str)
         assert isinstance(signal["timestamp"], str)
-        
+
         # Confidence validation if present
         if "confidence" in signal:
             confidence = signal["confidence"]
             assert isinstance(confidence, (int, float))
             assert 0.0 <= confidence <= 1.0, "Confidence must be between 0.0 and 1.0"
-        
+
         # Instrument key format validation
         if "instrument_key" in signal:
             instrument_key = signal["instrument_key"]
@@ -133,7 +131,7 @@ class TestScreenerServiceContract:
             exchange, symbol = instrument_key.split(":", 1)
             assert len(exchange) > 0, "Exchange part cannot be empty"
             assert len(symbol) > 0, "Symbol part cannot be empty"
-        
+
         # Metadata validation
         if "metadata" in signal:
             metadata = signal["metadata"]
@@ -146,7 +144,7 @@ class TestScreenerServiceContract:
         """Test GET /api/v2/signals/history returns valid contract structure."""
         with patch('app.core.auth.verify_jwt_token') as mock_auth:
             mock_auth.return_value = {"user_id": "test_user", "sub": "test_user"}
-            
+
             # Mock historical data service
             with patch('app.services.historical_data_manager.HistoricalDataManager.get_signal_history') as mock_history:
                 mock_history.return_value = {
@@ -162,7 +160,7 @@ class TestScreenerServiceContract:
                     ],
                     "total": 1
                 }
-                
+
                 response = client.get(
                     "/api/v2/signals/history",
                     headers={"Authorization": mock_user_token},
@@ -172,22 +170,22 @@ class TestScreenerServiceContract:
                         "limit": 100
                     }
                 )
-                
+
                 assert response.status_code == 200
                 data = response.json()
-                
+
                 # Required response structure
                 assert "signals" in data
                 assert "pagination" in data
                 assert isinstance(data["signals"], list)
                 assert isinstance(data["pagination"], dict)
-                
+
                 # Pagination structure
                 pagination = data["pagination"]
                 required_pagination_fields = ["total", "limit", "offset", "has_more"]
                 for field in required_pagination_fields:
                     assert field in pagination
-                
+
                 # Validate signal format in historical response
                 for signal in data["signals"]:
                     self._validate_signal_format(signal)
@@ -196,10 +194,10 @@ class TestScreenerServiceContract:
     async def test_signal_performance_metrics_contract(self, client, mock_user_token):
         """Test GET /api/v2/signals/{signal_id}/performance returns valid structure."""
         signal_id = "sig_1234567890"
-        
+
         with patch('app.core.auth.verify_jwt_token') as mock_auth:
             mock_auth.return_value = {"user_id": "test_user", "sub": "test_user"}
-            
+
             # Mock performance metrics service
             with patch('app.services.signal_performance_tracker.get_signal_performance') as mock_perf:
                 mock_perf.return_value = {
@@ -210,25 +208,25 @@ class TestScreenerServiceContract:
                     "total_signals": 156,
                     "profitable_signals": 114
                 }
-                
+
                 response = client.get(
                     f"/api/v2/signals/{signal_id}/performance",
                     headers={"Authorization": mock_user_token}
                 )
-                
+
                 if response.status_code == 200:  # Feature may not be implemented yet
                     data = response.json()
-                    
+
                     # Required performance structure
                     assert "signal_id" in data
                     assert "performance_metrics" in data
-                    
+
                     metrics = data["performance_metrics"]
                     required_metrics = [
-                        "success_rate", "avg_return", "sharpe_ratio", 
+                        "success_rate", "avg_return", "sharpe_ratio",
                         "max_drawdown", "total_signals", "profitable_signals"
                     ]
-                    
+
                     for metric in required_metrics:
                         assert metric in metrics
                         assert isinstance(metrics[metric], (int, float))
@@ -238,12 +236,12 @@ class TestScreenerServiceContract:
         """Test error responses follow consistent format."""
         # Test unauthenticated request
         response = client.get("/api/v2/signals/stream/available")
-        
+
         if response.status_code in [401, 403]:
             # Error responses should have consistent structure
             data = response.json()
             assert "error" in data or "detail" in data
-            
+
             # Validate error structure if using contract format
             if "error" in data:
                 error = data["error"]
@@ -257,19 +255,19 @@ class TestScreenerServiceContract:
         """Test rate limiting headers are present and valid."""
         with patch('app.core.auth.verify_jwt_token') as mock_auth:
             mock_auth.return_value = {"user_id": "test_user", "sub": "test_user"}
-            
+
             response = client.get(
                 "/api/v2/signals/stream/available",
                 headers={"Authorization": mock_user_token}
             )
-            
+
             # Rate limit headers (may not be implemented yet)
             rate_limit_headers = [
                 "X-RateLimit-Limit",
-                "X-RateLimit-Remaining", 
+                "X-RateLimit-Remaining",
                 "X-RateLimit-Reset"
             ]
-            
+
             for header in rate_limit_headers:
                 if header in response.headers:
                     # If present, should be valid integer
@@ -279,17 +277,17 @@ class TestScreenerServiceContract:
     async def test_cors_headers_for_screener_frontend(self, client):
         """Test CORS headers allow screener frontend integration."""
         response = client.options("/api/v2/signals/stream/available")
-        
+
         # Should allow OPTIONS for CORS preflight
         assert response.status_code in [200, 204, 405]  # 405 if not implemented
-        
+
         # Check for CORS headers if implemented
         cors_headers = [
             "Access-Control-Allow-Origin",
             "Access-Control-Allow-Methods",
             "Access-Control-Allow-Headers"
         ]
-        
+
         for header in cors_headers:
             if header in response.headers:
                 assert len(response.headers[header]) > 0
@@ -298,13 +296,13 @@ class TestScreenerServiceContract:
     async def test_internal_api_key_authentication(self, client):
         """Test service-to-service authentication works."""
         internal_api_key = "test_internal_key"
-        
+
         with patch.object(settings, 'internal_api_key', internal_api_key):
             response = client.get(
                 "/api/v2/signals/stream/available",
                 headers={"X-Internal-API-Key": internal_api_key}
             )
-            
+
             # Should accept internal API key for service-to-service calls
             # May return different status based on implementation
             assert response.status_code in [200, 401, 501]
@@ -314,9 +312,9 @@ def run_screener_contract_validation():
     """Run screener service contract validation tests."""
     import subprocess
     import sys
-    
+
     print("🔍 Running Screener Service Contract Validation Tests...")
-    
+
     cmd = [
         sys.executable, "-m", "pytest",
         __file__,
@@ -326,25 +324,25 @@ def run_screener_contract_validation():
         "--cov-report=json:coverage_reports/coverage_screener_contract.json",
         "-v"
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     print("STDOUT:")
     print(result.stdout)
-    
+
     if result.stderr:
         print("STDERR:")
         print(result.stderr)
-    
+
     return result.returncode == 0
 
 
 if __name__ == "__main__":
     print("🤝 Screener Service Contract Validation")
     print("=" * 60)
-    
+
     success = run_screener_contract_validation()
-    
+
     if success:
         print("\n✅ Screener service contract validation passed!")
         print("📋 Contract compatibility verified for:")

@@ -5,12 +5,12 @@ Comprehensive monitoring infrastructure that enhances existing capabilities
 with production-critical metrics for operations management.
 """
 
-from .enhanced_metrics import get_enhanced_metrics_collector, ProductionMetricsCollector
+from .enhanced_metrics import ProductionMetricsCollector, get_enhanced_metrics_collector
 from .production_alerting import ProductionAlertingRules
 
 __all__ = [
     'get_enhanced_metrics_collector',
-    'ProductionMetricsCollector', 
+    'ProductionMetricsCollector',
     'ProductionAlertingRules'
 ]
 
