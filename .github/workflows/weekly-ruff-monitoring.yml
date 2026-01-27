@@ -1,0 +1,503 @@
+name: Weekly Ruff Quality Monitoring
+
+on:
+  # Run every Monday at 6 AM UTC
+  schedule:
+    - cron: '0 6 * * 1'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      force_alert:
+        description: 'Force P0 alert for testing'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  weekly-quality-monitoring:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for trend analysis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.1.9
+          
+      - name: Create evidence directories
+        run: |
+          mkdir -p evidence/weekly/
+          mkdir -p evidence/weekly/alerts/
+          mkdir -p evidence/weekly/reports/
+          mkdir -p evidence/weekly/trends/
+          
+      - name: Run Weekly Ruff Monitoring
+        id: monitoring
+        run: |
+          echo "🔍 Running weekly Ruff quality monitoring..."
+          
+          # Get current timestamp
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          DATE_READABLE=$(date +"%B %d, %Y at %H:%M UTC")
+          
+          # Run Ruff check with statistics
+          echo "📊 Collecting current violation statistics..."
+          python -m ruff check . --statistics > ruff_stats_raw.txt 2>&1 || true
+          python -m ruff check . --output-format=json > ruff_violations.json 2>/dev/null || echo "[]" > ruff_violations.json
+          
+          # Parse statistics
+          echo "🔢 Parsing violation data..."
+          python3 << 'EOF'
+          import json
+          import re
+          import os
+          from datetime import datetime
+          
+          # Parse statistics
+          with open('ruff_stats_raw.txt', 'r') as f:
+              stats_content = f.read()
+          
+          # Extract violation counts
+          total_violations = 0
+          p0_violations = 0
+          auto_fixable = 0
+          violation_breakdown = {}
+          
+          # P0 rules that actually block CI (syntax errors and critical issues)
+          p0_rules = ['E999', 'F821', 'F822', 'F811', 'F402', 'F823', 'E902']
+          
+          for line in stats_content.split('\n'):
+              if line.strip() and not line.startswith('[*]'):
+                  parts = line.split('\t')
+                  if len(parts) >= 3:
+                      try:
+                          count = int(parts[0].strip())
+                          rule = parts[1].strip()
+                          flags = parts[2].strip() if len(parts) > 2 else ''
+                          
+                          total_violations += count
+                          violation_breakdown[rule] = count
+                          
+                          # Check if P0 (critical)
+                          if rule in p0_rules:
+                              p0_violations += count
+                          
+                          # Check if auto-fixable
+                          if '[*]' in flags:
+                              auto_fixable += count
+                      except ValueError:
+                          continue
+          
+          # Load violation details
+          try:
+              with open('ruff_violations.json', 'r') as f:
+                  violation_details = json.load(f)
+          except:
+              violation_details = []
+          
+          # Create monitoring report
+          timestamp = os.environ.get('TIMESTAMP', datetime.now().strftime("%Y%m%d_%H%M%S"))
+          
+          weekly_report = {
+              "monitoring_timestamp": datetime.now().isoformat(),
+              "report_id": f"weekly_monitoring_{timestamp}",
+              "quality_metrics": {
+                  "total_violations": total_violations,
+                  "p0_critical_violations": p0_violations,
+                  "auto_fixable_violations": auto_fixable,
+                  "violation_breakdown": violation_breakdown,
+                  "files_affected": len(set(v.get('filename', '') for v in violation_details)),
+                  "ci_blocking": p0_violations > 0
+              },
+              "quality_status": {
+                  "p0_compliant": p0_violations == 0,
+                  "improvement_available": auto_fixable > 0,
+                  "quality_grade": "PASS" if p0_violations == 0 else "FAIL",
+                  "trend_direction": "stable"  # Will be calculated by trend analysis
+              },
+              "violation_details": violation_details[:50],  # Limit for size
+              "monitoring_metadata": {
+                  "ruff_version": "0.1.9",
+                  "python_version": "3.11",
+                  "monitoring_frequency": "weekly",
+                  "alert_threshold_p0": 1
+              }
+          }
+          
+          # Save weekly report
+          with open(f'evidence/weekly/weekly_monitoring_report_{timestamp}.json', 'w') as f:
+              json.dump(weekly_report, f, indent=2, default=str)
+          
+          # Set outputs for GitHub Actions
+          print(f"::set-output name=total_violations::{total_violations}")
+          print(f"::set-output name=p0_violations::{p0_violations}")
+          print(f"::set-output name=auto_fixable::{auto_fixable}")
+          print(f"::set-output name=report_file::weekly_monitoring_report_{timestamp}.json")
+          print(f"::set-output name=ci_blocking::{'true' if p0_violations > 0 else 'false'}")
+          
+          # Create alert if P0 violations found
+          if p0_violations > 0 or os.environ.get('FORCE_ALERT') == 'true':
+              alert_data = {
+                  "alert_type": "P0_REGRESSION" if p0_violations > 0 else "TEST_ALERT",
+                  "severity": "HIGH" if p0_violations > 0 else "INFO", 
+                  "timestamp": datetime.now().isoformat(),
+                  "metrics": weekly_report["quality_metrics"],
+                  "action_required": p0_violations > 0,
+                  "alert_message": f"🚨 P0 REGRESSION DETECTED: {p0_violations} blocking violations found!" if p0_violations > 0 else "🧪 Test alert triggered manually"
+              }
+              
+              with open(f'evidence/weekly/alerts/p0_alert_{timestamp}.json', 'w') as f:
+                  json.dump(alert_data, f, indent=2, default=str)
+              
+              print(f"::set-output name=alert_triggered::true")
+              print(f"::set-output name=alert_file::p0_alert_{timestamp}.json")
+          else:
+              print(f"::set-output name=alert_triggered::false")
+          EOF
+          
+          echo "✅ Weekly monitoring data collected"
+          
+      - name: Analyze Quality Trends
+        id: trends
+        run: |
+          echo "📈 Analyzing quality trends..."
+          
+          python3 << 'EOF'
+          import json
+          import os
+          from glob import glob
+          from datetime import datetime, timedelta
+          import statistics
+          
+          # Get all historical weekly reports
+          report_files = sorted(glob('evidence/weekly/weekly_monitoring_report_*.json'))
+          
+          if len(report_files) < 2:
+              print("📋 Insufficient data for trend analysis (need at least 2 reports)")
+              trend_data = {
+                  "trend_analysis": "insufficient_data",
+                  "weeks_analyzed": len(report_files),
+                  "message": "Need at least 2 weekly reports for trend analysis"
+              }
+          else:
+              print(f"📊 Analyzing trends from {len(report_files)} weekly reports...")
+              
+              # Load recent reports (last 8 weeks)
+              recent_reports = []
+              for file_path in report_files[-8:]:
+                  try:
+                      with open(file_path, 'r') as f:
+                          report = json.load(f)
+                          recent_reports.append(report)
+                  except Exception as e:
+                      print(f"⚠️ Error reading {file_path}: {e}")
+              
+              if len(recent_reports) >= 2:
+                  # Calculate trends
+                  total_violations = [r["quality_metrics"]["total_violations"] for r in recent_reports]
+                  p0_violations = [r["quality_metrics"]["p0_critical_violations"] for r in recent_reports]
+                  auto_fixable = [r["quality_metrics"]["auto_fixable_violations"] for r in recent_reports]
+                  
+                  # Determine trend direction
+                  if len(total_violations) >= 2:
+                      recent_avg = statistics.mean(total_violations[-3:]) if len(total_violations) >= 3 else total_violations[-1]
+                      older_avg = statistics.mean(total_violations[:-3]) if len(total_violations) >= 4 else total_violations[0]
+                      
+                      if recent_avg < older_avg * 0.95:
+                          trend_direction = "improving"
+                      elif recent_avg > older_avg * 1.05:
+                          trend_direction = "degrading" 
+                      else:
+                          trend_direction = "stable"
+                  else:
+                      trend_direction = "stable"
+                  
+                  trend_data = {
+                      "trend_analysis": "complete",
+                      "weeks_analyzed": len(recent_reports),
+                      "trend_direction": trend_direction,
+                      "metrics_history": {
+                          "total_violations": total_violations,
+                          "p0_violations": p0_violations,
+                          "auto_fixable": auto_fixable
+                      },
+                      "summary": {
+                          "current_total": total_violations[-1] if total_violations else 0,
+                          "previous_total": total_violations[-2] if len(total_violations) > 1 else 0,
+                          "change_since_last": total_violations[-1] - total_violations[-2] if len(total_violations) > 1 else 0,
+                          "p0_stable": all(v == 0 for v in p0_violations[-4:]) if len(p0_violations) >= 4 else p0_violations[-1] == 0
+                      }
+                  }
+              else:
+                  trend_data = {"trend_analysis": "insufficient_data", "message": "Need at least 2 valid reports"}
+          
+          # Save trend analysis
+          timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+          with open(f'evidence/weekly/trends/trend_analysis_{timestamp}.json', 'w') as f:
+              json.dump(trend_data, f, indent=2, default=str)
+          
+          print(f"::set-output name=trend_direction::{trend_data.get('trend_direction', 'unknown')}")
+          print(f"::set-output name=trend_file::trend_analysis_{timestamp}.json")
+          EOF
+
+      - name: Generate Executive Summary
+        run: |
+          echo "📋 Generating executive summary..."
+          
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          DATE_READABLE=$(date +"%B %d, %Y")
+          
+          python3 << 'EOF'
+          import json
+          import os
+          from datetime import datetime
+          
+          # Load latest monitoring data
+          total_violations = int(os.environ.get('TOTAL_VIOLATIONS', '0'))
+          p0_violations = int(os.environ.get('P0_VIOLATIONS', '0'))
+          auto_fixable = int(os.environ.get('AUTO_FIXABLE', '0'))
+          trend_direction = os.environ.get('TREND_DIRECTION', 'stable')
+          
+          timestamp = os.environ.get('TIMESTAMP')
+          date_readable = os.environ.get('DATE_READABLE')
+          
+          # Generate executive summary
+          summary_content = f"""# Weekly Code Quality Report
+## {date_readable}
+
+### 🎯 Quality Status Overview
+
+| Metric | Current | Status |
+|--------|---------|--------|
+| **P0 Critical Violations** | {p0_violations} | {'🟢 PASS' if p0_violations == 0 else '🔴 FAIL'} |
+| **Total Violations** | {total_violations:,} | {'🟡 Improving' if trend_direction == 'improving' else '🔵 Stable' if trend_direction == 'stable' else '🟠 Needs Attention'} |
+| **Auto-Fixable** | {auto_fixable:,} | {'🛠️ Available' if auto_fixable > 0 else '✨ Clean'} |
+| **CI Pipeline** | {'Blocked' if p0_violations > 0 else 'Unblocked'} | {'🔴 Action Required' if p0_violations > 0 else '🟢 Operational'} |
+
+### 📈 Quality Trends
+
+**Trend Direction:** {trend_direction.title()}
+
+### 🚨 Alerts & Actions
+
+{'**🚨 CRITICAL: P0 violations detected!**' if p0_violations > 0 else '✅ No critical issues detected'}
+{f'- **{p0_violations} P0 violations** are blocking CI pipeline' if p0_violations > 0 else '- CI pipeline remains unblocked'}
+{f'- **Immediate action required** to resolve blocking issues' if p0_violations > 0 else '- Continue regular quality maintenance'}
+{f'- **{auto_fixable} violations** can be auto-fixed with `ruff --fix`' if auto_fixable > 0 else ''}
+
+### 📊 Automation Status
+
+- **Weekly Monitoring:** ✅ Active
+- **P0 Detection:** ✅ {'Alert Triggered' if p0_violations > 0 else 'Monitoring'}
+- **Style Cleanup:** {'🛠️ Needed' if auto_fixable > 0 else '✅ Current'}
+- **Evidence Collection:** ✅ Complete
+
+### 🔗 Resources
+
+- **Detailed Report:** `evidence/weekly/weekly_monitoring_report_{timestamp}.json`
+- **Trend Analysis:** `evidence/weekly/trends/trend_analysis_{timestamp}.json`
+- **Style Cleanup:** `scripts/ruff_style_cleanup_automation.py`
+{'- **Alert Details:** `evidence/weekly/alerts/p0_alert_' + timestamp + '.json`' if p0_violations > 0 else ''}
+
+### 📞 Next Steps
+
+{f'1. **URGENT:** Fix {p0_violations} P0 violations to unblock CI' if p0_violations > 0 else '1. Continue monitoring for regressions'}
+{f'2. Run style cleanup automation to fix {auto_fixable} auto-fixable violations' if auto_fixable > 0 else '2. Maintain current quality standards'}
+{'3. Review alert details and triage critical violations' if p0_violations > 0 else '3. Review weekly trends for improvement opportunities'}
+
+---
+**Report Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC  
+**Monitoring Pipeline:** Weekly Ruff Quality Monitoring v1.0  
+**Next Report:** {(datetime.now() + timedelta(days=7)).strftime('%B %d, %Y')}
+"""
+          
+          # Save executive summary
+          with open(f'evidence/weekly/reports/executive_summary_{timestamp}.md', 'w') as f:
+              f.write(summary_content)
+          
+          print("📋 Executive summary generated")
+          EOF
+        env:
+          TOTAL_VIOLATIONS: ${{ steps.monitoring.outputs.total_violations }}
+          P0_VIOLATIONS: ${{ steps.monitoring.outputs.p0_violations }}
+          AUTO_FIXABLE: ${{ steps.monitoring.outputs.auto_fixable }}
+          TREND_DIRECTION: ${{ steps.trends.outputs.trend_direction }}
+          TIMESTAMP: $(date +"%Y%m%d_%H%M%S")
+          DATE_READABLE: $(date +"%B %d, %Y")
+
+      - name: Commit Monitoring Data
+        run: |
+          echo "💾 Committing monitoring data to repository..."
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "Weekly Quality Monitor"
+          
+          # Add all monitoring files
+          git add evidence/weekly/
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "📝 No changes to commit"
+          else
+            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+            DATE_READABLE=$(date +"%B %d, %Y")
+            
+            git commit -m "monitoring: weekly code quality report - $DATE_READABLE
+
+Weekly Ruff monitoring results:
+- Total violations: ${{ steps.monitoring.outputs.total_violations }}
+- P0 critical: ${{ steps.monitoring.outputs.p0_violations }}
+- Auto-fixable: ${{ steps.monitoring.outputs.auto_fixable }}
+- CI status: ${{ steps.monitoring.outputs.ci_blocking == 'true' && 'BLOCKED' || 'UNBLOCKED' }}
+- Trend: ${{ steps.trends.outputs.trend_direction }}
+
+Evidence stored in evidence/weekly/ for historical tracking.
+
+🤖 Generated by Weekly Quality Monitor
+
+Co-Authored-By: GitHub Actions <action@github.com>"
+            
+            echo "✅ Monitoring data committed"
+          fi
+
+      - name: Create P0 Alert Issue
+        if: steps.monitoring.outputs.alert_triggered == 'true' && steps.monitoring.outputs.p0_violations != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const alertData = require('./evidence/weekly/alerts/${{ steps.monitoring.outputs.alert_file }}');
+            
+            const issueTitle = `🚨 P0 Code Quality Regression - ${alertData.metrics.p0_critical_violations} Critical Violations`;
+            
+            const issueBody = `# 🚨 P0 Code Quality Alert
+            
+            **Alert Triggered:** ${new Date(alertData.timestamp).toLocaleString()}
+            **Severity:** ${alertData.severity}
+            
+            ## Critical Issues Detected
+            
+            - **P0 Violations:** ${alertData.metrics.p0_critical_violations}
+            - **Total Violations:** ${alertData.metrics.total_violations}
+            - **CI Status:** ${'BLOCKED'}
+            - **Files Affected:** ${alertData.metrics.files_affected}
+            
+            ## Immediate Actions Required
+            
+            1. **🔥 URGENT:** Fix P0 violations to unblock CI pipeline
+            2. **🔍 INVESTIGATE:** Review what introduced these violations  
+            3. **🛠️ AUTO-FIX:** ${alertData.metrics.auto_fixable_violations} violations can be auto-fixed
+            4. **📊 MONITOR:** Track progress until P0 count returns to zero
+            
+            ## Resources
+            
+            - **Detailed Report:** \`evidence/weekly/${{ steps.monitoring.outputs.report_file }}\`
+            - **Alert Data:** \`evidence/weekly/alerts/${{ steps.monitoring.outputs.alert_file }}\`
+            - **Style Cleanup Tool:** \`scripts/ruff_style_cleanup_automation.py\`
+            - **Fix Command:** \`python -m ruff check . --fix\`
+            
+            ## Auto-Resolution
+            
+            This issue will auto-close when P0 violations return to zero in the next weekly scan.
+            
+            ---
+            **🤖 This alert was generated automatically by Weekly Quality Monitor**`;
+            
+            // Check if similar issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['P0-regression', 'code-quality'],
+              state: 'open'
+            });
+            
+            if (issues.length === 0) {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['P0-regression', 'code-quality', 'urgent']
+              });
+              console.log('🚨 P0 regression issue created');
+            } else {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body: `📈 **Updated Alert - ${new Date().toLocaleString()}**\n\n${issueBody}`
+              });
+              console.log('📝 Updated existing P0 regression issue');
+            }
+
+      - name: Close P0 Issues (if resolved)
+        if: steps.monitoring.outputs.p0_violations == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find and close any open P0 regression issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['P0-regression', 'code-quality'],
+              state: 'open'
+            });
+            
+            for (const issue of issues) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ **P0 Regression Resolved**\n\nAll P0 violations have been fixed. CI pipeline is now unblocked.\n\n**Resolution Time:** ${new Date().toLocaleString()}\n\n🤖 Auto-closed by Weekly Quality Monitor`
+              });
+            }
+            
+            if (issues.length > 0) {
+              console.log(`✅ Closed ${issues.length} resolved P0 regression issue(s)`);
+            }
+
+      - name: Summary
+        run: |
+          echo "📊 Weekly Quality Monitoring Complete"
+          echo "=================================="
+          echo "Total Violations: ${{ steps.monitoring.outputs.total_violations }}"
+          echo "P0 Critical: ${{ steps.monitoring.outputs.p0_violations }}"
+          echo "Auto-fixable: ${{ steps.monitoring.outputs.auto_fixable }}"
+          echo "CI Status: ${{ steps.monitoring.outputs.ci_blocking == 'true' && 'BLOCKED' || 'UNBLOCKED' }}"
+          echo "Alert Triggered: ${{ steps.monitoring.outputs.alert_triggered }}"
+          echo "Trend Direction: ${{ steps.trends.outputs.trend_direction }}"
+          echo "=================================="
+          
+          if [ "${{ steps.monitoring.outputs.p0_violations }}" != "0" ]; then
+            echo "🚨 ACTION REQUIRED: P0 violations detected!"
+            echo "Check the created GitHub issue for details"
+            exit 1
+          else
+            echo "✅ Quality monitoring passed - no P0 violations"
+          fi

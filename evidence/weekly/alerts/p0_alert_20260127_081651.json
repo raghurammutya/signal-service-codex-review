@@ -1,0 +1,899 @@
+{
+  "alert_type": "P0_REGRESSION",
+  "severity": "HIGH",
+  "timestamp": "2026-01-27T08:16:51.492540",
+  "metrics": {
+    "total_violations": 871,
+    "p0_critical_violations": 175,
+    "auto_fixable_violations": 91,
+    "violation_breakdown": {
+      "B904": 278,
+      "SIM117": 158,
+      "UP035": 136,
+      "W293": 53,
+      "E402": 46,
+      "E722": 40,
+      "SIM102": 39,
+      "F401": 21,
+      "UP006": 19,
+      "B007": 13,
+      "B017": 13,
+      "SIM105": 11,
+      "B023": 7,
+      "SIM103": 6,
+      "F541": 5,
+      "W291": 3,
+      "UP007": 3,
+      "RET504": 2,
+      "SIM108": 2,
+      "N802": 2,
+      "N818": 2,
+      "E721": 2,
+      "E741": 2,
+      "F841": 2,
+      "B019": 1,
+      "B025": 1,
+      "C401": 1,
+      "I001": 1,
+      "W292": 1,
+      "UP015": 1
+    },
+    "ci_blocking": true,
+    "violation_details": [
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 153,
+          "row": 212
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 212
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 212,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 93,
+          "row": 269
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 269
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 269,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 106,
+          "row": 270
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 270
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 270,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 91,
+          "row": 272
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 272
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 272,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 76,
+          "row": 347
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 347
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 347,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 82,
+          "row": 419
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 419
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 419,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 80,
+          "row": 441
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 441
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 441,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 108,
+          "row": 532
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 532
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 532,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 102,
+          "row": 533
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 533
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 533,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 110,
+          "row": 535
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 535
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 535,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 116,
+          "row": 577
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 577
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 577,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 108,
+          "row": 578
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 578
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 578,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 108,
+          "row": 580
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 580
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 580,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 108,
+          "row": 625
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 625
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 625,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 99,
+          "row": 626
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 626
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 626,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 107,
+          "row": 628
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 628
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 628,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 95,
+          "row": 661
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 661
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 661,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 102,
+          "row": 662
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 662
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 662,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 87,
+          "row": 664
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 664
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 664,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 94,
+          "row": 736
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 736
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 736,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 105,
+          "row": 737
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 737
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 737,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 86,
+          "row": 739
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 739
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 739,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 1139
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/enhanced_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 1139
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 1139,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 1154
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/enhanced_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 1154
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 1154,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 1180
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/enhanced_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 1180
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 1180,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 1208
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/enhanced_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 1208
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 1208,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 1230
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/enhanced_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 1230
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 1230,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 73,
+          "row": 58
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 58
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 58,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 73,
+          "row": 84
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 84
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 84,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 81,
+          "row": 109
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 109
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 109,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 89,
+          "row": 134
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 134
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 134,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 146,
+          "row": 165
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+        "fix": null,
+        "location": {
+          "column": 13,
+          "row": 165
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 165,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 91,
+          "row": 183
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 183
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 183,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "F401",
+        "end_location": {
+          "column": 63,
+          "row": 48
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/simple_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 45,
+          "row": 48
+        },
+        "message": "`app.core.health_checker.get_health_checker` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+        "noqa_row": 48,
+        "url": "https://docs.astral.sh/ruff/rules/unused-import"
+      },
+      {
+        "cell": null,
+        "code": "F401",
+        "end_location": {
+          "column": 73,
+          "row": 54
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/simple_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 46,
+          "row": 54
+        },
+        "message": "`app.core.circuit_breaker.get_circuit_breaker_manager` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+        "noqa_row": 54,
+        "url": "https://docs.astral.sh/ruff/rules/unused-import"
+      },
+      {
+        "cell": null,
+        "code": "F401",
+        "end_location": {
+          "column": 79,
+          "row": 60
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/simple_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 49,
+          "row": 60
+        },
+        "message": "`monitoring.enhanced_metrics.get_enhanced_metrics_collector` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+        "noqa_row": 60,
+        "url": "https://docs.astral.sh/ruff/rules/unused-import"
+      },
+      {
+        "cell": null,
+        "code": "F401",
+        "end_location": {
+          "column": 54,
+          "row": 66
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/simple_monitoring.py",
+        "fix": null,
+        "location": {
+          "column": 39,
+          "row": 66
+        },
+        "message": "`prometheus_client.generate_latest` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+        "noqa_row": 66,
+        "url": "https://docs.astral.sh/ruff/rules/unused-import"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 156,
+          "row": 24
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 24
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 24,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 134,
+          "row": 54
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 54
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 54,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 37,
+          "row": 63
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 63
+        },
+        "message": "Module level import not at top of file",
+        "noqa_row": 63,
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 165
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 165
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 165,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 203
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 203
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 203,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 257
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 257
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 257,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 315
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 315
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 315,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 352
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 352
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 352,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 376
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 376
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 376,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 407
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 407
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 407,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 434
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 434
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 434,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "B904",
+        "end_location": {
+          "column": 60,
+          "row": 495
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/admin.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 495
+        },
+        "message": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+        "noqa_row": 495,
+        "url": "https://docs.astral.sh/ruff/rules/raise-without-from-inside-except"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 37,
+          "row": 14
+        },
+        "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/batch.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 14
+        },
+        "message": "Module level import not at top of file",
+        "noqa_row": 14,
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "files_affected": 227
+  },
+  "action_required": true,
+  "alert_message": "\ud83d\udea8 P0 REGRESSION DETECTED: 175 blocking violations found!",
+  "forced": false
+}

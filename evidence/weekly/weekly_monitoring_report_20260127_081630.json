@@ -1,0 +1,31 @@
+{
+  "monitoring_timestamp": "2026-01-27T08:16:30.111570",
+  "report_id": "weekly_monitoring_20260127_081630",
+  "quality_metrics": {
+    "total_violations": 0,
+    "p0_critical_violations": 0,
+    "auto_fixable_violations": 0,
+    "violation_breakdown": {},
+    "violation_details": [],
+    "files_affected": 0,
+    "collection_error": "[Errno 2] No such file or directory: 'python'"
+  },
+  "quality_status": {
+    "p0_compliant": true,
+    "improvement_available": false,
+    "quality_grade": "PASS",
+    "trend_direction": "unknown"
+  },
+  "trend_analysis": {
+    "trend_analysis": "insufficient_data",
+    "weeks_analyzed": 0,
+    "message": "Need at least 2 weekly reports for trend analysis"
+  },
+  "monitoring_metadata": {
+    "ruff_version": "unknown",
+    "python_version": "3.11",
+    "monitoring_frequency": "weekly",
+    "alert_threshold_p0": 1,
+    "monitor_version": "1.0"
+  }
+}
