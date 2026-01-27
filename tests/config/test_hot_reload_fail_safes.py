@@ -97,7 +97,7 @@ class TestSchemaValidation:
         with patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_base_init:
             mock_base_init.return_value = None
             config = HotReloadableSignalServiceConfig()
-            config.environment = 'test'  # Set environment for validation
+            config.environment = 'test'  # set environment for validation
             return config
 
     def test_database_url_validation(self, hot_config):

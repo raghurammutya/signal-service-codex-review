@@ -240,9 +240,8 @@ class TestTokenValidator:
         token = jwt.encode(payload, jwt_secret, algorithm="HS256")
 
         # Mock blacklist check
-        with patch.object(validator, '_is_token_blacklisted', return_value=True):
-            with pytest.raises(AuthenticationError, match="Token has been revoked"):
-                validator.validate_token(token)
+        with patch.object(validator, '_is_token_blacklisted', return_value=True), pytest.raises(AuthenticationError, match="Token has been revoked"):
+            validator.validate_token(token)
 
     def test_user_role_validation(self, validator, mock_settings, jwt_secret):
         """Test user role validation in token"""
@@ -443,28 +442,25 @@ class TestIntegratedAuthFlow:
     async def test_complete_auth_flow_success(self, client):
         """Test complete authentication flow with valid credentials"""
         # Mock all auth components
-        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway:
-            with patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token:
-                with patch('app.middleware.entitlement_middleware.EntitlementMiddleware.check_route_entitlement') as mock_entitlement:
+        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway, patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token, patch('app.middleware.entitlement_middleware.EntitlementMiddleware.check_route_entitlement') as mock_entitlement:
+                mock_gateway.return_value = True
+                mock_token.return_value = {
+                    "user_id": "user_123",
+                    "role": "premium"
+                }
+                mock_entitlement.return_value = True
 
-                    mock_gateway.return_value = True
-                    mock_token.return_value = {
-                        "user_id": "user_123",
-                        "role": "premium"
+                response = await client.get(
+                    "/api/v2/health",
+                    headers={
+                        "X-Gateway-Secret": "valid-secret",
+                        "X-User-ID": "user_123",
+                        "Authorization": "Bearer valid-token",
+                        "X-Forwarded-For": "127.0.0.1"
                     }
-                    mock_entitlement.return_value = True
+                )
 
-                    response = await client.get(
-                        "/api/v2/health",
-                        headers={
-                            "X-Gateway-Secret": "valid-secret",
-                            "X-User-ID": "user_123",
-                            "Authorization": "Bearer valid-token",
-                            "X-Forwarded-For": "127.0.0.1"
-                        }
-                    )
-
-                    assert response.status_code == 200
+                assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_auth_flow_gateway_failure(self, client):
@@ -487,69 +483,61 @@ class TestIntegratedAuthFlow:
     @pytest.mark.asyncio
     async def test_auth_flow_token_failure(self, client):
         """Test auth flow failure at token validation level"""
-        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway:
-            with patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token:
+        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway, patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token:
+            mock_gateway.return_value = True
+            mock_token.side_effect = AuthenticationError("Invalid token")
 
+            response = await client.get(
+                "/api/v2/health",
+                headers={
+                    "X-Gateway-Secret": "valid-secret",
+                    "X-User-ID": "user_123",
+                    "Authorization": "Bearer invalid-token",
+                    "X-Forwarded-For": "127.0.0.1"
+                }
+            )
+
+            assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_auth_flow_entitlement_failure(self, client):
+        """Test auth flow failure at entitlement level"""
+        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway, patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token, patch('app.middleware.entitlement_middleware.EntitlementMiddleware.check_route_entitlement') as mock_entitlement:
                 mock_gateway.return_value = True
-                mock_token.side_effect = AuthenticationError("Invalid token")
+                mock_token.return_value = {"user_id": "user_123", "role": "basic"}
+                mock_entitlement.side_effect = AuthorizationError("F&O access not permitted")
+
+                response = await client.get(
+                    "/api/v2/fo/greeks",  # F&O endpoint
+                    headers={
+                        "X-Gateway-Secret": "valid-secret",
+                        "X-User-ID": "user_123",
+                        "Authorization": "Bearer valid-token",
+                        "X-Forwarded-For": "127.0.0.1"
+                    }
+                )
+
+                assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_rate_limiting_integration(self, client):
+        """Test rate limiting integration with auth system"""
+        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway, patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token, patch('app.middleware.ratelimit.RateLimiter.check_rate_limit') as mock_rate_limit:
+                mock_gateway.return_value = True
+                mock_token.return_value = {"user_id": "user_123", "role": "basic"}
+                mock_rate_limit.return_value = False  # Rate limit exceeded
 
                 response = await client.get(
                     "/api/v2/health",
                     headers={
                         "X-Gateway-Secret": "valid-secret",
                         "X-User-ID": "user_123",
-                        "Authorization": "Bearer invalid-token",
+                        "Authorization": "Bearer valid-token",
                         "X-Forwarded-For": "127.0.0.1"
                     }
                 )
 
-                assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_auth_flow_entitlement_failure(self, client):
-        """Test auth flow failure at entitlement level"""
-        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway:
-            with patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token:
-                with patch('app.middleware.entitlement_middleware.EntitlementMiddleware.check_route_entitlement') as mock_entitlement:
-
-                    mock_gateway.return_value = True
-                    mock_token.return_value = {"user_id": "user_123", "role": "basic"}
-                    mock_entitlement.side_effect = AuthorizationError("F&O access not permitted")
-
-                    response = await client.get(
-                        "/api/v2/fo/greeks",  # F&O endpoint
-                        headers={
-                            "X-Gateway-Secret": "valid-secret",
-                            "X-User-ID": "user_123",
-                            "Authorization": "Bearer valid-token",
-                            "X-Forwarded-For": "127.0.0.1"
-                        }
-                    )
-
-                    assert response.status_code == 403
-
-    @pytest.mark.asyncio
-    async def test_rate_limiting_integration(self, client):
-        """Test rate limiting integration with auth system"""
-        with patch('app.core.auth.gateway_trust.GatewayTrustValidator.validate_gateway_trust') as mock_gateway:
-            with patch('app.core.auth.token_validator.TokenValidator.validate_token') as mock_token:
-                with patch('app.middleware.ratelimit.RateLimiter.check_rate_limit') as mock_rate_limit:
-
-                    mock_gateway.return_value = True
-                    mock_token.return_value = {"user_id": "user_123", "role": "basic"}
-                    mock_rate_limit.return_value = False  # Rate limit exceeded
-
-                    response = await client.get(
-                        "/api/v2/health",
-                        headers={
-                            "X-Gateway-Secret": "valid-secret",
-                            "X-User-ID": "user_123",
-                            "Authorization": "Bearer valid-token",
-                            "X-Forwarded-For": "127.0.0.1"
-                        }
-                    )
-
-                    assert response.status_code == 429  # Too Many Requests
+                assert response.status_code == 429  # Too Many Requests
 
 
 class TestSecurityAuditLogging:
@@ -559,43 +547,41 @@ class TestSecurityAuditLogging:
         """Test logging of successful authentication events"""
         validator = GatewayTrustValidator()
 
-        with patch('app.core.auth.gateway_trust.log_info') as mock_log:
-            with patch('app.core.auth.gateway_trust.settings') as mock_settings:
-                mock_settings.GATEWAY_SECRET = "test-secret"
-                mock_settings.GATEWAY_TRUSTED_IPS = ["127.0.0.1"]
-                mock_settings.ENABLE_GATEWAY_TRUST = True
+        with patch('app.core.auth.gateway_trust.log_info') as mock_log, patch('app.core.auth.gateway_trust.settings') as mock_settings:
+            mock_settings.GATEWAY_SECRET = "test-secret"
+            mock_settings.GATEWAY_TRUSTED_IPS = ["127.0.0.1"]
+            mock_settings.ENABLE_GATEWAY_TRUST = True
 
-                headers = {
-                    "X-Gateway-Secret": "test-secret",
-                    "X-User-ID": "user_123",
-                    "X-Forwarded-For": "127.0.0.1"
-                }
+            headers = {
+                "X-Gateway-Secret": "test-secret",
+                "X-User-ID": "user_123",
+                "X-Forwarded-For": "127.0.0.1"
+            }
 
-                validator.validate_gateway_trust(headers)
+            validator.validate_gateway_trust(headers)
 
-                # Verify successful auth was logged
-                mock_log.assert_called_with("Gateway trust validated successfully for user: user_123")
+            # Verify successful auth was logged
+            mock_log.assert_called_with("Gateway trust validated successfully for user: user_123")
 
     def test_failed_auth_logging(self):
         """Test logging of failed authentication events"""
         validator = GatewayTrustValidator()
 
-        with patch('app.core.auth.gateway_trust.log_warning') as mock_log:
-            with patch('app.core.auth.gateway_trust.settings') as mock_settings:
-                mock_settings.GATEWAY_SECRET = "test-secret"
-                mock_settings.ENABLE_GATEWAY_TRUST = True
+        with patch('app.core.auth.gateway_trust.log_warning') as mock_log, patch('app.core.auth.gateway_trust.settings') as mock_settings:
+            mock_settings.GATEWAY_SECRET = "test-secret"
+            mock_settings.ENABLE_GATEWAY_TRUST = True
 
-                headers = {
-                    "X-Gateway-Secret": "wrong-secret",
-                    "X-User-ID": "user_123",
-                    "X-Forwarded-For": "192.168.1.1"
-                }
+            headers = {
+                "X-Gateway-Secret": "wrong-secret",
+                "X-User-ID": "user_123",
+                "X-Forwarded-For": "192.168.1.1"
+            }
 
-                with contextlib.suppress(AuthenticationError):
-                    validator.validate_gateway_trust(headers)
+            with contextlib.suppress(AuthenticationError):
+                validator.validate_gateway_trust(headers)
 
-                # Verify failed auth was logged
-                mock_log.assert_called_with("Gateway trust validation failed for user: user_123 from IP: 192.168.1.1")
+            # Verify failed auth was logged
+            mock_log.assert_called_with("Gateway trust validation failed for user: user_123 from IP: 192.168.1.1")
 
     def test_security_event_auditing(self):
         """Test comprehensive security event auditing"""

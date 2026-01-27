@@ -66,18 +66,16 @@ class TestCORSEnvironmentVariableParsing:
         empty_test_cases = ["", "   ", "\t", "\n", "\r\n"]
 
         for empty_value in empty_test_cases:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": empty_value}, clear=True):
-                with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": empty_value}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured"):
+                get_allowed_origins("production")
 
     def test_cors_allowed_origins_missing_variable(self):
         """Test handling of missing CORS_ALLOWED_ORIGINS environment variable."""
         environments = ["production", "staging", "development"]
 
         for env in environments:
-            with patch.dict(os.environ, {}, clear=True):
-                with pytest.raises(ValueError, match=f"CORS_ALLOWED_ORIGINS must be configured for {env} environment"):
-                    get_allowed_origins(env)
+            with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match=f"CORS_ALLOWED_ORIGINS must be configured for {env} environment"):
+                get_allowed_origins(env)
 
     def test_cors_allowed_origins_malformed_values(self):
         """Test handling of malformed CORS_ALLOWED_ORIGINS values."""
@@ -176,9 +174,8 @@ class TestCORSEnvironmentSpecificValidation:
 
         # Production should reject all wildcards
         for wildcard in wildcard_origins:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_unknown_environment_handling(self):
         """Test handling of unknown environment values."""

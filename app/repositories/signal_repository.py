@@ -10,9 +10,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-logger = logging.getLogger(__name__)
 from app.services.historical_data_manager import get_historical_data_manager
 from common.storage.database import get_timescaledb_session
+
+logger = logging.getLogger(__name__)
 
 # from app.models.signal_models import SignalGreeks, SignalIndicators
 
@@ -271,7 +272,7 @@ class SignalRepository:
             interval_minutes: Aggregation interval in minutes
 
         Returns:
-            List of Greeks data points from ticker_service
+            list of Greeks data points from ticker_service
         """
         try:
             # Route through ticker_service for historical data
@@ -647,7 +648,7 @@ class SignalRepository:
             end_time: End time
 
         Returns:
-            List of moneyness historical data from ticker_service
+            list of moneyness historical data from ticker_service
         """
         try:
             # Route through ticker_service for moneyness historical data

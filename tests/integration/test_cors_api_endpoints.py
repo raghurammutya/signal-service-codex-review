@@ -236,9 +236,8 @@ class TestCORSProductionCompliance:
         """Test that production requires explicit CORS origins."""
         from common.cors_config import get_allowed_origins
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for production"):
-                get_allowed_origins("production")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for production"):
+            get_allowed_origins("production")
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.dependencies import get_universal_calculator
 from app.services.computation_registry import computation_registry
@@ -17,7 +18,6 @@ router = APIRouter(prefix="/universal", tags=["universal-computation"])
 
 
 # Request/Response Models
-from pydantic import BaseModel, Field
 
 
 class ComputationRequest(BaseModel):
@@ -31,7 +31,7 @@ class UniversalComputeRequest(BaseModel):
     """Universal computation request"""
     asset_type: str = Field(..., description="Asset type (equity, futures, options, etc.)")
     instrument_key: str = Field(..., description="Universal instrument key")
-    computations: list[ComputationRequest] = Field(..., description="List of computations to perform")
+    computations: list[ComputationRequest] = Field(..., description="list of computations to perform")
     timeframe: str | None = Field("5m", description="Timeframe for data")
     mode: str | None = Field("realtime", description="Computation mode (realtime, historical, batch)")
     context: dict[str, Any] | None = Field(
@@ -101,7 +101,7 @@ async def universal_compute(
                 status_code=400,
                 detail=f"Invalid asset type: {request.asset_type}. "
                 f"Valid types: {[t.value for t in AssetType]}"
-            )
+            ) from None
 
         # Prepare computation list
         computation_list = []
@@ -150,7 +150,7 @@ async def universal_compute(
         raise
     except Exception as e:
         log_exception(f"Error in universal compute: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/compute/batch")
@@ -176,7 +176,7 @@ async def universal_compute_batch(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid asset type: {asset_type}"
-            )
+            ) from None
 
         # Prepare computation list
         computation_list = []
@@ -227,7 +227,7 @@ async def universal_compute_batch(
         raise
     except Exception as e:
         log_exception(f"Error in batch compute: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/computations")
@@ -236,7 +236,7 @@ async def list_computations(
     tags: list[str] | None = Query(None, description="Filter by tags")
 ) -> dict[str, Any]:
     """
-    List available computations with optional filtering
+    list available computations with optional filtering
 
     Returns all registered computations that can be used with the /compute endpoint
     """
@@ -272,7 +272,7 @@ async def list_computations(
 
     except Exception as e:
         log_exception(f"Error listing computations: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/computations/{computation_name}")
@@ -308,7 +308,7 @@ async def get_computation_details(computation_name: str) -> dict[str, Any]:
         raise
     except Exception as e:
         log_exception(f"Error getting computation details: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/validate")
@@ -366,7 +366,7 @@ async def validate_computation_request(
 
     except Exception as e:
         log_exception(f"Error validating request: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/examples/{asset_type}")
@@ -387,7 +387,7 @@ async def get_computation_examples(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid asset type: {asset_type}"
-            )
+            ) from None
 
         examples = []
 
@@ -487,7 +487,7 @@ async def get_computation_examples(
         raise
     except Exception as e:
         log_exception(f"Error getting examples: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/health")

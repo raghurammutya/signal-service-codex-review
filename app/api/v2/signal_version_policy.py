@@ -219,7 +219,7 @@ async def list_signal_versions(
     x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
 ) -> list[SignalVersionInfo]:
     """
-    List all versions of a signal.
+    list all versions of a signal.
 
     Returns version history including:
     - Version numbers

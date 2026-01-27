@@ -51,7 +51,7 @@ async def retry_with_backoff(
         max_retries: Maximum number of retry attempts
         base_delay: Base delay in seconds
         max_delay: Maximum delay between retries
-        exceptions: Tuple of exceptions to catch and retry on
+        exceptions: tuple of exceptions to catch and retry on
 
     Returns:
         Result of the operation

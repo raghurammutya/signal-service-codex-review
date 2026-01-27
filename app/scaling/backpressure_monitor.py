@@ -161,7 +161,7 @@ class BackpressureMonitor:
         except Exception as e:
             logger.error(f"Failed to calculate backpressure level: {e}")
             # Fail fast instead of defaulting
-            raise ValueError(f"Unable to calculate backpressure level: {e}. No default values allowed in production.")
+            raise ValueError(f"Unable to calculate backpressure level: {e}. No default values allowed in production.") from e
 
     def get_scaling_recommendation(self, current_pods: int = 1) -> ScalingRecommendation:
         """Get scaling recommendation based on current metrics and trends"""
@@ -206,7 +206,7 @@ class BackpressureMonitor:
         except Exception as e:
             logger.error(f"Failed to generate scaling recommendation: {e}")
             # Fail fast instead of returning default
-            raise ValueError(f"Unable to generate scaling recommendation: {e}. No default recommendations allowed in production.")
+            raise ValueError(f"Unable to generate scaling recommendation: {e}. No default recommendations allowed in production.") from e
 
     def _calculate_load_score(self, metrics: dict[str, Any]) -> float:
         """Calculate composite load score (0.0-1.0)"""
@@ -234,7 +234,7 @@ class BackpressureMonitor:
 
         except Exception as e:
             logger.error(f"Failed to calculate load score: {e}")
-            raise ValueError(f"Unable to calculate load score: {e}")
+            raise ValueError(f"Unable to calculate load score: {e}") from e
 
     def _analyze_trends(self) -> dict[str, Any]:
         """Analyze trends in metrics over time"""

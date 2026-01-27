@@ -52,18 +52,14 @@ class TestProductionFixesValidation:
     @pytest.mark.asyncio
     async def test_redis_manager_production_failure(self):
         """Test that Redis manager fails hard in production when Redis unavailable."""
-        with patch.dict(os.environ, {'ENVIRONMENT': 'production', 'REDIS_URL': 'redis://invalid:6379/0'}):
-            # Should raise connection error in production
-            with pytest.raises(RedisConnectionError):
-                await get_redis_client()
+        with patch.dict(os.environ, {'ENVIRONMENT': 'production', 'REDIS_URL': 'redis://invalid:6379/0'}), pytest.raises(RedisConnectionError):
+            await get_redis_client()
 
     @pytest.mark.asyncio
     async def test_database_connection_production(self):
         """Test that database connection works in production mode."""
-        with patch.dict(os.environ, {'ENVIRONMENT': 'production', 'DATABASE_URL': 'postgresql+asyncpg://test:test@localhost:5432/test'}):
-            # Should attempt real connection (will fail in test but shows correct behavior)
-            with pytest.raises(DatabaseConnectionError):
-                await get_database_connection()
+        with patch.dict(os.environ, {'ENVIRONMENT': 'production', 'DATABASE_URL': 'postgresql+asyncpg://test:test@localhost:5432/test'}), pytest.raises(DatabaseConnectionError):
+            await get_database_connection()
 
     @pytest.mark.asyncio
     async def test_database_connection_development_fallback(self):
@@ -189,18 +185,17 @@ for i in range(200):
     def test_imports_resolution(self):
         """Test that all critical imports are resolved."""
         # Test that app.core.redis_manager can be imported
-        try:
-            from app.core.redis_manager import get_redis_client
+        import importlib.util
+        if importlib.util.find_spec('app.core.redis_manager'):
             assert True
-        except ImportError as e:
-            pytest.fail(f"app.core.redis_manager import failed: {e}")
+        else:
+            pytest.fail("app.core.redis_manager module not available")
 
         # Test that database imports work
-        try:
-            from common.storage.database import get_timescaledb_session
+        if importlib.util.find_spec('common.storage.database'):
             assert True
-        except ImportError as e:
-            pytest.fail(f"database imports failed: {e}")
+        else:
+            pytest.fail("database imports not available")
 
     @pytest.mark.asyncio
     async def test_redis_health_checker(self):
@@ -272,14 +267,12 @@ class TestEnvironmentConfiguration:
     async def test_configuration_validation(self):
         """Test that configuration validation works properly."""
         # Test missing Redis URL in production
-        with patch.dict(os.environ, {'ENVIRONMENT': 'production'}, clear=True):
-            with pytest.raises(RedisConnectionError):
-                await get_redis_client()
+        with patch.dict(os.environ, {'ENVIRONMENT': 'production'}, clear=True), pytest.raises(RedisConnectionError):
+            await get_redis_client()
 
         # Test missing database URL in production
-        with patch.dict(os.environ, {'ENVIRONMENT': 'production'}, clear=True):
-            with pytest.raises(DatabaseConnectionError):
-                await get_database_connection()
+        with patch.dict(os.environ, {'ENVIRONMENT': 'production'}, clear=True), pytest.raises(DatabaseConnectionError):
+            await get_database_connection()
 
 
 class TestSecurityMeasures:

@@ -853,7 +853,7 @@ class HealthChecker:
         try:
             process = psutil.Process()
             return time.time() - process.create_time()
-        except:
+        except Exception:
             return 0.0
 
 

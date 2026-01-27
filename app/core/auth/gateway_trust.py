@@ -104,7 +104,7 @@ async def get_current_user_from_gateway(
         authorization: Bearer token (only used in development mode)
 
     Returns:
-        Dict[str, str]: User information with keys:
+        dict[str, str]: User information with keys:
             - user_id: User ID from gateway
             - from_gateway: Always "true"
 
@@ -114,7 +114,7 @@ async def get_current_user_from_gateway(
     Example Usage:
         @router.get("/api/v1/signals")
         async def get_signals(
-            user: Dict = Depends(get_current_user_from_gateway)
+            user: dict = Depends(get_current_user_from_gateway)
         ):
             user_id = user["user_id"]
             # ... your logic here
@@ -166,12 +166,12 @@ async def get_optional_user_from_gateway(
         x_gateway_secret: Gateway secret for verification
 
     Returns:
-        Optional[Dict[str, str]]: User information or None if not authenticated
+        Optional[dict[str, str]]: User information or None if not authenticated
 
     Example Usage:
         @router.get("/api/v1/signals/public")
         async def get_public_signals(
-            user: Optional[Dict] = Depends(get_optional_user_from_gateway)
+            user: Optional[dict] = Depends(get_optional_user_from_gateway)
         ):
             if user:
                 # Show personalized data
@@ -219,9 +219,9 @@ async def get_current_user_with_roles(
         x_gateway_secret: Gateway secret for verification
 
     Returns:
-        Dict[str, any]: User information with keys:
+        dict[str, any]: User information with keys:
             - user_id: User ID from gateway
-            - roles: List of user roles
+            - roles: list of user roles
             - from_gateway: Always "true"
 
     Raises:
@@ -231,7 +231,7 @@ async def get_current_user_with_roles(
         @router.delete("/api/v1/admin/signals/{signal_id}")
         async def delete_signal(
             signal_id: int,
-            current_user: Dict = Depends(get_current_user_with_roles)
+            current_user: dict = Depends(get_current_user_with_roles)
         ):
             if "admin" not in current_user["roles"]:
                 raise HTTPException(403, "Admin access required")
@@ -278,7 +278,7 @@ def require_role(required_role: str):
         @router.post("/api/v1/admin/signals")
         async def create_signal(
             signal_data: SignalCreate,
-            current_user: Dict = Depends(require_role("admin"))
+            current_user: dict = Depends(require_role("admin"))
         ):
             # Only admins can access this endpoint
             # ... your logic here

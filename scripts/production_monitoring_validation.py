@@ -7,7 +7,7 @@ Confirms alerts for config-service, DB/Redis pools, circuit-breaker opens, and b
 import json
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 
 class ProductionMonitoringValidation:

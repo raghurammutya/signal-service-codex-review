@@ -13,7 +13,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 
 def run_command(cmd: list[str]) -> tuple[int, str, str]:
@@ -126,7 +126,7 @@ class RuffExemptionManager:
             f.write(existing_content + exemption_entry)
 
     def list_exemptions(self, show_inactive: bool = False) -> None:
-        """List all exemptions"""
+        """list all exemptions"""
         db = self.load_exemptions_db()
 
         if not db["exemptions"]:
@@ -301,8 +301,8 @@ def main():
     add_parser.add_argument("--review-date", help="Date to review exemption (YYYY-MM-DD)")
     add_parser.add_argument("--assignee", help="Person responsible for eventual fix")
 
-    # List exemptions
-    list_parser = subparsers.add_parser("list", help="List exemptions")
+    # list exemptions
+    list_parser = subparsers.add_parser("list", help="list exemptions")
     list_parser.add_argument("--all", action="store_true", help="Include inactive exemptions")
 
     # Review exemptions

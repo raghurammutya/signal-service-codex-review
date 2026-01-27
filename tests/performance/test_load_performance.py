@@ -596,63 +596,61 @@ class TestExternalConfigServicePerformance:
         from app.core.hot_config import get_hot_reloadable_settings
 
         # Create test configuration
-        with patch.dict(os.environ, {'USE_EXTERNAL_CONFIG': 'false', 'ENVIRONMENT': 'test'}):
-            # Mock config dependencies
-            with patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_init:
-                mock_init.return_value = None
-                config = get_hot_reloadable_settings()
+        with patch.dict(os.environ, {'USE_EXTERNAL_CONFIG': 'false', 'ENVIRONMENT': 'test'}), patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_init:
+            mock_init.return_value = None
+            config = get_hot_reloadable_settings()
 
-                # Mock handler registration
-                reload_events = 0
+            # Mock handler registration
+            reload_events = 0
 
-                async def mock_reload_handler(data):
-                    nonlocal reload_events
-                    reload_events += 1
-                    await asyncio.sleep(0.001)  # Simulate reload work
+            async def mock_reload_handler(data):
+                nonlocal reload_events
+                reload_events += 1
+                await asyncio.sleep(0.001)  # Simulate reload work
 
-                config.register_hot_reload_handler("test_reload", mock_reload_handler)
+            config.register_hot_reload_handler("test_reload", mock_reload_handler)
 
-                # Test signal processing with simulated hot reloads
-                processing_tasks = []
-                reload_tasks = []
+            # Test signal processing with simulated hot reloads
+            processing_tasks = []
+            reload_tasks = []
 
-                start_time = time.time()
+            start_time = time.time()
 
-                # Start signal processing tasks
-                for i in range(100):
-                    task = signal_processor.compute_greeks_for_instrument(
-                        f'NSE@HOTRELOAD{i}@equity_options@2025-07-10@call@21500'
-                    )
-                    processing_tasks.append(task)
-
-                # Simulate hot reload events during processing
-                for i in range(10):  # 10 reload events
-                    reload_task = asyncio.create_task(mock_reload_handler({"test": f"reload_{i}"}))
-                    reload_tasks.append(reload_task)
-
-                # Execute all tasks concurrently
-                all_results = await asyncio.gather(
-                    *processing_tasks, *reload_tasks,
-                    return_exceptions=True
+            # Start signal processing tasks
+            for i in range(100):
+                task = signal_processor.compute_greeks_for_instrument(
+                    f'NSE@HOTRELOAD{i}@equity_options@2025-07-10@call@21500'
                 )
+                processing_tasks.append(task)
 
-                end_time = time.time()
-                total_time = end_time - start_time
+            # Simulate hot reload events during processing
+            for i in range(10):  # 10 reload events
+                reload_task = asyncio.create_task(mock_reload_handler({"test": f"reload_{i}"}))
+                reload_tasks.append(reload_task)
 
-                # Analyze performance impact
-                processing_errors = sum(
-                    1 for result in all_results[:100]  # First 100 are processing tasks
-                    if isinstance(result, Exception)
-                )
+            # Execute all tasks concurrently
+            all_results = await asyncio.gather(
+                *processing_tasks, *reload_tasks,
+                return_exceptions=True
+            )
 
-                success_rate = (100 - processing_errors) / 100
-                processing_throughput = (100 - processing_errors) / total_time
+            end_time = time.time()
+            total_time = end_time - start_time
 
-                # Performance assertions
-                assert success_rate > 0.95, f"Hot reload degraded processing success rate to {success_rate:.2%}"
-                assert processing_throughput > 20, f"Hot reload degraded throughput to {processing_throughput:.2f} ops/sec"
+            # Analyze performance impact
+            processing_errors = sum(
+                1 for result in all_results[:100]  # First 100 are processing tasks
+                if isinstance(result, Exception)
+            )
 
-                print(f"Hot reload performance - {reload_events} reloads, {processing_throughput:.2f} ops/sec, {success_rate:.2%} success")
+            success_rate = (100 - processing_errors) / 100
+            processing_throughput = (100 - processing_errors) / total_time
+
+            # Performance assertions
+            assert success_rate > 0.95, f"Hot reload degraded processing success rate to {success_rate:.2%}"
+            assert processing_throughput > 20, f"Hot reload degraded throughput to {processing_throughput:.2f} ops/sec"
+
+            print(f"Hot reload performance - {reload_events} reloads, {processing_throughput:.2f} ops/sec, {success_rate:.2%} success")
 
 
 @pytest.mark.performance

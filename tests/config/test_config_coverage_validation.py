@@ -19,10 +19,9 @@ class TestConfigServiceBootstrapCoverage:
     def test_environment_variable_coverage(self):
         """Test all environment variable validation paths."""
         # Test 1: Missing ENVIRONMENT variable
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="ENVIRONMENT environment variable is required"):
-                from app.core.config import _get_config_client
-                _get_config_client()
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="ENVIRONMENT environment variable is required"):
+            from app.core.config import _get_config_client
+            _get_config_client()
 
     def test_config_service_url_coverage(self):
         """Test CONFIG_SERVICE_URL validation paths."""
@@ -223,10 +222,9 @@ class TestConfigServiceBootstrapCoverage:
             mock_client.get_config.side_effect = mock_get_config_missing
             mock_client.get_secret.side_effect = mock_get_secret
 
-            with patch('common.config_service.client.ConfigServiceClient', return_value=mock_client):
-                with pytest.raises(ValueError, match="service_name not found in config_service"):
-                    from app.core.config import SignalServiceConfig
-                    SignalServiceConfig()
+            with patch('common.config_service.client.ConfigServiceClient', return_value=mock_client), pytest.raises(ValueError, match="service_name not found in config_service"):
+                from app.core.config import SignalServiceConfig
+                SignalServiceConfig()
 
 
 class TestConfigServiceCoverageMetrics:
@@ -297,9 +295,8 @@ class TestDeploymentScriptValidation:
             assert validate_required_env_vars() is True
 
         # Test 2: Missing variables
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="Missing required environment variables"):
-                validate_required_env_vars()
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="Missing required environment variables"):
+            validate_required_env_vars()
 
     def test_deployment_safety_net(self):
         """Test that provides safety net for missing configuration."""

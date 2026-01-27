@@ -10,12 +10,13 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
-logger = logging.getLogger(__name__)
 from app.core.config import settings
 from app.dependencies import get_moneyness_calculator
 from app.schemas.signal_schemas import BatchGreeksRequest, BatchGreeksResponse
 from app.services.bulk_computation_engine import BulkComputationEngine
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/batch", tags=["batch"])
 
@@ -104,8 +105,8 @@ async def compute_batch_indicators(
     Compute multiple indicators for multiple instruments
 
     Args:
-        instrument_keys: List of instruments
-        indicators: List of indicator configurations
+        instrument_keys: list of instruments
+        indicators: list of indicator configurations
         timeframe: Time interval
 
     Returns:
@@ -176,8 +177,8 @@ async def compute_batch_moneyness_greeks(
     Compute moneyness Greeks for multiple underlyings and levels
 
     Args:
-        underlyings: List of underlying symbols
-        moneyness_levels: List of moneyness levels (ATM, OTM5delta, etc.)
+        underlyings: list of underlying symbols
+        moneyness_levels: list of moneyness levels (ATM, OTM5delta, etc.)
         expiry_dates: Optional list of expiry dates
 
     Returns:
@@ -422,12 +423,12 @@ async def notify_job_completion(
             "timestamp": datetime.utcnow().isoformat()
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(callback_url, json=payload) as response:
-                if response.status != 200:
-                    logger.warning(f"Callback failed for job {job_id}: {response.status}")
-                else:
-                    logger.info(f"Callback successful for job {job_id}")
+        async with aiohttp.ClientSession() as session, \
+                   session.post(callback_url, json=payload) as response:
+            if response.status != 200:
+                logger.warning(f"Callback failed for job {job_id}: {response.status}")
+            else:
+                logger.info(f"Callback successful for job {job_id}")
 
     except Exception as e:
         logger.error(f"Error calling callback for job {job_id}: {e}")

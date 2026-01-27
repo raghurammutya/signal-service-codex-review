@@ -28,94 +28,93 @@ class TestOptionalDependenciesComputationErrors:
 
     def test_scipy_trendline_missing_dependency(self):
         """Test that missing scipy raises ComputationError for trendline calculations."""
-        with patch.dict('sys.modules', {'scipy': None, 'scipy.stats': None}):
-            with patch('builtins.__import__', side_effect=ImportError("scipy not available")):
-                # Import module after patching to simulate missing dependency
-                try:
-                    from app.services.indicator_registry import IndicatorRegistry
+        with patch.dict('sys.modules', {'scipy': None, 'scipy.stats': None}), patch('builtins.__import__', side_effect=ImportError("scipy not available")):
+            # Import module after patching to simulate missing dependency
+            try:
+                from app.services.indicator_registry import IndicatorRegistry
 
-                    # Try to get a scipy-based indicator
-                    scipy_indicator = IndicatorRegistry.get('linregress')
+                # Try to get a scipy-based indicator
+                scipy_indicator = IndicatorRegistry.get('linregress')
 
-                    if scipy_indicator:
-                        # Create test data
-                        df = pd.DataFrame({
-                            'close': [100, 101, 102, 103, 104, 105],
-                            'high': [102, 103, 104, 105, 106, 107],
-                            'low': [98, 99, 100, 101, 102, 103]
-                        })
+                if scipy_indicator:
+                    # Create test data
+                    df = pd.DataFrame({
+                        'close': [100, 101, 102, 103, 104, 105],
+                        'high': [102, 103, 104, 105, 106, 107],
+                        'low': [98, 99, 100, 101, 102, 103]
+                    })
 
-                        # Should raise ComputationError when scipy not available
-                        with pytest.raises(ComputationError) as exc_info:
-                            scipy_indicator.function(df, period=5)
+                    # Should raise ComputationError when scipy not available
+                    with pytest.raises(ComputationError) as exc_info:
+                        scipy_indicator.function(df, period=5)
 
-                        assert "scipy" in str(exc_info.value).lower()
-                        assert "not available" in str(exc_info.value).lower()
+                    assert "scipy" in str(exc_info.value).lower()
+                    assert "not available" in str(exc_info.value).lower()
 
-                except ImportError:
-                    # If registry module itself can't import, that's the expected behavior
-                    pass
+            except ImportError:
+                # If registry module itself can't import, that's the expected behavior
+                pass
 
     def test_findpeaks_missing_dependency(self):
         """Test that missing findpeaks raises ComputationError for peak detection."""
-        with patch.dict('sys.modules', {'findpeaks': None}):
-            with patch('builtins.__import__', side_effect=ImportError("findpeaks not available")):
-                try:
-                    from app.services.indicator_registry import IndicatorRegistry
+        with patch.dict('sys.modules', {'findpeaks': None}), patch('builtins.__import__', side_effect=ImportError("findpeaks not available")):
+            try:
+                from app.services.indicator_registry import IndicatorRegistry
 
-                    # Try to get a findpeaks-based indicator
-                    peaks_indicator = IndicatorRegistry.get('findpeaks')
+                # Try to get a findpeaks-based indicator
+                peaks_indicator = IndicatorRegistry.get('findpeaks')
 
-                    if peaks_indicator:
-                        # Create test data with clear peaks
-                        df = pd.DataFrame({
-                            'close': [100, 105, 95, 110, 90, 115, 85],
-                            'high': [102, 107, 97, 112, 92, 117, 87],
-                            'low': [98, 103, 93, 108, 88, 113, 83]
-                        })
+                if peaks_indicator:
+                    # Create test data with clear peaks
+                    df = pd.DataFrame({
+                        'close': [100, 105, 95, 110, 90, 115, 85],
+                        'high': [102, 107, 97, 112, 92, 117, 87],
+                        'low': [98, 103, 93, 108, 88, 113, 83]
+                    })
 
-                        # Should raise ComputationError when findpeaks not available
-                        with pytest.raises(ComputationError) as exc_info:
-                            peaks_indicator.function(df, distance=2)
+                    # Should raise ComputationError when findpeaks not available
+                    with pytest.raises(ComputationError) as exc_info:
+                        peaks_indicator.function(df, distance=2)
 
-                        assert "findpeaks" in str(exc_info.value).lower()
-                        assert "not available" in str(exc_info.value).lower()
+                    assert "findpeaks" in str(exc_info.value).lower()
+                    assert "not available" in str(exc_info.value).lower()
 
-                except ImportError:
-                    # Expected behavior when dependencies missing
-                    pass
+            except ImportError:
+                # Expected behavior when dependencies missing
+                pass
 
     def test_sklearn_missing_dependency(self):
         """Test that missing sklearn raises ComputationError for ML-based indicators."""
-        with patch.dict('sys.modules', {'sklearn': None, 'sklearn.linear_model': None}):
-            with patch('builtins.__import__', side_effect=ImportError("sklearn not available")):
-                try:
-                    from app.services.indicator_registry import IndicatorRegistry
+        with patch.dict('sys.modules', {'sklearn': None, 'sklearn.linear_model': None}), patch('builtins.__import__', side_effect=ImportError("sklearn not available")):
+            try:
+                from app.services.indicator_registry import IndicatorRegistry
 
-                    # Try to get a sklearn-based indicator
-                    ml_indicator = IndicatorRegistry.get('ml_trend')
+                # Try to get a sklearn-based indicator
+                ml_indicator = IndicatorRegistry.get('ml_trend')
 
-                    if ml_indicator:
-                        # Create test data
-                        df = pd.DataFrame({
-                            'close': [100 + i + np.sin(i/10)*5 for i in range(50)],
-                            'volume': [1000 + i*10 for i in range(50)]
-                        })
+                if ml_indicator:
+                    # Create test data
+                    df = pd.DataFrame({
+                        'close': [100 + i + np.sin(i/10)*5 for i in range(50)],
+                        'volume': [1000 + i*10 for i in range(50)]
+                    })
 
-                        # Should raise ComputationError when sklearn not available
-                        with pytest.raises(ComputationError) as exc_info:
-                            ml_indicator.function(df, lookback=10)
+                    # Should raise ComputationError when sklearn not available
+                    with pytest.raises(ComputationError) as exc_info:
+                        ml_indicator.function(df, lookback=10)
 
-                        assert "sklearn" in str(exc_info.value).lower()
-                        assert "not available" in str(exc_info.value).lower()
+                    assert "sklearn" in str(exc_info.value).lower()
+                    assert "not available" in str(exc_info.value).lower()
 
-                except ImportError:
-                    pass
+            except ImportError:
+                pass
 
     def test_wavelet_missing_dependency(self):
         """Test that missing PyWavelets raises ComputationError for wavelet analysis."""
-        with patch.dict('sys.modules', {'pywt': None, 'PyWavelets': None}):
-            with patch('builtins.__import__', side_effect=ImportError("PyWavelets not available")):
+        with (
+    patch.dict('sys.modules', {'pywt': None, 'PyWavelets': None}),
+    patch('builtins.__import__', side_effect=ImportError("PyWavelets not available"))
+):
                 try:
                     from app.services.indicator_registry import IndicatorRegistry
 
@@ -144,8 +143,10 @@ class TestOptionalDependenciesComputationErrors:
         missing_deps = ['scipy', 'sklearn', 'findpeaks']
 
         for missing_dep in missing_deps:
-            with patch.dict('sys.modules', {missing_dep: None}):
-                with patch('builtins.__import__', side_effect=ImportError(f"{missing_dep} not available")):
+            with (
+    patch.dict('sys.modules', {missing_dep: None}),
+    patch('builtins.__import__', side_effect=ImportError(f"{missing_dep} not available"))
+):
                     try:
                         from app.services.indicator_registry import IndicatorRegistry
 
@@ -174,8 +175,10 @@ class TestOptionalDependenciesComputationErrors:
 
     def test_no_synthetic_data_fallback(self):
         """Test that missing dependencies don't fall back to synthetic data."""
-        with patch.dict('sys.modules', {'scipy': None}):
-            with patch('builtins.__import__', side_effect=ImportError("scipy not available")):
+        with (
+    patch.dict('sys.modules', {'scipy': None}),
+    patch('builtins.__import__', side_effect=ImportError("scipy not available"))
+):
                 try:
                     # Mock an indicator function that might be tempted to return synthetic data
                     def mock_failing_indicator(df, **kwargs):
@@ -185,7 +188,7 @@ class TestOptionalDependenciesComputationErrors:
                             return scipy.stats.linregress(range(len(df)), df['close'].values)
                         except ImportError:
                             # Should raise ComputationError, NOT return synthetic data
-                            raise ComputationError("scipy dependency required but not available")
+                            raise ComputationError("scipy dependency required but not available") from e
 
                     # Test data
                     df = pd.DataFrame({'close': [100, 101, 102, 103, 104]})
@@ -201,32 +204,30 @@ class TestOptionalDependenciesComputationErrors:
 
     def test_graceful_error_logging_without_stack_traces(self):
         """Test that ComputationError for missing dependencies logs gracefully."""
-        with patch('app.utils.logging_utils.log_exception'):
-            with patch.dict('sys.modules', {'findpeaks': None}):
-                with patch('builtins.__import__', side_effect=ImportError("findpeaks not available")):
-                    try:
-                        # Mock indicator that handles missing dependency gracefully
-                        def graceful_indicator(df, **kwargs):
-                            try:
-                                import findpeaks
-                                # Would normally use findpeaks here
-                                return {"peaks": []}
-                            except ImportError as e:
-                                # Log the missing dependency gracefully
-                                from app.utils.logging_utils import log_warning
-                                log_warning(f"Optional dependency not available: {e}")
-                                raise ComputationError(f"findpeaks library required but not available: {e}")
+        with patch('app.utils.logging_utils.log_exception'), patch.dict('sys.modules', {'findpeaks': None}), patch('builtins.__import__', side_effect=ImportError("findpeaks not available")):
+                try:
+                    # Mock indicator that handles missing dependency gracefully
+                    def graceful_indicator(df, **kwargs):
+                        import importlib.util
+                        if importlib.util.find_spec('findpeaks'):
+                            # Would normally use findpeaks here
+                            return {"peaks": []}
+                        else:
+                            # Log the missing dependency gracefully
+                            from app.utils.logging_utils import log_warning
+                            log_warning("Optional dependency not available: findpeaks")
+                            raise ComputationError("findpeaks library required but not available")
 
-                        df = pd.DataFrame({'close': [100, 105, 95, 110, 90]})
+                    df = pd.DataFrame({'close': [100, 105, 95, 110, 90]})
 
-                        with pytest.raises(ComputationError):
-                            graceful_indicator(df)
+                    with pytest.raises(ComputationError):
+                        graceful_indicator(df)
 
-                        # Verify graceful logging occurred (would be log_warning, not log_exception)
-                        # This ensures we don't spam error logs with expected missing dependencies
+                    # Verify graceful logging occurred (would be log_warning, not log_exception)
+                    # This ensures we don't spam error logs with expected missing dependencies
 
-                    except ImportError:
-                        pass
+                except ImportError:
+                    pass
 
     def test_import_error_message_specificity(self):
         """Test that ComputationError messages specify which dependency is missing."""
@@ -240,8 +241,10 @@ class TestOptionalDependenciesComputationErrors:
         ]
 
         for missing_lib, description in test_cases:
-            with patch.dict('sys.modules', {missing_lib: None}):
-                with patch('builtins.__import__', side_effect=ImportError(f"No module named '{missing_lib}'")):
+            with (
+    patch.dict('sys.modules', {missing_lib: None}),
+    patch('builtins.__import__', side_effect=ImportError(f"No module named '{missing_lib}'"))
+):
                     # Mock a function that requires this specific library
                     def dependency_requiring_function():
                         try:
@@ -251,7 +254,7 @@ class TestOptionalDependenciesComputationErrors:
                             raise ComputationError(
                                 f"Optional dependency '{missing_lib}' required for {description} "
                                 f"but not available: {e}"
-                            )
+                            ) from e
 
                     with pytest.raises(ComputationError) as exc_info:
                         dependency_requiring_function()
@@ -284,7 +287,7 @@ class TestOptionalDependenciesComputationErrors:
                     return "computation_result"
 
                 except ImportError as e:
-                    raise ComputationError(f"scipy dependency required: {e}")
+                    raise ComputationError(f"scipy dependency required: {e}") from e
 
             with pytest.raises(ComputationError) as exc_info:
                 version_sensitive_function()

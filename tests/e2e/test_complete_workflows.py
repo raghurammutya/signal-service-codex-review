@@ -250,7 +250,7 @@ class TestRealtimeTradingWorkflow:
     async def test_frequency_based_delivery_workflow(self, async_client, redis_client):
         """Test frequency-based signal delivery workflow"""
 
-        # 1. Set up frequency subscription
+        # 1. set up frequency subscription
         subscription_data = {
             'user_id': 'test_user',
             'instrument': 'NSE@NIFTY@equity_options@2025-07-10@call@21500',

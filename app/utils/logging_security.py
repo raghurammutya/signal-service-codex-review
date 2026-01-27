@@ -73,7 +73,7 @@ class SensitiveDataFilter(logging.Filter):
             # Keep prefix and suffix, redact the sensitive middle part
             try:
                 redacted_text = pattern.sub(r'\1' + self.redaction_marker + r'\3', redacted_text)
-            except:
+            except Exception:
                 # Fallback for patterns without 3 groups
                 redacted_text = pattern.sub(self.redaction_marker, redacted_text)
 

@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
 
+from app.core.config import settings
+
 # Add common module to path for shared CORS config
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 # Configure logging with security filters
@@ -221,7 +223,6 @@ app = FastAPI(
 )
 
 # Add CORS middleware using shared configuration - get environment from config_service
-from app.core.config import settings
 
 add_cors_middleware(app, environment=settings.environment)
 

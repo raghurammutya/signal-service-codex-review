@@ -63,7 +63,7 @@ class TokenResolutionMiddleware:
             broker_id: Target broker for token resolution
 
         Returns:
-            Dict: Processed request parameters with resolved tokens
+            dict: Processed request parameters with resolved tokens
         """
         processed_data = data.copy() if data else {}
         processed_params = params.copy() if params else {}
@@ -129,7 +129,7 @@ class TokenResolutionMiddleware:
             original_request: Original request data for context
 
         Returns:
-            Dict: Processed response with instrument_key and metadata
+            dict: Processed response with instrument_key and metadata
         """
         processed_response = response_data.copy()
 
@@ -215,7 +215,7 @@ class InstrumentHTTPClient:
             **kwargs: Additional request parameters
 
         Returns:
-            Dict: Response with enriched metadata
+            dict: Response with enriched metadata
         """
         url = f"{self.config.base_url}{endpoint}"
 
@@ -271,7 +271,7 @@ class InstrumentHTTPClient:
             **kwargs: Additional request parameters
 
         Returns:
-            Dict: Response with enriched metadata
+            dict: Response with enriched metadata
         """
         url = f"{self.config.base_url}{endpoint}"
 
@@ -324,7 +324,7 @@ class InstrumentHTTPClient:
             broker_id: Target broker for token resolution
 
         Yields:
-            Dict: Streaming responses with metadata
+            dict: Streaming responses with metadata
         """
         url = f"{self.config.base_url}{endpoint}"
 

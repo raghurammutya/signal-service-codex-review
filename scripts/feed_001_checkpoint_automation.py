@@ -22,7 +22,7 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
 class FEED001CheckpointAutomation:
@@ -63,7 +63,7 @@ class FEED001CheckpointAutomation:
         Execute comprehensive pre-deployment validation for FEED_001
 
         Returns:
-            Dict: Pre-deployment checkpoint results with GO/NO-GO decision
+            dict: Pre-deployment checkpoint results with GO/NO-GO decision
         """
         print("🔍 Starting FEED_001 pre-deployment checkpoint validation")
 
@@ -118,7 +118,7 @@ class FEED001CheckpointAutomation:
         Execute evening validation checkpoint for rollout dashboard evidence
 
         Returns:
-            Dict: Evening checkpoint results for rollout dashboard
+            dict: Evening checkpoint results for rollout dashboard
         """
         print("🌅 Starting FEED_001 evening checkpoint for rollout dashboard")
 

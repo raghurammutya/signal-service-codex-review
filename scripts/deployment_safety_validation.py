@@ -15,7 +15,7 @@ import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 # Setup logging
 logging.basicConfig(
@@ -90,7 +90,7 @@ class DeploymentSafetyValidator:
                     message=f"Required bootstrap environment variable {var} is not set",
                     critical=True,
                     suggestions=[
-                        f"Set {var} in docker-compose.production.yml environment section",
+                        f"set {var} in docker-compose.production.yml environment section",
                         "Ensure docker-compose uses production environment pattern",
                         "Check deployment configuration matches StocksBlitz architecture"
                     ]
@@ -143,7 +143,7 @@ class DeploymentSafetyValidator:
                 message="CONFIG_SERVICE_URL not configured",
                 critical=True,
                 suggestions=[
-                    "Set CONFIG_SERVICE_URL=http://config-service:8100",
+                    "set CONFIG_SERVICE_URL=http://config-service:8100",
                     "Ensure config service container is running",
                     "Check docker-compose.production.yml config"
                 ]
@@ -157,7 +157,7 @@ class DeploymentSafetyValidator:
                 message="INTERNAL_API_KEY not configured",
                 critical=True,
                 suggestions=[
-                    "Set INTERNAL_API_KEY for service-to-service authentication",
+                    "set INTERNAL_API_KEY for service-to-service authentication",
                     "Use StocksBlitz internal API key pattern",
                     "Check docker-compose.production.yml environment section"
                 ]

@@ -11,15 +11,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 
-try:
-    from fastapi import HTTPException
-    from fastapi.testclient import TestClient
-
-    from app.api.v2.sdk_signals import router as sdk_router
-    from app.services.enhanced_watermark_integration import EnhancedWatermarkService, WatermarkError
-    from app.services.signal_delivery_service import SignalDeliveryService
+import importlib.util
+if importlib.util.find_spec('fastapi.testclient'):
     WATERMARK_SERVICE_AVAILABLE = True
-except ImportError:
+else:
     WATERMARK_SERVICE_AVAILABLE = False
 
 

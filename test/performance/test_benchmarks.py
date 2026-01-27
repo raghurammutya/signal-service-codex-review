@@ -322,7 +322,7 @@ class TestPerformanceBenchmarks:
 
                 try:
                     await asyncio.gather(*tasks, return_exceptions=True)
-                except:
+                except Exception:
                     pass  # Expected with mocked exceptions
 
                 return time.time() - start_time

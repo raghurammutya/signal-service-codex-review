@@ -58,7 +58,7 @@ class UniversalComputeRequest(BaseModel):
     """Universal computation request"""
     asset_type: AssetTypeEnum = Field(..., description="Asset type")
     instrument_key: str = Field(..., description="Universal instrument key")
-    computations: list[ComputationRequest] = Field(..., description="List of computations to perform")
+    computations: list[ComputationRequest] = Field(..., description="list of computations to perform")
     timeframe: TimeframeEnum = Field(TimeframeEnum.MIN_5, description="Timeframe for data")
     mode: ComputationModeEnum = Field(ComputationModeEnum.REALTIME, description="Computation mode")
     context: dict[str, Any] | None = Field(
@@ -107,7 +107,7 @@ class UniversalComputeResponse(BaseModel):
 
 class BatchComputeRequest(BaseModel):
     """Batch computation request for multiple instruments"""
-    instruments: list[str] = Field(..., description="List of instrument keys")
+    instruments: list[str] = Field(..., description="list of instrument keys")
     computations: list[ComputationRequest] = Field(..., description="Computations to perform")
     asset_type: AssetTypeEnum = Field(..., description="Asset type for all instruments")
     timeframe: TimeframeEnum = Field(TimeframeEnum.MIN_5, description="Timeframe for data")
@@ -231,7 +231,7 @@ class RiskMetricsRequest(BaseModel):
     """Request for risk metrics calculation"""
     metrics: list[str] = Field(
         default_factory=lambda: ["var", "sharpe", "max_drawdown"],
-        description="List of risk metrics to calculate"
+        description="list of risk metrics to calculate"
     )
     period: int = Field(252, description="Lookback period")
     confidence_level: float = Field(0.95, description="Confidence level for VaR")

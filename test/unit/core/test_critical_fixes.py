@@ -87,9 +87,8 @@ class TestCriticalFixesCompliance:
         client = InstrumentServiceClient()
 
         # Test service unavailable scenario
-        with patch.object(client, '_service_available', False):
-            with pytest.raises(ServiceUnavailableError):
-                await client.get_instrument("test_instrument")
+        with patch.object(client, '_service_available', False), pytest.raises(ServiceUnavailableError):
+            await client.get_instrument("test_instrument")
 
     def test_proper_exception_hierarchy(self):
         """Test that all custom exceptions inherit properly."""

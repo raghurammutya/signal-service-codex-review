@@ -78,10 +78,10 @@ class TestSignalVersionPolicy:
 
     async def test_get_version_policy(self, client, mock_signal_product):
         """Test getting current version policy."""
-        with patch('app.core.auth.get_current_user_from_gateway',
-                  return_value={"user_id": "user-456"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_product_definition',
-                      return_value=mock_signal_product):
+        with (
+    patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-456"}),
+    patch('app.services.marketplace_client.MarketplaceClient.get_product_definition', return_value=mock_signal_product)
+):
 
                 response = await client.get(
                     "/api/v2/signals/version-policy/signal-123",
@@ -102,10 +102,10 @@ class TestSignalVersionPolicy:
 
     async def test_get_version_policy_unauthorized(self, client, mock_signal_product):
         """Test that non-owners cannot view version policy."""
-        with patch('app.core.auth.get_current_user_from_gateway',
-                  return_value={"user_id": "other-user"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_product_definition',
-                      return_value=mock_signal_product):
+        with (
+    patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "other-user"}),
+    patch('app.services.marketplace_client.MarketplaceClient.get_product_definition', return_value=mock_signal_product)
+):
 
                 response = await client.get(
                     "/api/v2/signals/version-policy/signal-123",
@@ -120,10 +120,10 @@ class TestSignalVersionPolicy:
 
     async def test_update_to_locked_policy(self, client, mock_signal_product):
         """Test updating to locked version policy."""
-        with patch('app.core.auth.get_current_user_from_gateway',
-                  return_value={"user_id": "user-456"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_product_definition',
-                      return_value=mock_signal_product):
+        with (
+    patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-456"}),
+    patch('app.services.marketplace_client.MarketplaceClient.get_product_definition', return_value=mock_signal_product)
+):
 
                 # Mock the update response
                 mock_client = MagicMock()
@@ -166,10 +166,10 @@ class TestSignalVersionPolicy:
 
     async def test_update_to_range_policy(self, client, mock_signal_product):
         """Test updating to range version policy."""
-        with patch('app.core.auth.get_current_user_from_gateway',
-                  return_value={"user_id": "user-456"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_product_definition',
-                      return_value=mock_signal_product):
+        with (
+    patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-456"}),
+    patch('app.services.marketplace_client.MarketplaceClient.get_product_definition', return_value=mock_signal_product)
+):
 
                 # Mock the update response
                 mock_client = MagicMock()
@@ -321,10 +321,10 @@ class TestSignalVersionPolicy:
 
     async def test_get_policy_recommendations(self, client, mock_signal_product):
         """Test getting version policy recommendations."""
-        with patch('app.core.auth.get_current_user_from_gateway',
-                  return_value={"user_id": "user-456"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_product_definition',
-                      return_value=mock_signal_product):
+        with (
+    patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-456"}),
+    patch('app.services.marketplace_client.MarketplaceClient.get_product_definition', return_value=mock_signal_product)
+):
 
                 # Test with moderate subscribers
                 response = await client.get(

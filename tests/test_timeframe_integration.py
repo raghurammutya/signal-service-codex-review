@@ -134,7 +134,7 @@ class TestTimeframeCacheManager:
             {'timestamp': '2024-01-01T10:05:00Z', 'open': 101, 'close': 102}
         ]
 
-        # Set data
+        # set data
         await cache_manager.set_cached_data('TEST@SYMBOL', '5minute', test_data)
 
         # Get data
@@ -149,7 +149,7 @@ class TestTimeframeCacheManager:
         # Create cache
         cache = await cache_manager.get_or_create_cache('TEST@SYMBOL', '5minute')
 
-        # Set last access to old time
+        # set last access to old time
         cache.last_access = datetime.now() - timedelta(hours=2)
         cache.subscriber_count = 0
 
@@ -184,7 +184,7 @@ class TestTimeframeCache:
         """Test cache expiration"""
         cache = TimeframeCache('TEST@SYMBOL', '5minute')
 
-        # Set with immediate expiration
+        # set with immediate expiration
         asyncio.run(cache.set('test_key', {'data': 'value'}, ttl=-1))
 
         # Clear expired

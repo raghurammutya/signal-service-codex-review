@@ -73,7 +73,7 @@ async def process_email_webhook(
         raise
     except Exception as e:
         log_error(f"Error processing email webhook: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/webhook/sendgrid")
@@ -101,7 +101,7 @@ async def process_sendgrid_webhook(request: Request) -> dict[str, Any]:
 
     except Exception as e:
         log_error(f"Error processing SendGrid webhook: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/webhook/mailgun")
@@ -132,7 +132,7 @@ async def process_mailgun_webhook(request: Request) -> dict[str, Any]:
 
     except Exception as e:
         log_error(f"Error processing Mailgun webhook: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/webhook/status")
@@ -169,4 +169,4 @@ async def get_webhook_status() -> dict[str, Any]:
 
     except Exception as e:
         log_error(f"Error getting webhook status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

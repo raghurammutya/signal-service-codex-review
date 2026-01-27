@@ -99,7 +99,7 @@ class SubscriptionMigrationUtility:
 
         Args:
             user_id: User identifier
-            legacy_subscriptions: List of legacy token-based subscriptions
+            legacy_subscriptions: list of legacy token-based subscriptions
             validate_data_integrity: Whether to perform integrity validation
 
         Returns:
@@ -194,7 +194,7 @@ class SubscriptionMigrationUtility:
             parallel_batches: Number of parallel migration batches
 
         Returns:
-            Dict: Migration results per user
+            dict: Migration results per user
         """
         logger.info(f"Starting bulk migration for {len(user_token_data)} users")
 
@@ -275,7 +275,7 @@ class SubscriptionMigrationUtility:
                 test_key = "AAPL_NASDAQ_EQUITY"
                 await self.instrument_client.get_instrument_metadata(test_key)
                 validation_results["registry_connectivity"] = True
-            except:
+            except Exception:
                 validation_results["registry_connectivity"] = False
 
             logger.info(f"Pre-migration validation for {user_id}: {validation_results}")

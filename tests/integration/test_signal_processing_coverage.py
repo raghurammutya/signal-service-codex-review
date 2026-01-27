@@ -23,13 +23,13 @@ class TestSignalProcessingProductionPaths:
 
     @pytest.fixture
     def production_environment(self):
-        """Set production environment for fail-fast testing."""
+        """set production environment for fail-fast testing."""
         with patch.dict(os.environ, {'ENVIRONMENT': 'production'}):
             yield
 
     @pytest.fixture
     def development_environment(self):
-        """Set development environment for fallback testing."""
+        """set development environment for fallback testing."""
         with patch.dict(os.environ, {'ENVIRONMENT': 'development'}):
             yield
 

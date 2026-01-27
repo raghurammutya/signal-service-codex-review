@@ -50,7 +50,7 @@ class TestSprintComplete5AFixed:
         # Use a marketplace stream key that triggers watermarking
         marketplace_key = "marketplace:prod_123:AAPL:rsi"
 
-        # Set up mock connections
+        # set up mock connections
         manager.subscription_connections[marketplace_key] = {"client_1", "client_2"}
         manager.active_connections = {
             "client_1": AsyncMock(),
@@ -134,36 +134,34 @@ def calculate_signal(data, params):
 """
 
         # Mock dependencies
-        with patch.object(SignalExecutor, 'fetch_marketplace_script', new_callable=AsyncMock) as mock_fetch:
-            with patch.object(SignalExecutor, 'execute_signal_script', new_callable=AsyncMock) as mock_execute:
-                with patch.object(SignalExecutor, 'publish_to_redis', new_callable=AsyncMock) as mock_publish:
-                    mock_fetch.return_value = {
-                        "content": mock_script,
-                        "metadata": {},
-                        "version": "latest",
-                        "product_id": "prod_123"
-                    }
-                    mock_execute.return_value = {
-                        "success": True,
-                        "signals": [{"signal": "buy", "confidence": 0.85}],
-                        "execution_time": 0.01,
-                        "timestamp": datetime.now(UTC).isoformat()
-                    }
+        with patch.object(SignalExecutor, 'fetch_marketplace_script', new_callable=AsyncMock) as mock_fetch, patch.object(SignalExecutor, 'execute_signal_script', new_callable=AsyncMock) as mock_execute, patch.object(SignalExecutor, 'publish_to_redis', new_callable=AsyncMock) as mock_publish:
+                mock_fetch.return_value = {
+                    "content": mock_script,
+                    "metadata": {},
+                    "version": "latest",
+                    "product_id": "prod_123"
+                }
+                mock_execute.return_value = {
+                    "success": True,
+                    "signals": [{"signal": "buy", "confidence": 0.85}],
+                    "execution_time": 0.01,
+                    "timestamp": datetime.now(UTC).isoformat()
+                }
 
-                    # Execute signal
-                    result = await executor.execute_marketplace_signal(
-                        execution_token="exec_token_123",
-                        product_id="prod_123",
-                        instrument="AAPL",
-                        params={"threshold": 150}
-                    )
+                # Execute signal
+                result = await executor.execute_marketplace_signal(
+                    execution_token="exec_token_123",
+                    product_id="prod_123",
+                    instrument="AAPL",
+                    params={"threshold": 150}
+                )
 
-                    assert result["success"]
-                    assert "execution_id" in result
-                    assert result["status"] == "completed"
+                assert result["success"]
+                assert "execution_id" in result
+                assert result["status"] == "completed"
 
-                    # Verify result was published to Redis stream
-                    mock_publish.assert_called_once()
+                # Verify result was published to Redis stream
+                mock_publish.assert_called_once()
 
         print("✓ Item 3: MinIO script execution with sandboxing verified")
 
@@ -196,30 +194,28 @@ def calculate_signal(data, params):
         ]
 
         # Use TestClient to test the actual endpoint
-        with TestClient(app) as client:
-            with patch('app.core.auth.gateway_trust.get_current_user_from_gateway', new_callable=AsyncMock) as mock_auth:
-                mock_auth.return_value = {"user_id": "user_123"}
-                with patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions',
-                          return_value=mock_marketplace_response):
-                    with patch('app.clients.algo_engine_client.AlgoEngineClient.list_personal_scripts',
-                              new_callable=AsyncMock, return_value=mock_personal_scripts):
+        with TestClient(app) as client, patch('app.core.auth.gateway_trust.get_current_user_from_gateway', new_callable=AsyncMock) as mock_auth:
+            mock_auth.return_value = {"user_id": "user_123"}
+            with patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions',
+                       return_value=mock_marketplace_response), patch('app.clients.algo_engine_client.AlgoEngineClient.list_personal_scripts',
+                      new_callable=AsyncMock, return_value=mock_personal_scripts):
 
-                        # Call the actual endpoint with proper headers
-                        response = client.get(
-                            "/sdk/signals/streams",
-                            headers={
-                                "X-User-ID": "user_123",
-                                "X-Gateway-Secret": "test_secret",
-                                "Authorization": "Bearer test_token"
-                            }
-                        )
+                # Call the actual endpoint with proper headers
+                response = client.get(
+                    "/sdk/signals/streams",
+                    headers={
+                        "X-User-ID": "user_123",
+                        "X-Gateway-Secret": "test_secret",
+                        "Authorization": "Bearer test_token"
+                    }
+                )
 
-                        assert response.status_code == 200
-                        data = response.json()
-                        assert "marketplace" in data
-                        assert "personal" in data
-                        assert len(data["marketplace"]) > 0
-                        assert len(data["personal"]) > 0
+                assert response.status_code == 200
+                data = response.json()
+                assert "marketplace" in data
+                assert "personal" in data
+                assert len(data["marketplace"]) > 0
+                assert len(data["personal"]) > 0
 
         print("✓ Item 4: Real SDK signal listing via API endpoint verified")
 
@@ -268,27 +264,25 @@ def calculate_signal(data, params):
             mock_redis.return_value = mock_redis_client
 
             # Mock author verification
-            with patch('app.api.v2.signal_version_policy.verify_signal_author', return_value=True):
-                with TestClient(app) as client:
-                    # Update version policy
-                    response = client.put(
-                        "/api/v2/signals/version-policy/sig_123",
-                        json={
-                            "policy_type": "locked",
-                            "target_version": "1.2.0"
-                        },
-                        headers={
-                            "X-User-ID": "author_456",
-                            "X-Gateway-Secret": "test_secret",
-                            "Authorization": "Bearer test_token"
-                        }
-                    )
+            with patch('app.api.v2.signal_version_policy.verify_signal_author', return_value=True), TestClient(app) as client:
+                response = client.put(
+                    "/api/v2/signals/version-policy/sig_123",
+                    json={
+                        "policy_type": "locked",
+                        "target_version": "1.2.0"
+                    },
+                    headers={
+                        "X-User-ID": "author_456",
+                        "X-Gateway-Secret": "test_secret",
+                        "Authorization": "Bearer test_token"
+                    }
+                )
 
-                    assert response.status_code == 200
-                    data = response.json()
-                    assert data["policy_type"] == "locked"
-                    assert data["target_version"] == "1.2.0"
-                    assert data["signal_id"] == "sig_123"
+                assert response.status_code == 200
+                data = response.json()
+                assert data["policy_type"] == "locked"
+                assert data["target_version"] == "1.2.0"
+                assert data["signal_id"] == "sig_123"
 
         print("✓ Item 6: Version policy management API verified")
 
@@ -340,29 +334,28 @@ def calculate_signal(data, params):
             assert result["result"]["signal_id"] == "sig_123"
 
         # Test email webhook endpoint
-        with TestClient(app) as client:
-            with patch('app.services.email_integration.get_email_integration_service') as mock_get_service:
-                mock_service = AsyncMock()
-                mock_service.process_inbound_email.return_value = {
-                    "success": True,
-                    "command": "subscribe",
-                    "result": {"signal_id": "sig_123"}
+        with TestClient(app) as client, patch('app.services.email_integration.get_email_integration_service') as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.process_inbound_email.return_value = {
+                "success": True,
+                "command": "subscribe",
+                "result": {"signal_id": "sig_123"}
+            }
+            mock_get_service.return_value = mock_service
+
+            response = client.post(
+                "/api/v2/signals/email/webhook",
+                json={
+                    "from_email": "user@example.com",
+                    "to_email": "signals@stocksblitz.com",
+                    "subject": "SUBSCRIBE sig_123",
+                    "body_plain": "Subscribe to signal",
+                    "body_html": None
                 }
-                mock_get_service.return_value = mock_service
+            )
 
-                response = client.post(
-                    "/api/v2/signals/email/webhook",
-                    json={
-                        "from_email": "user@example.com",
-                        "to_email": "signals@stocksblitz.com",
-                        "subject": "SUBSCRIBE sig_123",
-                        "body_plain": "Subscribe to signal",
-                        "body_html": None
-                    }
-                )
-
-                assert response.status_code == 200
-                assert response.json()["success"]
+            assert response.status_code == 200
+            assert response.json()["success"]
 
         print("✓ Item 7: Email integration with webhooks verified")
 

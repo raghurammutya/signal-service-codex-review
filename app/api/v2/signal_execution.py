@@ -17,6 +17,7 @@ from app.schemas.signal_schemas import (
     SignalExecutionResponse,
 )
 from app.services.signal_executor import SignalExecutor
+from app.services.signal_stream_contract import StreamKeyFormat
 
 router = APIRouter(prefix="/api/v2/signals", tags=["signal-execution"])
 
@@ -82,7 +83,7 @@ async def execute_marketplace_signal(
 
     except Exception as e:
         log_error(f"Error initiating marketplace signal execution: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/execute/personal", response_model=SignalExecutionResponse)
@@ -144,7 +145,7 @@ async def execute_personal_signal(
 
     except Exception as e:
         log_error(f"Error initiating personal signal execution: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/execution/status/{execution_id}")
@@ -201,8 +202,7 @@ async def get_execution_status(
     except Exception as e:
         # Only catch non-HTTP exceptions (Redis, JSON parsing errors, etc.)
         log_error(f"Error getting execution status for {execution_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # Import for stream key generation
-from app.services.signal_stream_contract import StreamKeyFormat

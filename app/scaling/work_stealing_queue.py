@@ -280,10 +280,8 @@ class WorkerPool:
         requester_size = self.workers[requester_id].size()
 
         for worker_id, queue in self.workers.items():
-            if worker_id != requester_id:
-                # Only steal from workers with more tasks
-                if queue.size() > requester_size + 10:  # Threshold
-                    stealable.append(worker_id)
+            if worker_id != requester_id and queue.size() > requester_size + 10:  # Threshold
+                stealable.append(worker_id)
 
         return stealable
 

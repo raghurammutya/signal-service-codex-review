@@ -290,7 +290,7 @@ def previous_high_low(
         period: Period for calculation ("1D", "1W", "1M")
 
     Returns:
-        Dict with 'previous_high' and 'previous_low' values
+        dict with 'previous_high' and 'previous_low' values
     """
     try:
         if not SMC_AVAILABLE or len(df) < 2:
@@ -614,9 +614,8 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
 
             # Bullish FVG: Gap up pattern
             # Candle 1 high < Candle 3 low (gap between them)
-            if candle1['high'] < candle3['low']:
+            if candle1['high'] < candle3['low'] and candle3['close'] > candle1['close'] * 1.005:
                 # Confirm it's a strong bullish move
-                if candle3['close'] > candle1['close'] * 1.005:  # At least 0.5% move
                     gap_top = candle3['low']
                     gap_bottom = candle1['high']
 
@@ -632,21 +631,19 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
 
             # Bearish FVG: Gap down pattern
             # Candle 1 low > Candle 3 high (gap between them)
-            elif candle1['low'] > candle3['high']:
-                # Confirm it's a strong bearish move
-                if candle3['close'] < candle1['close'] * 0.995:  # At least 0.5% move
-                    gap_top = candle1['low']
-                    gap_bottom = candle3['high']
+            if candle1['low'] > candle3['high'] and candle3['close'] < candle1['close'] * 0.995:  # At least 0.5% move:
+                gap_top = candle1['low']
+                gap_bottom = candle3['high']
 
-                    # Check if gap is significant (> 0.1% of price)
-                    if (gap_top - gap_bottom) / candle1['close'] > 0.001:
-                        fvg_list.append({
-                            'top': float(gap_top),
-                            'bottom': float(gap_bottom),
-                            'type': 'bearish',
-                            'timestamp': df.index[i],
-                            'filled': False
-                        })
+                # Check if gap is significant (> 0.1% of price)
+                if (gap_top - gap_bottom) / candle1['close'] > 0.001:
+                    fvg_list.append({
+                        'top': float(gap_top),
+                        'bottom': float(gap_bottom),
+                        'type': 'bearish',
+                        'timestamp': df.index[i],
+                        'filled': False
+                    })
 
         # Check if any FVGs have been filled by subsequent price action
         if fvg_list:

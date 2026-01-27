@@ -111,7 +111,7 @@ class GreeksModelConfig:
             raise ConfigurationError(
                 f"Failed to initialize Greeks model configuration: {str(e)}",
                 details={"original_error": str(e)}
-            )
+            ) from e
 
     def _validate_parameters(self):
         """Validate model parameters are within reasonable ranges"""
@@ -203,7 +203,7 @@ class GreeksModelConfig:
                     "model": self._model_name,
                     "import_error": str(e)
                 }
-            )
+            ) from e
 
     @property
     def model_name(self) -> str:
@@ -310,7 +310,7 @@ class GreeksModelConfig:
                         "dividend_yield": final_dividend_yield
                     }
                 }
-            )
+            ) from e
 
     def get_model_info(self) -> dict[str, Any]:
         """Get information about the configured model"""

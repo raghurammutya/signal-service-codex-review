@@ -348,12 +348,13 @@ class TestExternalConfigServiceIntegration:
 
         for base_url in EXTERNAL_CONFIG_URLS:
             try:
-                async with aiohttp.ClientSession() as session:
-                    # Test health endpoint
-                    async with session.get(
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(
                         f"{base_url}/health",
                         timeout=aiohttp.ClientTimeout(total=10)
-                    ) as response:
+                    ) as response
+                ):
                         if response.status == 200:
                             health_data = await response.json()
                             results[base_url] = {
@@ -447,12 +448,13 @@ class TestExternalConfigServiceIntegration:
         from app.core.hot_config import get_hot_reloadable_settings
 
         # Create test configuration with external config service
-        with patch.dict(os.environ, {
-            'USE_EXTERNAL_CONFIG': 'true',
-            'ENVIRONMENT': 'dev'
-        }):
-            # Mock config dependencies for testing
-            with patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_base_init:
+        with (
+            patch.dict(os.environ, {
+                'USE_EXTERNAL_CONFIG': 'true',
+                'ENVIRONMENT': 'dev'
+            }),
+            patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_base_init
+        ):
                 mock_base_init.return_value = None
 
                 config = get_hot_reloadable_settings(use_external_config=True)

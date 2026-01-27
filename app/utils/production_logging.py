@@ -361,7 +361,7 @@ def setup_production_logging(
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
 
-    # Set specific logger levels
+    # set specific logger levels
     logging.getLogger('signal_service').setLevel(getattr(logging, log_level.upper()))
     logging.getLogger('signal_service.performance').setLevel(logging.INFO)
     logging.getLogger('signal_service.errors').setLevel(logging.WARNING)

@@ -3,7 +3,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from app.core.config import settings
 from app.errors import ConfigurationError, InvalidConfigurationError, MissingConfigurationError
@@ -49,14 +49,14 @@ class ConfigHandler:
 
         except Exception as e:
             log_exception(f"Failed to process config update: {e}")
-            raise ConfigurationError(f"Configuration processing failed: {str(e)}")
+            raise ConfigurationError(f"Configuration processing failed: {str(e)}") from e
 
     async def validate_config(self, config_data: dict) -> SignalConfigData:
         """Validate configuration data using Pydantic schema"""
         try:
             return SignalConfigData(**config_data)
         except Exception as e:
-            raise InvalidConfigurationError(f"Configuration validation failed: {str(e)}")
+            raise InvalidConfigurationError(f"Configuration validation failed: {str(e)}") from e
 
     async def create_config(self, config: SignalConfigData):
         """Create a new configuration"""
@@ -153,7 +153,7 @@ class ConfigHandler:
         config_key = self.get_config_key(config)
 
         try:
-            # Set up scheduled tasks based on frequency
+            # set up scheduled tasks based on frequency
             if config.frequency.value in ['every_interval', 'on_close']:
                 await self.setup_scheduled_tasks(config_key, config)
 
@@ -164,7 +164,7 @@ class ConfigHandler:
             raise
 
     async def setup_scheduled_tasks(self, config_key: str, config: SignalConfigData):
-        """Set up scheduled tasks for configuration"""
+        """set up scheduled tasks for configuration"""
         try:
             # Cancel existing task if any
             await self.cancel_config_tasks(config_key)
@@ -182,7 +182,7 @@ class ConfigHandler:
                     log_info(f"Started periodic task for {config_key} (every {interval_seconds}s)")
 
             elif config.frequency.value == 'on_close':
-                # Set up market close detection task
+                # set up market close detection task
                 task = asyncio.create_task(
                     self.execute_on_close_computation(config)
                 )

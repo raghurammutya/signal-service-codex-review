@@ -365,7 +365,7 @@ class RegistryMetricsCollector:
                     current_cache_hit_rate >= self.sla_thresholds["cache_hit_rate_pct"]
                 )
             }
-        except:
+        except Exception:
             return {"error": "Unable to calculate SLA summary"}
 
 # Global metrics collector instance

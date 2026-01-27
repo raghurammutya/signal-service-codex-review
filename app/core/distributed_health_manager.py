@@ -114,7 +114,7 @@ class DistributedHealthManager:
                 json.dumps(asdict(instance), default=str)
             )
 
-            # Set TTL for auto-cleanup
+            # set TTL for auto-cleanup
             await self.redis_client.expire(
                 f"{self.redis_keys['instances']}:{self.instance_id}",
                 self.instance_ttl

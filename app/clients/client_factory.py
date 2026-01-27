@@ -6,8 +6,8 @@ configuration, proper resource cleanup, and circuit breaker patterns.
 """
 import asyncio
 import logging
-from contextlib import asynccontextmanager
-from typing import Any, AsyncContextManager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +203,7 @@ def _register_default_clients(manager: ClientManager):
 
 # Convenience functions for common client access patterns
 @asynccontextmanager
-async def get_ticker_client() -> AsyncContextManager:
+async def get_ticker_client() -> AbstractAsyncContextManager:
     """Get ticker service client with managed lifecycle."""
     manager = get_client_manager()
     async with manager.get_client_context('ticker_service') as client:
@@ -211,7 +211,7 @@ async def get_ticker_client() -> AsyncContextManager:
 
 
 @asynccontextmanager
-async def get_user_client() -> AsyncContextManager:
+async def get_user_client() -> AbstractAsyncContextManager:
     """Get user service client with managed lifecycle."""
     manager = get_client_manager()
     async with manager.get_client_context('user_service') as client:
@@ -219,7 +219,7 @@ async def get_user_client() -> AsyncContextManager:
 
 
 @asynccontextmanager
-async def get_alert_client() -> AsyncContextManager:
+async def get_alert_client() -> AbstractAsyncContextManager:
     """Get alert service client with managed lifecycle."""
     manager = get_client_manager()
     async with manager.get_client_context('alert_service') as client:
@@ -227,7 +227,7 @@ async def get_alert_client() -> AsyncContextManager:
 
 
 @asynccontextmanager
-async def get_comms_client() -> AsyncContextManager:
+async def get_comms_client() -> AbstractAsyncContextManager:
     """Get comms service client with managed lifecycle."""
     manager = get_client_manager()
     async with manager.get_client_context('comms_service') as client:
@@ -235,7 +235,7 @@ async def get_comms_client() -> AsyncContextManager:
 
 
 @asynccontextmanager
-async def get_historical_data_client() -> AsyncContextManager:
+async def get_historical_data_client() -> AbstractAsyncContextManager:
     """Get historical data client with managed lifecycle."""
     manager = get_client_manager()
     async with manager.get_client_context('historical_data') as client:

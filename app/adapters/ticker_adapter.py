@@ -209,7 +209,7 @@ class EnhancedTickerAdapter:
                 raise RuntimeError("INTERNAL_API_KEY not found in config_service. Required for ticker_service authentication.")
 
         except Exception as e:
-            raise RuntimeError(f"Failed to get ticker_service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+            raise RuntimeError(f"Failed to get ticker_service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.") from e
 
         # Initialize HTTP client for ticker_service
         self.http_client = httpx.AsyncClient(
@@ -266,10 +266,10 @@ class EnhancedTickerAdapter:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ValueError(f"Instrument {instrument_key} not found in ticker_service")
-            raise DataAccessError(f"ticker_service error for {instrument_key}: {e.response.status_code}")
+                raise ValueError(f"Instrument {instrument_key} not found in ticker_service") from e
+            raise DataAccessError(f"ticker_service error for {instrument_key}: {e.response.status_code}") from e
         except Exception as e:
-            raise DataAccessError(f"Failed to get latest price for {instrument_key}: {e}")
+            raise DataAccessError(f"Failed to get latest price for {instrument_key}: {e}") from e
 
     async def process_tick(self, tick_data: dict[str, Any]) -> dict[str, Any]:
         """
@@ -344,7 +344,7 @@ class EnhancedTickerAdapter:
 
         except Exception as e:
             logger.exception("Error processing enhanced tick: %s", e)
-            raise DataAccessError(f"Failed to process tick data: {str(e)}")
+            raise DataAccessError(f"Failed to process tick data: {str(e)}") from e
 
     def _extract_price_data(self, tick_data: dict, field: str, default_currency: str) -> dict | None:
         """Extract price data from tick, handling both nested and flat formats."""
@@ -416,7 +416,7 @@ class EnhancedTickerAdapter:
 
         except Exception as e:
             logger.exception("Error preparing data for indicators: %s", e)
-            raise ComputationError(f"Failed to prepare indicator data: {str(e)}")
+            raise ComputationError(f"Failed to prepare indicator data: {str(e)}") from e
 
     async def calculate_indicators(
         self,
@@ -438,7 +438,7 @@ class EnhancedTickerAdapter:
         except Exception as e:
             logger.exception("Error calculating indicators: %s", e)
             from app.errors import ComputationError
-            raise ComputationError(f"Failed to calculate indicators: {str(e)}")
+            raise ComputationError(f"Failed to calculate indicators: {str(e)}") from e
 
     def requires_usd_conversion(self, asset_class: str) -> bool:
         """
@@ -529,10 +529,10 @@ class EnhancedTickerAdapter:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ValueError(f"Option {underlying} {strike} {option_type} not found in ticker_service")
-            raise DataAccessError(f"ticker_service error for option price: {e.response.status_code}")
+                raise ValueError(f"Option {underlying} {strike} {option_type} not found in ticker_service") from e
+            raise DataAccessError(f"ticker_service error for option price: {e.response.status_code}") from e
         except Exception as e:
-            raise DataAccessError(f"Failed to get option price for {underlying} {strike} {option_type}: {e}")
+            raise DataAccessError(f"Failed to get option price for {underlying} {strike} {option_type}: {e}") from e
 
     async def get_historical_options(
         self,
@@ -552,7 +552,7 @@ class EnhancedTickerAdapter:
             moneyness_level: Moneyness level filter (optional)
 
         Returns:
-            List of historical option data
+            list of historical option data
         """
         try:
             # Call ticker_service for historical option chain
@@ -574,10 +574,10 @@ class EnhancedTickerAdapter:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ValueError(f"Historical options for {underlying} at {timestamp} not found in ticker_service")
-            raise DataAccessError(f"ticker_service error for historical options: {e.response.status_code}")
+                raise ValueError(f"Historical options for {underlying} at {timestamp} not found in ticker_service") from e
+            raise DataAccessError(f"ticker_service error for historical options: {e.response.status_code}") from e
         except Exception as e:
-            raise DataAccessError(f"Failed to get historical options for {underlying} at {timestamp}: {e}")
+            raise DataAccessError(f"Failed to get historical options for {underlying} at {timestamp}: {e}") from e
 
     async def get_option_iv(
         self,
@@ -622,10 +622,10 @@ class EnhancedTickerAdapter:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ValueError(f"IV for {underlying} {strike} {option_type} not found in ticker_service")
-            raise DataAccessError(f"ticker_service error for option IV: {e.response.status_code}")
+                raise ValueError(f"IV for {underlying} {strike} {option_type} not found in ticker_service") from e
+            raise DataAccessError(f"ticker_service error for option IV: {e.response.status_code}") from e
         except Exception as e:
-            raise DataAccessError(f"Failed to get option IV for {underlying} {strike} {option_type}: {e}")
+            raise DataAccessError(f"Failed to get option IV for {underlying} {strike} {option_type}: {e}") from e
 
     async def get_option_chain(
         self,
@@ -641,7 +641,7 @@ class EnhancedTickerAdapter:
             expiry: Option expiry date (optional)
 
         Returns:
-            List of option chain data
+            list of option chain data
         """
         try:
             # Call ticker_service for option chain
@@ -658,10 +658,10 @@ class EnhancedTickerAdapter:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ValueError(f"Option chain for {underlying} not found in ticker_service")
-            raise DataAccessError(f"ticker_service error for option chain: {e.response.status_code}")
+                raise ValueError(f"Option chain for {underlying} not found in ticker_service") from e
+            raise DataAccessError(f"ticker_service error for option chain: {e.response.status_code}") from e
         except Exception as e:
-            raise DataAccessError(f"Failed to get option chain for {underlying}: {e}")
+            raise DataAccessError(f"Failed to get option chain for {underlying}: {e}") from e
 
     async def get_historical_data(
         self,
@@ -733,10 +733,10 @@ class EnhancedTickerAdapter:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ValueError(f"Historical data for {symbol} not found in ticker_service")
-            raise DataAccessError(f"ticker_service error for historical data: {e.response.status_code}")
+                raise ValueError(f"Historical data for {symbol} not found in ticker_service") from e
+            raise DataAccessError(f"ticker_service error for historical data: {e.response.status_code}") from e
         except Exception as e:
-            raise DataAccessError(f"Failed to get historical data for {symbol}: {e}")
+            raise DataAccessError(f"Failed to get historical data for {symbol}: {e}") from e
 
     async def close(self):
         """Close the HTTP client connection"""

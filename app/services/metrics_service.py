@@ -17,13 +17,13 @@ import psutil
 
 # Import logging utilities
 from app.utils.logging_utils import log_info
+from app.utils.redis import get_redis_client
 
 
 def log_error(message, *args, **kwargs):
     """Log error messages."""
     logging.error(message, *args, **kwargs)
 
-from app.utils.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -126,10 +126,8 @@ class MetricsCollector:
     def record_request(self, endpoint: str, duration_ms: float, status_code: int):
         """Record API request metrics with budget guard validation."""
         # Apply budget throttling - drop non-essential metrics under pressure
-        if self.backpressure_state['active'] and self.backpressure_state['level'] == 'heavy':
-            # Only record essential endpoints during heavy backpressure
-            if not any(essential in endpoint for essential in ['/health', '/metrics']):
-                return
+        if self.backpressure_state['active'] and self.backpressure_state['level'] == 'heavy' and not any(essential in endpoint for essential in ['/health', '/metrics']):
+            return
 
         with self._lock:
             timestamp = time.time()
@@ -300,7 +298,7 @@ class MetricsCollector:
                     breakdown[calc_type]['errors'] += 1
 
         # Calculate averages
-        for calc_type, metrics in breakdown.items():
+        for _calc_type, metrics in breakdown.items():
             if metrics['count'] > 0:
                 metrics['average_duration_ms'] = metrics['total_time'] / metrics['count']
                 metrics['error_rate'] = metrics['errors'] / metrics['count']

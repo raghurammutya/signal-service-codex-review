@@ -92,7 +92,7 @@ async def detailed_health_check(checker: HealthChecker = Depends(get_health_chec
     try:
         health_data = await checker.get_comprehensive_health()
 
-        # Set HTTP status code based on health
+        # set HTTP status code based on health
         status_code = 200
         if health_data['status'] == 'unhealthy' or health_data['status'] == 'error':
             status_code = 503  # Service Unavailable
@@ -117,7 +117,7 @@ async def cluster_health_check(dist_health: DistributedHealthManager = Depends(g
     try:
         cluster_data = await dist_health.get_cluster_health_for_dashboard()
 
-        # Set HTTP status code based on cluster health
+        # set HTTP status code based on cluster health
         status_code = 200
         if cluster_data['status'] == 'unhealthy' or cluster_data['status'] == 'error':
             status_code = 503

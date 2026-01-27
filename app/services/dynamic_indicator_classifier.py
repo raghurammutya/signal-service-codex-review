@@ -277,10 +277,9 @@ class DynamicIndicatorClassifier:
         base_freq = context.required_frequency
 
         # Adjust based on indicator type
-        if context.indicator_type == IndicatorType.CUSTOM_SCRIPT:
+        if context.indicator_type == IndicatorType.CUSTOM_SCRIPT and context.computation_time_ms > 1000:  # >1 second
             # Custom scripts might be expensive
-            if context.computation_time_ms > 1000:  # >1 second
-                return self._reduce_frequency(base_freq, factor=2)
+            return self._reduce_frequency(base_freq, factor=2)
 
         # Adjust based on market conditions
         if context.volatility_regime == 'extreme':

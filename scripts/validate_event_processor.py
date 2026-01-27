@@ -22,7 +22,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -86,7 +86,7 @@ class EventProcessorValidator:
             samples_file: JSON file with event migration samples
 
         Returns:
-            Dict: Complete event migration validation report
+            dict: Complete event migration validation report
         """
         print(f"📋 Loading event samples from {samples_file}")
 
@@ -169,7 +169,7 @@ class EventProcessorValidator:
             event_count: Number of events to test
 
         Returns:
-            Dict: Performance validation report
+            dict: Performance validation report
         """
         print(f"⚡ Running event performance validation with {event_count} events")
 
@@ -273,9 +273,8 @@ class EventProcessorValidator:
 
         # Validate routing table consistency
         routing_table = event_entry.get("routing_table_entry")
-        if routing_table:
-            if not self._validate_routing_table_mapping(old_routing, new_routing, routing_table):
-                errors.append("Routing table mapping inconsistency detected")
+        if routing_table and not self._validate_routing_table_mapping(old_routing, new_routing, routing_table):
+            errors.append("Routing table mapping inconsistency detected")
 
         return errors
 
@@ -336,9 +335,8 @@ class EventProcessorValidator:
             try:
                 if isinstance(timestamp, str):
                     datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                elif isinstance(timestamp, int | float):
-                    if timestamp < 0 or timestamp > time.time() + 86400:  # Future events allowed up to 24h
-                        errors.append("Event timestamp out of reasonable range")
+                if isinstance(timestamp, int | float) and (timestamp < 0 or timestamp > time.time() + 86400):  # Future events allowed up to 24h:
+                    errors.append("Event timestamp out of reasonable range")
             except (ValueError, TypeError):
                 errors.append("Invalid timestamp format in event")
 

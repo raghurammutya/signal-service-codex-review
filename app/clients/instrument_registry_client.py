@@ -352,7 +352,7 @@ def create_registry_client(config_service_client=None) -> InstrumentRegistryClie
             config_service_client = get_config_client(service_name="signal_service")
         except ConfigServiceError as e:
             logger.error(f"Failed to initialize config service client: {e}")
-            raise RuntimeError(f"Config service integration required for production: {e}")
+            raise RuntimeError(f"Config service integration required for production: {e}") from e
 
     try:
         # Get registry service URL from config service
@@ -380,10 +380,10 @@ def create_registry_client(config_service_client=None) -> InstrumentRegistryClie
 
     except ConfigServiceError as e:
         logger.error(f"Failed to load registry configuration from config service: {e}")
-        raise RuntimeError(f"Registry configuration missing from config service: {e}")
+        raise RuntimeError(f"Registry configuration missing from config service: {e}") from e
     except (ValueError, TypeError) as e:
         logger.error(f"Invalid configuration values from config service: {e}")
-        raise RuntimeError(f"Registry configuration validation failed: {e}")
+        raise RuntimeError(f"Registry configuration validation failed: {e}") from e
 
 # Event handler example for signal service integration
 async def handle_registry_event(event: dict[str, Any], signal_service_context):

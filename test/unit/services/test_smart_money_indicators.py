@@ -157,7 +157,7 @@ class TestSmartMoneyIndicators:
                 # Verify touches count
                 assert (liquidity_levels['touches'] >= 1).all(), "All levels should have at least 1 touch"
         elif isinstance(liquidity_levels, dict):
-            assert 'support_levels' in liquidity_levels or 'resistance_levels' in liquidity_levels, "Dict should contain level info"
+            assert 'support_levels' in liquidity_levels or 'resistance_levels' in liquidity_levels, "dict should contain level info"
 
     def test_combined_smart_money_analysis(self, indicators, sample_ohlcv_data):
         """Test combined Smart Money analysis."""

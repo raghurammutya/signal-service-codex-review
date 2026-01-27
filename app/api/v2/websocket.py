@@ -10,9 +10,10 @@ from typing import Any
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-logger = logging.getLogger(__name__)
 from app.core.redis_manager import get_redis_client
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/subscriptions", tags=["websocket"])
 

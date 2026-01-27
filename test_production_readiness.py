@@ -73,7 +73,7 @@ class ImportTest(ProductionTest):
                 __import__(module)
                 imported.append(module)
             except Exception as e:
-                raise ImportError(f"Failed to import {module}: {e}")
+                raise ImportError(f"Failed to import {module}: {e}") from e
 
         # Try optional modules
         optional_imported = []
@@ -112,7 +112,7 @@ class EnvironmentTest(ProductionTest):
                 raise AssertionError("Script execution should be disabled in production")
             except RuntimeError as e:
                 if "disabled in production" not in str(e):
-                    raise AssertionError(f"Unexpected error: {e}")
+                    raise AssertionError(f"Unexpected error: {e}") from e
 
         except ImportError as e:
             # signal_executor might not be available due to missing dependencies

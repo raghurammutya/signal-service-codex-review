@@ -9,7 +9,7 @@ import json
 import os
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 
 class DatabaseFinalAssurance:
@@ -56,7 +56,7 @@ class DatabaseFinalAssurance:
 
                             if table in content:
                                 usage_files.append(file_path)
-                        except:
+                        except Exception:
                             continue
 
             table_usage[table] = {
@@ -116,7 +116,7 @@ import asyncio
 import logging
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Any
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class NightlyDBConsistencyCheck:
             "overall_health": "UNKNOWN"
         }
 
-    async def check_recent_writes(self) -> Dict[str, Any]:
+    async def check_recent_writes(self) -> dict[str, Any]:
         """Check for recent writes in all tables."""
         logger.info("Checking recent writes...")
 
@@ -190,7 +190,7 @@ class NightlyDBConsistencyCheck:
             "healthy_tables": sum(1 for check in write_check_results if check["status"] == "HEALTHY")
         }
 
-    async def check_hypertable_health(self) -> Dict[str, Any]:
+    async def check_hypertable_health(self) -> dict[str, Any]:
         """Check TimescaleDB hypertable health."""
         logger.info("Checking hypertable health...")
 
@@ -228,7 +228,7 @@ class NightlyDBConsistencyCheck:
             "avg_health_score": sum(h["health_score"] for h in health_results) / len(health_results)
         }
 
-    async def run_consistency_check(self) -> Dict[str, Any]:
+    async def run_consistency_check(self) -> dict[str, Any]:
         """Run complete nightly consistency check."""
         logger.info("Starting nightly DB consistency check...")
 

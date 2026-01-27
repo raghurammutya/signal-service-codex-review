@@ -44,7 +44,7 @@ class AlgoEngineScriptResponse(BaseModel):
 
 class AlgoEngineScriptsListResponse(BaseModel):
     """Schema for scripts list response from algo_engine API."""
-    scripts: list[AlgoEngineScriptResponse] = Field(..., description="List of user scripts")
+    scripts: list[AlgoEngineScriptResponse] = Field(..., description="list of user scripts")
     total_count: int | None = Field(None, description="Total number of scripts")
     page: int | None = Field(None, description="Current page number")
     limit: int | None = Field(None, description="Results per page")
@@ -302,7 +302,7 @@ async def subscribe_to_signals(
 
     except Exception as e:
         log_error(f"Error in SDK signal subscription: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.websocket("/ws")
@@ -548,7 +548,7 @@ async def list_available_streams(
     x_gateway_secret: str | None = Header(None, alias="X-Gateway-Secret")
 ) -> dict[str, Any]:
     """
-    List available signal streams for the authenticated user.
+    list available signal streams for the authenticated user.
 
     Returns categorized lists of streams the user can subscribe to.
     Sprint 5A: Real integration with marketplace and personal signals.
@@ -668,7 +668,7 @@ async def list_available_streams(
 
     except Exception as e:
         log_error(f"Error listing streams: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/signals/validate-token")
@@ -711,4 +711,4 @@ async def validate_execution_token(
 
     except Exception as e:
         log_error(f"Error validating token: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

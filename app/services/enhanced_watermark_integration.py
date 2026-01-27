@@ -136,7 +136,7 @@ class EnhancedWatermarkIntegration:
             log_exception(f"Unexpected watermarking error for user {user_id}: {e}")
             self._record_failure(user_id, stream_key, signal_data)
 
-            raise WatermarkError(f"Watermarking failed due to unexpected error: {e}")
+            raise WatermarkError(f"Watermarking failed due to unexpected error: {e}") from e
 
     async def _validate_watermark_prerequisites(self, user_id: str, stream_key: str):
         """Validate prerequisites for watermarking."""
@@ -168,9 +168,9 @@ class EnhancedWatermarkIntegration:
             return gateway_secret
 
         except AttributeError:
-            raise SecurityError("GATEWAY_SECRET not configured in config service")
+            raise SecurityError("GATEWAY_SECRET not configured in config service") from e
         except Exception as e:
-            raise SecurityError(f"Failed to get gateway secret from config service: {e}")
+            raise SecurityError(f"Failed to get gateway secret from config service: {e}") from e
 
     async def _apply_watermark_via_service(
         self,
@@ -218,7 +218,7 @@ class EnhancedWatermarkIntegration:
             try:
                 result = response.json()
             except (ValueError, json.JSONDecodeError):
-                raise WatermarkError("Invalid watermark service response - malformed JSON")
+                raise WatermarkError("Invalid watermark service response - malformed JSON") from e
 
             # Validate response structure
             if not isinstance(result, dict):
@@ -242,11 +242,11 @@ class EnhancedWatermarkIntegration:
             return watermarked_data
 
         except httpx.TimeoutException:
-            raise WatermarkError("Watermarking request timeout - service unavailable")
+            raise WatermarkError("Watermarking request timeout - service unavailable") from e
         except httpx.ConnectError:
-            raise WatermarkError("Watermarking service unavailable - connection failed")
+            raise WatermarkError("Watermarking service unavailable - connection failed") from e
         except httpx.RequestError as e:
-            raise WatermarkError(f"Watermarking request failed: {e}")
+            raise WatermarkError(f"Watermarking request failed: {e}") from e
 
     def _validate_watermark_integrity(
         self,

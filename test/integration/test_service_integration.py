@@ -13,7 +13,7 @@ class TestServiceIntegration:
 
     @pytest.fixture(scope="class")
     async def test_infrastructure(self):
-        """Set up test infrastructure containers."""
+        """set up test infrastructure containers."""
         # Start PostgreSQL
         postgres = PostgreSqlContainer(
             "timescale/timescaledb:latest-pg14",
@@ -27,7 +27,7 @@ class TestServiceIntegration:
         redis = RedisContainer("redis:7-alpine")
         redis.start()
 
-        # Set environment variables for test
+        # set environment variables for test
         os.environ["DATABASE_URL"] = postgres.get_connection_url()
         os.environ["REDIS_URL"] = redis.get_connection_url()
 

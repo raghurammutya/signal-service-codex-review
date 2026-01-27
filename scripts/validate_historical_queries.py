@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -97,7 +97,7 @@ class HistoricalQueryValidator:
             samples_file: JSON file with historical query migration samples
 
         Returns:
-            Dict: Complete historical query migration validation report
+            dict: Complete historical query migration validation report
         """
         print(f"📋 Loading query samples from {samples_file}")
 
@@ -180,7 +180,7 @@ class HistoricalQueryValidator:
             query_count: Number of queries to test
 
         Returns:
-            Dict: Performance validation report
+            dict: Performance validation report
         """
         print(f"⚡ Running historical query performance validation with {query_count} queries")
 

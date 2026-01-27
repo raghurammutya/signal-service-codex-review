@@ -277,7 +277,7 @@ class IndicatorUtils:
             window: Window size for swing detection
 
         Returns:
-            List of dicts with swing high info
+            list of dicts with swing high info
         """
         swings = CustomIndicators.swing_high(df, left_bars=window//2, right_bars=window//2)
 
@@ -302,7 +302,7 @@ class IndicatorUtils:
             lookback_periods: Number of periods to look back
 
         Returns:
-            Dict with swing high info or None
+            dict with swing high info or None
         """
         # Get recent data
         recent_df = df.tail(lookback_periods)
@@ -324,10 +324,10 @@ class IndicatorUtils:
 
         Args:
             df: DataFrame with OHLCV data
-            anchor_points: List of datetime strings for anchoring
+            anchor_points: list of datetime strings for anchoring
 
         Returns:
-            Dict of anchored VWAP series
+            dict of anchored VWAP series
         """
         vwaps = {}
 

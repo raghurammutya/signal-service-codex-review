@@ -79,7 +79,7 @@ class StrategyConfig:
     strategy_id: str
     name: str
     description: str
-    target_instruments: list[str]  # List of instrument_keys
+    target_instruments: list[str]  # list of instrument_keys
     max_position_size: int
     max_positions: int
     risk_percentage: float
@@ -126,7 +126,7 @@ class StrategyExecutionService:
             config: Strategy configuration with instrument_keys
 
         Returns:
-            Dict: Strategy creation result with enriched metadata
+            dict: Strategy creation result with enriched metadata
         """
         strategy_id = config.strategy_id
 
@@ -145,7 +145,7 @@ class StrategyExecutionService:
                 })
             except Exception as e:
                 logger.error(f"Invalid instrument in strategy config: {instrument_key} - {e}")
-                raise ValueError(f"Invalid instrument: {instrument_key}")
+                raise ValueError(f"Invalid instrument: {instrument_key}") from e
 
         # Initialize strategy state
         self._active_strategies[strategy_id] = config
@@ -237,7 +237,7 @@ class StrategyExecutionService:
             entry_price: Entry price (market price if None)
 
         Returns:
-            Dict: Position result with enriched metadata
+            dict: Position result with enriched metadata
         """
         if strategy_id not in self._active_strategies:
             raise ValueError(f"Strategy not found: {strategy_id}")
@@ -320,7 +320,7 @@ class StrategyExecutionService:
 
         except Exception as e:
             logger.error(f"Position opening failed: {strategy_id} - {instrument_key} - {e}")
-            raise RuntimeError(f"Position opening failed: {e}")
+            raise RuntimeError(f"Position opening failed: {e}") from e
 
     async def close_position(self, strategy_id: str, instrument_key: str) -> dict[str, Any]:
         """
@@ -331,7 +331,7 @@ class StrategyExecutionService:
             instrument_key: Position to close
 
         Returns:
-            Dict: Position closure result
+            dict: Position closure result
         """
         return await self._close_position(strategy_id, instrument_key)
 
@@ -383,7 +383,7 @@ class StrategyExecutionService:
 
         except Exception as e:
             logger.error(f"Position closing failed: {strategy_id} - {instrument_key} - {e}")
-            raise RuntimeError(f"Position closing failed: {e}")
+            raise RuntimeError(f"Position closing failed: {e}") from e
 
     # =============================================================================
     # PERFORMANCE ANALYTICS (metadata-enriched)
@@ -397,7 +397,7 @@ class StrategyExecutionService:
             strategy_id: Strategy identifier
 
         Returns:
-            Dict: Performance metrics with sector/exchange breakdowns
+            dict: Performance metrics with sector/exchange breakdowns
         """
         if strategy_id not in self._strategy_performance:
             raise ValueError(f"Strategy not found: {strategy_id}")
@@ -519,7 +519,7 @@ class StrategyExecutionService:
                         "exchange": metadata.exchange,
                         "sector": metadata.sector
                     })
-                except:
+                except Exception:
                     enriched_instruments.append({
                         "instrument_key": instrument_key,
                         "symbol": "Unknown",

@@ -151,7 +151,7 @@ class OrderClient:
             order.status = OrderStatus.REJECTED
             order.updated_at = datetime.now()
             logger.error(f"Order creation failed for {instrument_key}: {e}")
-            raise RuntimeError(f"Order creation failed: {e}")
+            raise RuntimeError(f"Order creation failed: {e}") from e
 
     async def get_order_status(self, order_id: str) -> Order | None:
         """
@@ -218,7 +218,7 @@ class OrderClient:
 
         except Exception as e:
             logger.error(f"Order cancellation error for {order_id}: {e}")
-            raise RuntimeError(f"Cancellation failed: {e}")
+            raise RuntimeError(f"Cancellation failed: {e}") from e
 
     async def get_orders_for_instrument(self, instrument_key: str) -> list[Order]:
         """
@@ -228,7 +228,7 @@ class OrderClient:
             instrument_key: Primary identifier
 
         Returns:
-            List[Order]: All orders for instrument
+            list[Order]: All orders for instrument
         """
         orders = [
             order for order in self._active_orders.values()

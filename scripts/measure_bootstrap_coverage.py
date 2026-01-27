@@ -47,7 +47,7 @@ directory = coverage_html_bootstrap
         config_file = f.name
 
     try:
-        # Set required environment variables for tests
+        # set required environment variables for tests
         test_env = os.environ.copy()
 
         # Run pytest with coverage

@@ -28,7 +28,7 @@ def create_test_data(periods: int = 100, base_price: float = 100.0) -> pd.DataFr
     prices = []
     current_price = base_price
 
-    for i in range(periods):
+    for _i in range(periods):
         # Add trend and volatility
         trend = 0.0005  # Small upward trend
         volatility = np.random.normal(0, 0.015)

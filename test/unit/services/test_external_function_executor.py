@@ -394,7 +394,7 @@ def calculate_signal(tick_data, parameters):
 
         try:
             executor._execute_in_subprocess(compiled_code, execution_context, config)
-        except:
+        except Exception:
             pass  # Expected to fail due to missing function in context
 
         # Verify resource limits were set
@@ -419,16 +419,11 @@ def calculate_signal(tick_data, parameters):
         )
 
         # Mock a slow function
-        with patch.object(executor, 'load_function_code', return_value=AsyncMock()):
-            with patch.object(executor, 'compile_function_safely'):
-                with patch.object(executor, 'prepare_execution_context'):
-                    with patch.object(executor, 'execute_with_limits',
-                                    side_effect=asyncio.sleep(1)):  # Simulate slow execution
-
-                        with pytest.raises(ExternalFunctionExecutionError, match="timed out"):
-                            await executor.execute_single_function(
-                                config, sample_context, asyncio.Semaphore(1)
-                            )
+        with patch.object(executor, 'load_function_code', return_value=AsyncMock()), patch.object(executor, 'compile_function_safely'), patch.object(executor, 'prepare_execution_context'), patch.object(executor, 'execute_with_limits',
+                                side_effect=asyncio.sleep(1)), pytest.raises(ExternalFunctionExecutionError, match="timed out"):
+            await executor.execute_single_function(
+                config, sample_context, asyncio.Semaphore(1)
+            )
 
     @pytest.mark.asyncio
     @patch('app.services.external_function_executor.settings')

@@ -220,9 +220,8 @@ class SubscriptionStorage:
 
         for sub_id in subscription_ids:
             subscription = self._subscriptions.get(sub_id)
-            if subscription:
-                if status_filter is None or subscription.status == status_filter:
-                    subscriptions.append(subscription)
+            if subscription and status_filter is None or subscription.status == status_filter:
+                subscriptions.append(subscription)
 
         return subscriptions
 
@@ -362,10 +361,10 @@ class SubscriptionStorage:
         Bulk migrate multiple token-based subscriptions
 
         Args:
-            migration_requests: List of migration requests
+            migration_requests: list of migration requests
 
         Returns:
-            Dict: Migration results summary
+            dict: Migration results summary
         """
         results = {
             "total_requested": len(migration_requests),
@@ -409,7 +408,7 @@ class SubscriptionStorage:
             subscription_id: Subscription to validate
 
         Returns:
-            Dict: Validation results
+            dict: Validation results
         """
         subscription = self._subscriptions.get(subscription_id)
         if not subscription:
@@ -573,14 +572,12 @@ class SubscriptionStorage:
     async def _remove_from_indexes(self, subscription: Subscription):
         """Remove subscription from indexes"""
         # Remove from user index
-        if subscription.user_id in self._user_subscriptions:
-            if subscription.subscription_id in self._user_subscriptions[subscription.user_id]:
-                self._user_subscriptions[subscription.user_id].remove(subscription.subscription_id)
+        if subscription.user_id in self._user_subscriptions and subscription.subscription_id in self._user_subscriptions[subscription.user_id]:
+            self._user_subscriptions[subscription.user_id].remove(subscription.subscription_id)
 
         # Remove from instrument index
-        if subscription.instrument_key in self._instrument_subscriptions:
-            if subscription.subscription_id in self._instrument_subscriptions[subscription.instrument_key]:
-                self._instrument_subscriptions[subscription.instrument_key].remove(subscription.subscription_id)
+        if subscription.instrument_key in self._instrument_subscriptions and subscription.subscription_id in self._instrument_subscriptions[subscription.instrument_key]:
+            self._instrument_subscriptions[subscription.instrument_key].remove(subscription.subscription_id)
 
     async def _resolve_token_to_key(self, token: str) -> str | None:
         """

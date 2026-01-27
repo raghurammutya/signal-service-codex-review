@@ -9,7 +9,7 @@ import json
 import os
 import shutil
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 
 class ImmutableArtifactsManager:

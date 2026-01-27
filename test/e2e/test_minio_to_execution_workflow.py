@@ -262,7 +262,7 @@ def calculate_risk(tick_data, parameters):
         """Test execution of multiple functions in a pipeline"""
         mock_settings.EXTERNAL_FUNCTIONS_STORAGE = temp_storage_dir
 
-        # Set up storage for multiple scripts
+        # set up storage for multiple scripts
         user_id = "portfolio_manager"
         user_dir = os.path.join(temp_storage_dir, user_id)
         os.makedirs(user_dir, exist_ok=True)
@@ -487,7 +487,7 @@ def strategy_{i}(tick_data, parameters):
 
         # Create configs for concurrent execution
         configs = []
-        for i, (user_id, user_dir) in enumerate(user_dirs):
+        for i, (user_id, _user_dir) in enumerate(user_dirs):
             config = ExternalFunctionConfig(
                 name=f"strategy_{i}",
                 function_name=f"strategy_{i}",
@@ -530,7 +530,7 @@ def strategy_{i}(tick_data, parameters):
         assert execution_time < 10.0, f"Workflow too slow under load: {execution_time:.2f}s"
 
         # Validate result correctness
-        for i, result in enumerate(successful_results[:5]):  # Check first 5
+        for _i, result in enumerate(successful_results[:5]):  # Check first 5
             assert "strategy_id" in result
             assert "signal" in result
             assert result["signal"] in ["buy", "sell"]

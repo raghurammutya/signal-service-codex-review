@@ -56,7 +56,7 @@ def support_trendline(
         method: Method for trendline calculation ("minmax" or "manual")
 
     Returns:
-        Dict with slope, intercept, start_idx, end_idx, r_squared
+        dict with slope, intercept, start_idx, end_idx, r_squared
     """
     try:
         if not TRENDLN_AVAILABLE:
@@ -138,7 +138,7 @@ def resistance_trendline(
         method: Method for trendline calculation
 
     Returns:
-        Dict with slope, intercept, start_idx, end_idx, r_squared
+        dict with slope, intercept, start_idx, end_idx, r_squared
     """
     try:
         if not TRENDLN_AVAILABLE:
@@ -230,10 +230,10 @@ def trendline_breakout(
         try:
             support = support_trendline(df)
             resistance = resistance_trendline(df)
-        except Exception:
+        except Exception as e:
             # If trendline detection fails, we cannot detect breakouts
             from app.errors import ComputationError
-            raise ComputationError("Failed to compute trendlines required for breakout detection")
+            raise ComputationError("Failed to compute trendlines required for breakout detection") from e
 
         if not support or not resistance:
             from app.errors import ComputationError
@@ -288,7 +288,7 @@ def channel_detection(
         df: DataFrame with OHLCV data
 
     Returns:
-        Dict with support_line, resistance_line, channel_width, is_valid
+        dict with support_line, resistance_line, channel_width, is_valid
     """
     try:
         if not TRENDLN_AVAILABLE:
@@ -299,10 +299,10 @@ def channel_detection(
         try:
             support = support_trendline(df)
             resistance = resistance_trendline(df)
-        except Exception:
+        except Exception as e:
             # If trendline detection fails, we cannot detect channels
             from app.errors import ComputationError
-            raise ComputationError("Failed to compute trendlines required for channel detection")
+            raise ComputationError("Failed to compute trendlines required for channel detection") from e
 
         if not support or not resistance:
             from app.errors import ComputationError

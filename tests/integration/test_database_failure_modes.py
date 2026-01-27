@@ -14,17 +14,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import asyncpg
 import pytest
 
-try:
-    from app.errors import DataAccessError, TimescaleDBConnectionError
-    from app.repositories.signal_repository import DatabaseError, SignalRepository
-    from common.storage.database import (
+import importlib.util
+if importlib.util.find_spec('app.errors'):
+    from app.errors import (
         DatabaseConnectionError,
         ProductionSession,
         ProductionTimescaleDB,
         get_timescaledb_session,
     )
     DATABASE_MODULES_AVAILABLE = True
-except ImportError:
+else:
     DATABASE_MODULES_AVAILABLE = False
 
 
@@ -135,7 +134,7 @@ class TestAsyncpgPoolFailureModes:
             return f"request_{request_id}_success"
 
         except Exception as e:
-            raise DatabaseConnectionError(f"Session {request_id} failed: {str(e)}")
+            raise DatabaseConnectionError(f"Session {request_id} failed: {str(e)}") from e
 
     @pytest.mark.asyncio
     async def test_connection_leak_detection(self):
@@ -305,7 +304,7 @@ class TestPartialTransactionFailures:
                 return result
             except Exception as e:
                 await session.rollback()
-                raise DatabaseConnectionError(f"Transaction conflict: {str(e)}")
+                raise DatabaseConnectionError(f"Transaction conflict: {str(e)}") from e
 
         # Run concurrent transactions that should conflict
         task1 = asyncio.create_task(concurrent_write(mock_connection1, 1))

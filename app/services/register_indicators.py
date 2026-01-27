@@ -55,7 +55,7 @@ def get_indicator_summary() -> dict:
     Get a summary of all registered indicators.
 
     Returns:
-        Dict with counts and category breakdowns
+        dict with counts and category breakdowns
     """
     return {
         "total_count": IndicatorRegistry.count(),

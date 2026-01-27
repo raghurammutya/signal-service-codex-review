@@ -27,9 +27,8 @@ class TestCORSWildcardSecurityValidation:
         ]
 
         for pattern in wildcard_patterns:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": pattern}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": pattern}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_production_subdomain_wildcard_forbidden(self):
         """Test that production forbids subdomain wildcard patterns."""
@@ -42,9 +41,8 @@ class TestCORSWildcardSecurityValidation:
         ]
 
         for wildcard in subdomain_wildcards:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_production_mixed_wildcard_patterns_forbidden(self):
         """Test that production forbids any wildcard in mixed origin lists."""
@@ -56,9 +54,8 @@ class TestCORSWildcardSecurityValidation:
         ]
 
         for pattern in mixed_patterns:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": pattern}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": pattern}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_wildcard_detection_algorithm(self):
         """Test wildcard detection algorithm accuracy."""
@@ -380,10 +377,9 @@ class TestCORSSecurityCompliance:
                     parsed = urllib.parse.urlparse(origin)
 
                     # Protocol security
-                    if parsed.scheme == "http" and environment == "production":
-                        if "localhost" not in origin and "127.0.0.1" not in origin:
-                            origin_issues.append(f"HTTP protocol in production: {origin}")
-                            security_score -= 20
+                    if parsed.scheme == "http" and environment == "production" and "localhost" not in origin and "127.0.0.1" not in origin:
+                        origin_issues.append(f"HTTP protocol in production: {origin}")
+                        security_score -= 20
 
                     # Wildcard detection
                     if "*" in origin:
@@ -460,9 +456,8 @@ class TestCORSSecurityCompliance:
                         if "*" in origin and environment == "production":
                             audit["validation_errors"].append(f"Wildcard origin in production: {origin}")
 
-                        if origin.startswith("http://") and environment == "production":
-                            if "localhost" not in origin:
-                                audit["security_warnings"].append(f"HTTP origin in production: {origin}")
+                        if origin.startswith("http://") and environment == "production" and "localhost" not in origin:
+                            audit["security_warnings"].append(f"HTTP origin in production: {origin}")
 
                     audit["security_validation_passed"] = len(audit["validation_errors"]) == 0
                 else:

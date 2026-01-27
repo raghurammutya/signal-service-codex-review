@@ -5,8 +5,9 @@ from typing import Any
 
 import httpx
 
-logger = logging.getLogger(__name__)
 from ..core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class SignalSubscriptionError(Exception):
@@ -57,7 +58,7 @@ class SignalSubscriptionClient:
             threshold_config: Threshold configuration details
 
         Returns:
-            Dict with validation result, monitoring tier, and resource allocation
+            dict with validation result, monitoring tier, and resource allocation
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -123,7 +124,7 @@ class SignalSubscriptionClient:
             computation_request: Details of computation to be performed
 
         Returns:
-            Dict with allocation result and resource limits
+            dict with allocation result and resource limits
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -221,7 +222,7 @@ class SignalSubscriptionClient:
             period: Time period ('today', 'this_hour', 'this_month')
 
         Returns:
-            Dict with quota usage and limits
+            dict with quota usage and limits
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -256,7 +257,7 @@ class SignalSubscriptionClient:
             user_id: User to check status for
 
         Returns:
-            Dict with threshold monitoring status
+            dict with threshold monitoring status
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -291,10 +292,10 @@ class SignalSubscriptionClient:
 
         Args:
             user_id: User to optimize for
-            current_thresholds: List of current threshold IDs
+            current_thresholds: list of current threshold IDs
 
         Returns:
-            Dict with optimization suggestions
+            dict with optimization suggestions
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:

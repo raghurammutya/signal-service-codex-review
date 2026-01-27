@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -92,7 +92,7 @@ class AggregationServiceValidator:
             samples_file: JSON file with aggregation migration samples
 
         Returns:
-            Dict: Complete aggregation migration validation report
+            dict: Complete aggregation migration validation report
         """
         print(f"📋 Loading aggregation samples from {samples_file}")
 
@@ -176,7 +176,7 @@ class AggregationServiceValidator:
             aggregation_count: Number of aggregations to test
 
         Returns:
-            Dict: Performance validation report
+            dict: Performance validation report
         """
         print(f"⚡ Running aggregation performance validation with {aggregation_count} aggregations")
 
@@ -677,9 +677,8 @@ class AggregationServiceValidator:
         if isinstance(result, dict):
             # Check OHLC or other dictionary results
             for value in result.values():
-                if isinstance(value, int | float):
-                    if math.isnan(value) or math.isinf(value) or abs(value) > 1e6:
-                        return False
+                if isinstance(value, int | float) and math.isnan(value) or math.isinf(value) or abs(value) > 1e6:
+                    return False
             return True
 
         return True

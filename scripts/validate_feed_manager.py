@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -95,7 +95,7 @@ class FeedManagerValidator:
             samples_file: JSON file with feed migration samples
 
         Returns:
-            Dict: Complete feed migration validation report
+            dict: Complete feed migration validation report
         """
         print(f"📋 Loading feed samples from {samples_file}")
 

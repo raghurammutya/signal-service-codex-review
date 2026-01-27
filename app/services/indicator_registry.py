@@ -102,7 +102,7 @@ class IndicatorRegistry:
             category: Category for organization
             library: Source library name
             description: Human-readable description
-            parameters: Dict of parameter names and defaults
+            parameters: dict of parameter names and defaults
             output_type: Type of output (series, dataframe, dict, float)
         """
         if name in cls._indicators:
@@ -134,7 +134,7 @@ class IndicatorRegistry:
     @classmethod
     def list_all(cls) -> dict[str, list[dict[str, Any]]]:
         """
-        List all indicators organized by category.
+        list all indicators organized by category.
 
         Returns:
             {
@@ -160,7 +160,7 @@ class IndicatorRegistry:
 
     @classmethod
     def list_by_category(cls, category: IndicatorCategory) -> list[dict[str, Any]]:
-        """List all indicators in a specific category"""
+        """list all indicators in a specific category"""
         return [
             ind.to_dict()
             for ind in cls._indicators.values()
@@ -176,7 +176,7 @@ class IndicatorRegistry:
             query: Search term (case-insensitive)
 
         Returns:
-            List of matching indicator metadata
+            list of matching indicator metadata
         """
         query = query.lower()
         results = []

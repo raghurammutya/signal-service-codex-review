@@ -215,7 +215,7 @@ class TickerServiceClient:
             include_volume: Include volume data
 
         Returns:
-            List of OHLCV data points or None if unavailable
+            list of OHLCV data points or None if unavailable
         """
         try:
             if await self._is_circuit_breaker_open():

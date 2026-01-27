@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -84,7 +84,7 @@ class CacheReindexValidator:
             samples_file: JSON file with cache migration samples
 
         Returns:
-            Dict: Complete cache migration validation report
+            dict: Complete cache migration validation report
         """
         print(f"📋 Loading cache samples from {samples_file}")
 
@@ -161,7 +161,7 @@ class CacheReindexValidator:
             lookup_count: Number of cache lookups to test
 
         Returns:
-            Dict: Performance validation report
+            dict: Performance validation report
         """
         print(f"⚡ Running cache performance validation with {lookup_count} lookups")
 
@@ -247,9 +247,8 @@ class CacheReindexValidator:
 
         # Check key mapping consistency
         expected_mapping = cache_entry.get("key_mapping")
-        if expected_mapping:
-            if not self._validate_key_mapping(old_key, new_key, expected_mapping):
-                errors.append("Key mapping inconsistency detected")
+        if expected_mapping and not self._validate_key_mapping(old_key, new_key, expected_mapping):
+            errors.append("Key mapping inconsistency detected")
 
         return errors
 

@@ -9,24 +9,25 @@ import os
 import time
 from datetime import datetime
 
-from app.utils.logging_utils import log_debug, log_error, log_exception, log_info, log_warning
-
-logger = logging.getLogger(__name__)
 from app.core.config import settings
-
-# Import existing signal service components
 from app.services.config_handler import ConfigHandler
 from app.services.pandas_ta_executor import PandasTAExecutor
 from app.services.realtime_greeks_calculator import RealTimeGreeksCalculator
+from app.utils.logging_utils import log_debug, log_error, log_exception, log_info, log_warning
 from app.utils.redis import get_redis_client
 
 from .adaptive_load_shedder import AdaptiveLoadShedder, RequestPriority
 from .backpressure_monitor import BackpressureMonitor
-
-# Import production scaling components
 from .consistent_hash_manager import ConsistentHashManager
 from .pod_assignment_manager import PodAssignmentManager
 from .work_stealing_queue import ComputationTask, ComputationWorker, TaskPriority, WorkerPool
+
+logger = logging.getLogger(__name__)
+
+# Import existing signal service components
+
+
+# Import production scaling components
 
 
 class ScalableSignalProcessor:

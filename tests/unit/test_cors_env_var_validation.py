@@ -39,34 +39,32 @@ class TestCORSEnvironmentValidation:
             'CORS_ALLOW_HEADERS': 'Content-Type,Authorization,X-Gateway-User-ID',
         }
 
-        with patch.dict(os.environ, production_envs, clear=True):
-            # Mock config service client to avoid real dependencies
-            with patch('app.core.config._get_config_client') as mock_config:
-                mock_client = MagicMock()
-                mock_client.health_check.return_value = True
-                mock_client.get_config.return_value = "test-value"
-                mock_client.get_secret.return_value = "test-secret"
-                mock_config.return_value = mock_client
+        with patch.dict(os.environ, production_envs, clear=True), patch('app.core.config._get_config_client') as mock_config:
+            mock_client = MagicMock()
+            mock_client.health_check.return_value = True
+            mock_client.get_config.return_value = "test-value"
+            mock_client.get_secret.return_value = "test-secret"
+            mock_config.return_value = mock_client
 
-                try:
-                    # Import settings to trigger validation
-                    from app.core.config import SignalServiceConfig
-                    config = SignalServiceConfig()
+            try:
+                # Import settings to trigger validation
+                from app.core.config import SignalServiceConfig
+                config = SignalServiceConfig()
 
-                    # Verify CORS origins are set
-                    assert hasattr(config, 'cors_origins') or 'CORS_ORIGINS' in os.environ
+                # Verify CORS origins are set
+                assert hasattr(config, 'cors_origins') or 'CORS_ORIGINS' in os.environ
 
-                    # Verify production origins are HTTPS only
-                    cors_origins = os.environ.get('CORS_ORIGINS', '')
-                    if cors_origins:
-                        origins = [origin.strip() for origin in cors_origins.split(',')]
-                        for origin in origins:
-                            assert origin.startswith('https://'), f"Production origin must be HTTPS: {origin}"
-                            assert 'localhost' not in origin.lower(), f"Localhost not allowed in production: {origin}"
+                # Verify production origins are HTTPS only
+                cors_origins = os.environ.get('CORS_ORIGINS', '')
+                if cors_origins:
+                    origins = [origin.strip() for origin in cors_origins.split(',')]
+                    for origin in origins:
+                        assert origin.startswith('https://'), f"Production origin must be HTTPS: {origin}"
+                        assert 'localhost' not in origin.lower(), f"Localhost not allowed in production: {origin}"
 
-                except Exception:
-                    # Config loading may fail due to dependencies, but env validation should work
-                    pass
+            except Exception:
+                # Config loading may fail due to dependencies, but env validation should work
+                pass
 
     def test_cors_development_configuration(self):
         """Test CORS configuration for development environment."""
@@ -229,7 +227,7 @@ class TestCORSEnvironmentValidation:
         for env_name, rules in environment_configs.items():
             test_env = {'ENVIRONMENT': env_name}
 
-            # Set appropriate CORS config for environment
+            # set appropriate CORS config for environment
             if env_name == 'production':
                 test_env['CORS_ORIGINS'] = 'https://app.yourdomain.com'
             elif env_name == 'staging':
@@ -274,9 +272,8 @@ class TestCORSEnvironmentValidation:
                         errors.append(f"Staging requires HTTPS origins: {origin}")
 
             # Credentials validation
-            if allow_credentials and allow_credentials.lower() == 'true':
-                if '*' in cors_origins:
-                    errors.append("Cannot use wildcard origins with credentials=true")
+            if allow_credentials and allow_credentials.lower() == 'true' and '*' in cors_origins:
+                errors.append("Cannot use wildcard origins with credentials=true")
 
             return errors
 

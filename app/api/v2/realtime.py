@@ -3,24 +3,25 @@ Real-time Signal API v2
 Provides real-time Greeks, indicators, and moneyness-based calculations
 """
 import logging
+import os
+import sys
 from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-logger = logging.getLogger(__name__)
-import os
-
-# Import standardized error handling (architecture compliance)
-import sys
-
+from app.schemas.signal_schemas import GreeksResponse, IndicatorResponse, MoneynessGreeksResponse
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.signal_processor import SignalProcessor
+from common.errors.standardized_errors import internal_server_error, resource_not_found_error
+
+logger = logging.getLogger(__name__)
+
+# Import standardized error handling (architecture compliance)
+
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 # from app.models.signal_models import SignalGreeks, SignalIndicators
-from app.schemas.signal_schemas import GreeksResponse, IndicatorResponse, MoneynessGreeksResponse
-from common.errors.standardized_errors import internal_server_error, resource_not_found_error
 
 router = APIRouter(prefix="/realtime", tags=["realtime"])
 

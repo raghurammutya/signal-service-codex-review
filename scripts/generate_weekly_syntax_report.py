@@ -11,7 +11,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 
 def run_command(cmd: list[str]) -> tuple[int, str, str]:
@@ -37,7 +37,7 @@ def load_historical_progress() -> list[dict]:
             with open(file) as f:
                 data = json.load(f)
                 historical_data.append(data)
-        except:
+        except Exception:
             continue
 
     return historical_data
@@ -228,7 +228,7 @@ def generate_executive_summary(current: dict, metrics: dict, historical_data: li
 
     if status == "resolved":
         summary += """### ✅ Transition to Maintenance
-1. **Enable monitoring** - Set up automated violation tracking
+1. **Enable monitoring** - set up automated violation tracking
 2. **Resume roadmap** - Return to planned development priorities
 3. **Post-mortem** - Conduct campaign retrospective for lessons learned
 4. **Prevention** - Strengthen pre-commit hooks to prevent regression
@@ -361,10 +361,10 @@ python -c "import ast; ast.parse(open('path/to/file.py').read())"
                     for filename, count in sorted_files:
                         try:
                             relative_path = str(Path(filename).relative_to(Path.cwd()))
-                        except:
+                        except Exception:
                             relative_path = filename
                         report += f"- `{relative_path}`: {count} errors\n"
-            except:
+            except Exception:
                 report += "- Unable to load file-level details\n"
 
     return report

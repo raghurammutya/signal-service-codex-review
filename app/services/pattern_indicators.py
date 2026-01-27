@@ -129,7 +129,7 @@ def pivot_points(
         method: Calculation method
 
     Returns:
-        Dict with pivot, r1, r2, r3, s1, s2, s3 levels
+        dict with pivot, r1, r2, r3, s1, s2, s3 levels
     """
     try:
         # Use previous bar's data
@@ -220,7 +220,7 @@ def fibonacci_retracement(
         lookback: Bars to look back for swing points
 
     Returns:
-        Dict with fib levels: 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%
+        dict with fib levels: 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%
     """
     try:
         recent_df = df.tail(lookback)
@@ -270,7 +270,7 @@ def fibonacci_extension(
         lookback: Bars to look back for swing points
 
     Returns:
-        Dict with extension levels: 100%, 127.2%, 161.8%, 200%, 261.8%
+        dict with extension levels: 100%, 127.2%, 161.8%, 200%, 261.8%
     """
     try:
         recent_df = df.tail(lookback)

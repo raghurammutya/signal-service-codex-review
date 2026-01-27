@@ -12,7 +12,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 # Import campaign success detection functions
 sys.path.append(str(Path(__file__).parent))
@@ -294,7 +294,7 @@ The P0 syntax error campaign has achieved **complete success** and CI gate funct
 
 ### Success Detection Artifacts
 """
-    for artifact_type, path in success_detection["artifacts"].items():
+    for _artifact_type, path in success_detection["artifacts"].items():
         report_content += f"- `{path}`\n"
 
     if "evidence_file" in gate_verification:

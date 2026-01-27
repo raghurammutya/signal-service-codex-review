@@ -1,0 +1,39 @@
+[
+  {
+    "timestamp": "20260127_095547",
+    "command": "ruff check . --statistics",
+    "exit_code": 1,
+    "stdout": "157\tSIM117\t[ ] multiple-with-statements\n130\tB904  \t[ ] raise-without-from-inside-except\n 46\tE402  \t[ ] module-import-not-at-top-of-file\n 40\tSIM102\t[ ] collapsible-if\n 23\tF401  \t[ ] unused-import\n 20\tW293  \t[*] blank-line-with-whitespace\n 14\tB007  \t[ ] unused-loop-control-variable\n 13\tB017  \t[ ] assert-raises-exception\n 11\tSIM105\t[ ] suppressible-exception\n  7\tB023  \t[ ] function-uses-loop-variable\n  6\tSIM103\t[ ] needless-bool\n  5\tF821  \t[ ] undefined-name\n  3\tW292  \t[*] missing-newline-at-end-of-file\n  3\tUP015 \t[*] redundant-open-modes\n  2\tSIM108\t[ ] if-else-block-instead-of-if-exp\n  2\tI001  \t[*] unsorted-imports\n  2\tN802  \t[ ] invalid-function-name\n  2\tN818  \t[ ] error-suffix-on-exception-name\n  2\tE721  \t[ ] type-comparison\n  2\tE741  \t[ ] ambiguous-variable-name\n  1\tB019  \t[ ] cached-instance-method\n  1\tB025  \t[ ] duplicate-try-block-exception\n  1\tRET507\t[*] superfluous-else-continue\n  1\tW291  \t[*] trailing-whitespace\n  1\tF841  \t[*] unused-variable\n[*] fixable with `ruff check --fix`\n",
+    "stderr": "",
+    "fix_mode": false,
+    "unsafe_fixes": false,
+    "violations": {
+      "SIM117": 157,
+      "B904": 130,
+      "E402": 46,
+      "SIM102": 40,
+      "F401": 23,
+      "W293": 20,
+      "B007": 14,
+      "B017": 13,
+      "SIM105": 11,
+      "B023": 7,
+      "SIM103": 6,
+      "F821": 5,
+      "W292": 3,
+      "UP015": 3,
+      "SIM108": 2,
+      "I001": 2,
+      "N802": 2,
+      "N818": 2,
+      "E721": 2,
+      "E741": 2,
+      "B019": 1,
+      "B025": 1,
+      "RET507": 1,
+      "W291": 1,
+      "F841": 1
+    },
+    "total_violations": 495
+  }
+]

@@ -351,9 +351,8 @@ class FrequencyFeedManager:
         signal_type: str
     ) -> FeedFrequency | None:
         """Get current frequency for a subscription"""
-        if user_id in self.user_frequencies:
-            if instrument_key in self.user_frequencies[user_id]:
-                return self.user_frequencies[user_id][instrument_key].get(signal_type)
+        if user_id in self.user_frequencies and instrument_key in self.user_frequencies[user_id]:
+            return self.user_frequencies[user_id][instrument_key].get(signal_type)
         return None
 
     async def _enable_realtime_processing(

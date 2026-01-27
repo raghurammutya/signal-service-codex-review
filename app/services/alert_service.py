@@ -178,7 +178,7 @@ class AlertService:
             expires_in_hours: Alert expiration time
 
         Returns:
-            Dict: Alert creation result with metadata
+            dict: Alert creation result with metadata
         """
         # Get instrument metadata for enrichment
         try:
@@ -277,7 +277,7 @@ class AlertService:
             max_instruments: Maximum instruments to monitor
 
         Returns:
-            Dict: Sector alert creation result
+            dict: Sector alert creation result
         """
         # This would typically query the registry for instruments in the sector
         # For now, simulate with a few example instruments
@@ -507,7 +507,7 @@ class AlertService:
         # Get metadata for response
         try:
             metadata = await self.instrument_client.get_instrument_metadata(alert.instrument_key)
-        except:
+        except Exception:
             metadata = type('obj', (object,), {'symbol': 'Unknown', 'exchange': 'Unknown'})(...)
 
         # Remove from active alerts
@@ -578,7 +578,7 @@ class AlertService:
         # Get instrument metadata
         try:
             metadata = await self.instrument_client.get_instrument_metadata(instrument_key)
-        except:
+        except Exception:
             metadata = type('obj', (object,), {
                 'symbol': 'Unknown', 'exchange': 'Unknown', 'sector': 'Unknown'
             })()

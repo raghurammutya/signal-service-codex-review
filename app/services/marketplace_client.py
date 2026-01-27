@@ -93,7 +93,7 @@ class MarketplaceClient:
             user_id: User ID requesting access
 
         Returns:
-            Dict with:
+            dict with:
                 - is_valid: bool (whether token is valid)
                 - product_id: str (verified product ID)
                 - user_id: str (verified user ID)
@@ -141,8 +141,8 @@ class MarketplaceClient:
             execution_token: Optional execution token for premium access
 
         Returns:
-            Dict with signal metadata:
-                - signals: List of signal groups with indicators
+            dict with signal metadata:
+                - signals: list of signal groups with indicators
                 - requires_subscription: bool
                 - has_active_subscription: bool
 
@@ -191,8 +191,8 @@ class MarketplaceClient:
             include_inactive: Include expired/cancelled subscriptions
 
         Returns:
-            Dict with:
-                - subscriptions: List of subscription data
+            dict with:
+                - subscriptions: list of subscription data
                 - total_count: int
 
         Raises:
@@ -260,14 +260,14 @@ class MarketplaceClient:
             execution_token: Optional execution token for premium access
 
         Returns:
-            Dict with complete product definition:
+            dict with complete product definition:
                 - product_id: str
                 - name: str
                 - description: str
-                - signal_groups: List of signal group definitions
+                - signal_groups: list of signal group definitions
                 - access_level: str (free/premium/subscription)
                 - requires_subscription: bool
-                - user_access: Dict with user's access status
+                - user_access: dict with user's access status
 
         Raises:
             Exception: If request fails
@@ -314,12 +314,12 @@ class MarketplaceClient:
             execution_token: Optional execution token for premium access
 
         Returns:
-            Dict with access information:
+            dict with access information:
                 - has_access: bool
                 - access_level: str (free/premium/subscription)
                 - subscription_status: str (active/expired/none)
                 - expires_at: Optional datetime string
-                - usage_limits: Dict with any usage restrictions
+                - usage_limits: dict with any usage restrictions
 
         Raises:
             Exception: If request fails

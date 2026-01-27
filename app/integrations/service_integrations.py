@@ -424,7 +424,7 @@ async def check_signal_service_integrations() -> dict[str, bool]:
         try:
             result = await check_task
             results[service] = result is not None and result.get("status") == "healthy"
-        except:
+        except Exception:
             results[service] = False
 
     return results

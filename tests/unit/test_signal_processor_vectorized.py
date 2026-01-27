@@ -76,7 +76,7 @@ class TestVectorizedGreeksEngine:
 
     def test_circuit_breaker_open_fallback(self, vectorized_engine):
         """Test fallback behavior when circuit breaker is open."""
-        # Set circuit breaker to open state
+        # set circuit breaker to open state
         vectorized_engine.circuit_breaker.is_open = True
 
         spots = np.array([100.0])
@@ -221,9 +221,10 @@ def main():
     print("🔍 Running Vectorized Greeks Engine Tests...")
 
     # Create mock module if it doesn't exist
-    try:
-        from app.services.vectorized_greeks_engine import VectorizedGreeksEngine
-    except ImportError:
+    import importlib.util
+    if importlib.util.find_spec('app.services.vectorized_greeks_engine'):
+        pass
+    else:
         print("⚠️ VectorizedGreeksEngine not found - creating mock implementation for testing")
 
         # Create a basic mock implementation for testing
@@ -240,7 +241,7 @@ def main():
                 self.adaptive_batching = False
 
             def calculate_greeks_batch(self, spots, strikes, time_to_expiry,
-                                     volatility, risk_free_rate, **kwargs):
+                                       volatility, risk_free_rate, **kwargs):
                 if self.circuit_breaker.is_open:
                     fallback = kwargs.get('fallback_value', 0.0)
                     return {'delta': np.full(len(spots), fallback)}

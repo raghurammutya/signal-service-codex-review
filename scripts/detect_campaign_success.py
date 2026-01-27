@@ -11,7 +11,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 
 def run_command(cmd: list[str]) -> tuple[int, str, str]:
@@ -89,7 +89,7 @@ def load_campaign_baseline() -> dict:
                             "baseline_file": str(baseline_file),
                             "baseline_timestamp": data.get("timestamp", "unknown")
                         }
-            except:
+            except Exception:
                 pass
 
     return baseline_data

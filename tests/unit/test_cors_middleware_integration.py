@@ -10,13 +10,10 @@ from unittest.mock import Mock, patch
 import pytest
 
 # FastAPI imports with fallbacks
-try:
-    from fastapi import FastAPI, Request, Response
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.testclient import TestClient
-    from starlette.responses import Response as StarletteResponse
+import importlib.util
+if importlib.util.find_spec('starlette.responses'):
     FASTAPI_AVAILABLE = True
-except ImportError:
+else:
     # Create mock classes if FastAPI not available
     FASTAPI_AVAILABLE = False
 
@@ -100,72 +97,67 @@ class TestCORSMiddlewareConfiguration:
         app = FastAPI()
         origins = "https://app.stocksblitz.com,https://dashboard.stocksblitz.com"
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                # Verify CORSMiddleware was instantiated with correct origins
-                MockCORSMiddleware.assert_called_once()
-                call_kwargs = MockCORSMiddleware.call_args[1]
+            # Verify CORSMiddleware was instantiated with correct origins
+            MockCORSMiddleware.assert_called_once()
+            call_kwargs = MockCORSMiddleware.call_args[1]
 
-                expected_origins = ["https://app.stocksblitz.com", "https://dashboard.stocksblitz.com"]
-                assert call_kwargs["allow_origins"] == expected_origins
+            expected_origins = ["https://app.stocksblitz.com", "https://dashboard.stocksblitz.com"]
+            assert call_kwargs["allow_origins"] == expected_origins
 
     def test_middleware_credentials_configuration(self):
         """Test CORS middleware credentials configuration."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                assert call_kwargs["allow_credentials"] is True
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            assert call_kwargs["allow_credentials"] is True
 
     def test_middleware_methods_configuration(self):
         """Test CORS middleware HTTP methods configuration."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                expected_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            expected_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 
-                for method in expected_methods:
-                    assert method in call_kwargs["allow_methods"]
+            for method in expected_methods:
+                assert method in call_kwargs["allow_methods"]
 
     def test_middleware_headers_configuration(self):
         """Test CORS middleware headers configuration."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                expected_headers = [
-                    "Authorization", "Content-Type", "X-User-ID",
-                    "X-Gateway-Secret", "X-API-Key", "X-Internal-API-Key", "Accept"
-                ]
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            expected_headers = [
+                "Authorization", "Content-Type", "X-User-ID",
+                "X-Gateway-Secret", "X-API-Key", "X-Internal-API-Key", "Accept"
+            ]
 
-                for header in expected_headers:
-                    assert header in call_kwargs["allow_headers"]
+            for header in expected_headers:
+                assert header in call_kwargs["allow_headers"]
 
     def test_middleware_exposed_headers_configuration(self):
         """Test CORS middleware exposed headers configuration."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                expected_exposed = ["X-Total-Count", "X-Page-Count", "X-Rate-Limit-Remaining"]
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            expected_exposed = ["X-Total-Count", "X-Page-Count", "X-Rate-Limit-Remaining"]
 
-                for header in expected_exposed:
-                    assert header in call_kwargs["expose_headers"]
+            for header in expected_exposed:
+                assert header in call_kwargs["expose_headers"]
 
 
 class TestCORSMiddlewareRuntimeBehavior:
@@ -225,21 +217,19 @@ class TestCORSMiddlewareRuntimeBehavior:
         """Test environment-specific CORS middleware behavior."""
         # Production app
         prod_app = FastAPI()
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(prod_app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(prod_app, "production")
 
-                prod_kwargs = MockCORSMiddleware.call_args[1]
-                prod_origins = prod_kwargs["allow_origins"]
+            prod_kwargs = MockCORSMiddleware.call_args[1]
+            prod_origins = prod_kwargs["allow_origins"]
 
         # Development app
         dev_app = FastAPI()
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "http://localhost:3000,https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(dev_app, "development")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "http://localhost:3000,https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(dev_app, "development")
 
-                dev_kwargs = MockCORSMiddleware.call_args[1]
-                dev_origins = dev_kwargs["allow_origins"]
+            dev_kwargs = MockCORSMiddleware.call_args[1]
+            dev_origins = dev_kwargs["allow_origins"]
 
         # Development should allow localhost
         assert any("localhost" in origin for origin in dev_origins)
@@ -252,22 +242,20 @@ class TestCORSMiddlewareRuntimeBehavior:
         app = FastAPI()
 
         # Test with invalid CORS configuration
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CORS configuration failed"):
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORS configuration failed"):
+            add_cors_middleware(app, "production")
 
     def test_cors_middleware_logging_behavior(self):
         """Test CORS middleware logging behavior."""
         app = FastAPI()
 
-        with patch('common.cors_config.logger') as mock_logger:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-                add_cors_middleware(app, "production")
+        with patch('common.cors_config.logger') as mock_logger, patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
+            add_cors_middleware(app, "production")
 
-                # Should log successful configuration
-                mock_logger.info.assert_called_with(
-                    "CORS middleware configured for production with 1 allowed origins"
-                )
+            # Should log successful configuration
+            mock_logger.info.assert_called_with(
+                "CORS middleware configured for production with 1 allowed origins"
+            )
 
 
 class TestCORSMiddlewareSecurityBehavior:
@@ -278,65 +266,61 @@ class TestCORSMiddlewareSecurityBehavior:
         app = FastAPI()
         allowed_origins = ["https://app.stocksblitz.com", "https://dashboard.stocksblitz.com"]
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": ",".join(allowed_origins)}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": ",".join(allowed_origins)}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                # Verify only allowed origins are configured
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                configured_origins = call_kwargs["allow_origins"]
+            # Verify only allowed origins are configured
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            configured_origins = call_kwargs["allow_origins"]
 
-                assert set(configured_origins) == set(allowed_origins)
-                assert "*" not in configured_origins
+            assert set(configured_origins) == set(allowed_origins)
+            assert "*" not in configured_origins
 
     def test_cors_credentials_security_configuration(self):
         """Test CORS credentials security configuration."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
+            call_kwargs = MockCORSMiddleware.call_args[1]
 
-                # Credentials should be enabled for auth, but origins should be specific
-                assert call_kwargs["allow_credentials"] is True
-                assert call_kwargs["allow_origins"] != ["*"]  # No wildcard with credentials
+            # Credentials should be enabled for auth, but origins should be specific
+            assert call_kwargs["allow_credentials"] is True
+            assert call_kwargs["allow_origins"] != ["*"]  # No wildcard with credentials
 
     def test_cors_method_security_restrictions(self):
         """Test CORS method security restrictions."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                allowed_methods = call_kwargs["allow_methods"]
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            allowed_methods = call_kwargs["allow_methods"]
 
-                # Should not allow dangerous methods
-                dangerous_methods = ["TRACE", "CONNECT", "PATCH"]
-                for method in dangerous_methods:
-                    assert method not in allowed_methods
+            # Should not allow dangerous methods
+            dangerous_methods = ["TRACE", "CONNECT", "PATCH"]
+            for method in dangerous_methods:
+                assert method not in allowed_methods
 
     def test_cors_header_security_restrictions(self):
         """Test CORS header security restrictions."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                allowed_headers = call_kwargs["allow_headers"]
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            allowed_headers = call_kwargs["allow_headers"]
 
-                # Should not allow all headers (wildcard)
-                assert "*" not in allowed_headers
+            # Should not allow all headers (wildcard)
+            assert "*" not in allowed_headers
 
-                # Should include necessary headers but be restrictive
-                assert "Authorization" in allowed_headers
-                assert "Content-Type" in allowed_headers
-                assert "X-Gateway-Secret" in allowed_headers
+            # Should include necessary headers but be restrictive
+            assert "Authorization" in allowed_headers
+            assert "Content-Type" in allowed_headers
+            assert "X-Gateway-Secret" in allowed_headers
 
 
 class TestCORSMiddlewareIntegrationWithMainApp:
@@ -351,13 +335,11 @@ class TestCORSMiddlewareIntegrationWithMainApp:
         mock_settings = Mock()
         mock_settings.environment = "production"
 
-        with patch('app.core.config.settings', mock_settings):
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-                # Simulate main app CORS configuration
-                configured_app = add_cors_middleware(mock_signal_app, mock_settings.environment)
+        with patch('app.core.config.settings', mock_settings), patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
+            configured_app = add_cors_middleware(mock_signal_app, mock_settings.environment)
 
-                assert configured_app is mock_signal_app
-                assert len(mock_signal_app.middleware_stack) > 0
+            assert configured_app is mock_signal_app
+            assert len(mock_signal_app.middleware_stack) > 0
 
     def test_cors_configuration_with_api_routers(self):
         """Test CORS configuration works with API routers."""
@@ -426,12 +408,10 @@ class TestCORSMiddlewareIntegrationWithMainApp:
         mock_settings = Mock()
         mock_settings.environment = "staging"
 
-        with patch('app.core.config.settings', mock_settings):
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://staging.stocksblitz.com"}, clear=True):
-                # Should detect environment from settings
-                configured_app = add_cors_middleware(app, mock_settings.environment)
+        with patch('app.core.config.settings', mock_settings), patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://staging.stocksblitz.com"}, clear=True):
+            configured_app = add_cors_middleware(app, mock_settings.environment)
 
-                assert configured_app is app
+            assert configured_app is app
 
 
 class TestCORSMiddlewarePerformanceAndMonitoring:
@@ -465,21 +445,20 @@ class TestCORSMiddlewarePerformanceAndMonitoring:
             "configuration_time": 0
         }
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com,https://dashboard.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
-                import time
-                start_time = time.time()
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com,https://dashboard.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as MockCORSMiddleware:
+            import time
+            start_time = time.time()
 
-                add_cors_middleware(app, "production")
+            add_cors_middleware(app, "production")
 
-                end_time = time.time()
-                config_metrics["configuration_time"] = end_time - start_time
+            end_time = time.time()
+            config_metrics["configuration_time"] = end_time - start_time
 
-                # Extract configuration metrics
-                call_kwargs = MockCORSMiddleware.call_args[1]
-                config_metrics["origins_count"] = len(call_kwargs["allow_origins"])
-                config_metrics["methods_count"] = len(call_kwargs["allow_methods"])
-                config_metrics["headers_count"] = len(call_kwargs["allow_headers"])
+            # Extract configuration metrics
+            call_kwargs = MockCORSMiddleware.call_args[1]
+            config_metrics["origins_count"] = len(call_kwargs["allow_origins"])
+            config_metrics["methods_count"] = len(call_kwargs["allow_methods"])
+            config_metrics["headers_count"] = len(call_kwargs["allow_headers"])
 
         # Verify reasonable configuration metrics
         assert config_metrics["origins_count"] == 2

@@ -54,7 +54,7 @@ class TestDataFactory:
         prices = []
         current_price = base_price
 
-        for i in range(periods):
+        for _i in range(periods):
             # Add trend
             current_price *= (1 + trend)
 
@@ -267,13 +267,11 @@ class TestPandasTAIndicators:
 
                     assert result is not None, f"{indicator_name} returned None"
 
-                    if isinstance(result, pd.Series):
-                        # Check that values are within reasonable ranges for oscillators
-                        if indicator_name in ['rsi', 'stochrsi', 'uo']:
-                            valid_values = result.dropna()
-                            if not valid_values.empty:
-                                assert valid_values.min() >= 0, f"{indicator_name} has values below 0"
-                                assert valid_values.max() <= 100, f"{indicator_name} has values above 100"
+                    if isinstance(result, pd.Series) and indicator_name in ['rsi', 'stochrsi', 'uo']:
+                        valid_values = result.dropna()
+                        if not valid_values.empty:
+                            assert valid_values.min() >= 0, f"{indicator_name} has values below 0"
+                            assert valid_values.max() <= 100, f"{indicator_name} has values above 100"
 
                     print(f"✓ {indicator_name} passed")
 

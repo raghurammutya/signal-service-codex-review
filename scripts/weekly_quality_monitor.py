@@ -21,7 +21,7 @@ import time
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 class WeeklyQualityMonitor:
@@ -62,7 +62,7 @@ class WeeklyQualityMonitor:
             force_alert: Force P0 alert for testing
 
         Returns:
-            Dict: Complete monitoring results
+            dict: Complete monitoring results
         """
         print("🔍 Weekly Code Quality Monitoring")
         print("=" * 50)

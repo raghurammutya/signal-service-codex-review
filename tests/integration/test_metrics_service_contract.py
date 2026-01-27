@@ -164,7 +164,7 @@ class TestMetricsServiceContract:
     @pytest.mark.integration
     async def test_health_score_calculation(self, metrics_collector):
         """Test overall health score calculation based on metrics."""
-        # Set up metrics for health score calculation
+        # set up metrics for health score calculation
         test_metrics = [
             ("GET", "/health", 50.0, 200),    # Fast, successful
             ("GET", "/health", 80.0, 200),    # Fast, successful

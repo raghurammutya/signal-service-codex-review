@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -105,7 +105,7 @@ class StreamSchemaValidator:
             samples_file: JSON file with sample stream messages
 
         Returns:
-            Dict: Comprehensive validation report
+            dict: Comprehensive validation report
         """
         print(f"📋 Loading stream samples from {samples_file}")
 
@@ -175,7 +175,7 @@ class StreamSchemaValidator:
             message_count: Number of synthetic messages to test
 
         Returns:
-            Dict: Performance validation report
+            dict: Performance validation report
         """
         print(f"⚡ Running performance validation with {message_count} synthetic messages")
 

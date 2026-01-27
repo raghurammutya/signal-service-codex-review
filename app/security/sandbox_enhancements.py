@@ -14,9 +14,9 @@ import psutil
 
 import docker
 from app.errors import ExternalFunctionExecutionError, SecurityError
+from app.utils.logging_utils import log_exception, log_info, log_warning
 
 logger = logging.getLogger(__name__)
-from app.utils.logging_utils import log_exception, log_info, log_warning
 
 if TYPE_CHECKING:
     from app.services.external_function_executor import ExternalFunctionExecutor
@@ -175,13 +175,13 @@ class EnhancedSandbox:
                         raise ExternalFunctionExecutionError("No output generated")
 
                 except docker.errors.ContainerError as e:
-                    raise ExternalFunctionExecutionError(f"Container error: {e}")
+                    raise ExternalFunctionExecutionError(f"Container error: {e}") from e
                 except Exception as e:
-                    raise ExternalFunctionExecutionError(f"Docker execution failed: {e}")
+                    raise ExternalFunctionExecutionError(f"Docker execution failed: {e}") from e
 
         except Exception as e:
             log_exception(f"Docker sandbox execution failed: {e}")
-            raise SecurityError(f"Docker sandbox failed: {e}")
+            raise SecurityError(f"Docker sandbox failed: {e}") from e
 
     async def _execute_with_cgroups(
         self,
@@ -209,7 +209,7 @@ class EnhancedSandbox:
 
         except Exception as e:
             log_exception(f"Cgroups sandbox execution failed: {e}")
-            raise SecurityError(f"Cgroups sandbox failed: {e}")
+            raise SecurityError(f"Cgroups sandbox failed: {e}") from e
 
     @contextmanager
     def _cgroup_context(self, cgroup_name: str, limits: dict[str, Any]):
@@ -220,17 +220,17 @@ class EnhancedSandbox:
             # Create cgroup
             os.makedirs(cgroup_path, exist_ok=True)
 
-            # Set memory limit
+            # set memory limit
             memory_bytes = limits['memory_mb'] * 1024 * 1024
             with open(f"{cgroup_path}/memory.max", 'w') as f:
                 f.write(str(memory_bytes))
 
-            # Set CPU limit
+            # set CPU limit
             with open(f"{cgroup_path}/cpu.max", 'w') as f:
                 cpu_quota = limits['cpu_time_seconds'] * 100000  # microseconds
                 f.write(f"{cpu_quota} 100000")
 
-            # Set process limit
+            # set process limit
             with open(f"{cgroup_path}/pids.max", 'w') as f:
                 f.write(str(limits['max_processes']))
 
@@ -290,7 +290,7 @@ class EnhancedSandbox:
             raise ExternalFunctionExecutionError(f"Function {function_name} not found")
 
         except Exception as e:
-            raise ExternalFunctionExecutionError(f"Cgroup execution failed: {e}")
+            raise ExternalFunctionExecutionError(f"Cgroup execution failed: {e}") from e
 
     async def _execute_with_process_limits(
         self,
@@ -338,7 +338,7 @@ class EnhancedSandbox:
 
         except Exception as e:
             log_exception(f"Enhanced process execution failed: {e}")
-            raise ExternalFunctionExecutionError(f"Enhanced execution failed: {e}")
+            raise ExternalFunctionExecutionError(f"Enhanced execution failed: {e}") from e
 
     def _validate_enhanced_script(self, script_content: str, limits: dict[str, Any]):
         """Enhanced script validation with additional checks"""
@@ -421,7 +421,7 @@ class EnhancedSandbox:
                     logger.debug("Monitor task cancelled successfully")
 
         except Exception as e:
-            raise ExternalFunctionExecutionError(f"Monitored execution failed: {e}")
+            raise ExternalFunctionExecutionError(f"Monitored execution failed: {e}") from e
 
     async def _monitor_execution(self, limits: dict[str, Any]):
         """Monitor resource usage during execution"""
@@ -545,7 +545,7 @@ except Exception as e:
             "Consider network namespace isolation",
             "Implement code signing for function verification",
             "Add audit logging for all executions",
-            "Set up alerts for resource limit violations"
+            "set up alerts for resource limit violations"
         ])
 
         return recommendations

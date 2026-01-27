@@ -10,7 +10,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def get_service_contracts() -> dict[str, dict[str, Any]]:

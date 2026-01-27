@@ -22,7 +22,7 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
 class TESTDATA001CheckpointAutomation:
@@ -66,7 +66,7 @@ class TESTDATA001CheckpointAutomation:
         Execute comprehensive pre-deployment validation for TEST_DATA_001
 
         Returns:
-            Dict: Pre-deployment checkpoint results with GO/NO-GO decision
+            dict: Pre-deployment checkpoint results with GO/NO-GO decision
         """
         print("🔍 Starting TEST_DATA_001 pre-deployment checkpoint validation")
 
@@ -126,7 +126,7 @@ class TESTDATA001CheckpointAutomation:
         Execute evening validation checkpoint for rollout dashboard evidence
 
         Returns:
-            Dict: Evening checkpoint results for rollout dashboard
+            dict: Evening checkpoint results for rollout dashboard
         """
         print("🌅 Starting TEST_DATA_001 evening checkpoint for rollout dashboard")
 
@@ -184,7 +184,7 @@ class TESTDATA001CheckpointAutomation:
         Execute Phase 2 completion signoff validation
 
         Returns:
-            Dict: Phase 2 signoff results
+            dict: Phase 2 signoff results
         """
         print("🎉 Starting Phase 2 completion signoff validation")
 

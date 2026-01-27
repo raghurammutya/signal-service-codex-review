@@ -130,7 +130,7 @@ class SubscriptionManager:
             delivery_config: Delivery configuration
 
         Returns:
-            Dict: Subscription result with metadata
+            dict: Subscription result with metadata
         """
         start_time = time.time()
 
@@ -191,7 +191,7 @@ class SubscriptionManager:
             subscription_id: Subscription to cancel
 
         Returns:
-            Dict: Unsubscribe result
+            dict: Unsubscribe result
         """
         start_time = time.time()
 
@@ -239,7 +239,7 @@ class SubscriptionManager:
             user_id: User identifier
 
         Returns:
-            Dict: User subscriptions with metadata
+            dict: User subscriptions with metadata
         """
         try:
             subscriptions = await self.storage.get_user_subscriptions(user_id)
@@ -285,7 +285,7 @@ class SubscriptionManager:
             instrument_key: Instrument identifier
 
         Returns:
-            Dict: Instrument subscriptions
+            dict: Instrument subscriptions
         """
         try:
             subscriptions = await self.storage.get_instrument_subscriptions(instrument_key)
@@ -299,7 +299,7 @@ class SubscriptionManager:
                     "sector": metadata.sector,
                     "instrument_type": metadata.instrument_type
                 }
-            except:
+            except Exception:
                 instrument_info = {
                     "symbol": "Unknown",
                     "exchange": "Unknown",
@@ -344,7 +344,7 @@ class SubscriptionManager:
             token_mappings: Mapping from token to instrument_key
 
         Returns:
-            Dict: Migration results
+            dict: Migration results
         """
         start_time = time.time()
 
@@ -388,7 +388,7 @@ class SubscriptionManager:
             subscription_id: Subscription to validate
 
         Returns:
-            Dict: Validation results
+            dict: Validation results
         """
         start_time = time.time()
 

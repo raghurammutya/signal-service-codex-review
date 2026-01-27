@@ -118,7 +118,7 @@ class ProductionReadinessBundle:
                 ]
             },
             "how_to_start_in_production": {
-                "step_1": "Set required environment variables",
+                "step_1": "set required environment variables",
                 "step_2": "Ensure config service is accessible",
                 "step_3": "Verify database connectivity (TimescaleDB)",
                 "step_4": "Run production hardening validation: python3 scripts/validate_production_hardening.py",

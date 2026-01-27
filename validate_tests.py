@@ -46,7 +46,7 @@ class TestValidator:
                     if isinstance(node, ast.ClassDef):
                         classes.append(node.name)
                 return classes, test_methods
-            except:
+            except Exception:
                 return [], test_methods
 
         except Exception as e:

@@ -684,9 +684,8 @@ class RegistryIntegrationService:
                 logger.warning("Switching to shadow mode due to registry failures")
                 await self.switch_mode(IntegrationMode.SHADOW)
 
-        elif reason == "shadow_mode_success":
+        elif reason == "shadow_mode_success" and current_mode == IntegrationMode.SHADOW:
             # Consider switching to active mode if shadow mode shows good results
-            if current_mode == IntegrationMode.SHADOW:
                 shadow_summary = self.get_shadow_mode_summary()
                 match_rate = shadow_summary.get("match_rate", 0)
                 registry_latency = shadow_summary.get("registry_avg_latency_ms", float('inf'))
@@ -696,11 +695,9 @@ class RegistryIntegrationService:
                     logger.info("Switching to active mode - shadow mode validation successful")
                     await self.switch_mode(IntegrationMode.ACTIVE)
 
-        elif reason == "circuit_breaker_open":
-            # Switch to disabled mode if circuit breaker is persistently open
-            if current_mode in [IntegrationMode.ACTIVE, IntegrationMode.SHADOW]:
-                logger.error("Switching to disabled mode due to circuit breaker")
-                await self.switch_mode(IntegrationMode.DISABLED)
+        if reason == "circuit_breaker_open" and current_mode in [IntegrationMode.ACTIVE, IntegrationMode.SHADOW]:
+            logger.error("Switching to disabled mode due to circuit breaker")
+            await self.switch_mode(IntegrationMode.DISABLED)
 
     async def switch_mode(self, new_mode: IntegrationMode, reason: str = "manual"):
         """Switch integration mode with metrics and logging"""

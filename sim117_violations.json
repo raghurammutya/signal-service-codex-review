@@ -1,0 +1,308 @@
+[
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 35,
+      "row": 356
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/integration/test_service_integrations.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 351
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 351,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 98,
+      "row": 455
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/integration/test_service_integrations.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 450
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 450,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 68,
+      "row": 88
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_sdk_signal_listing.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 86
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 86,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 81,
+      "row": 204
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_sdk_signal_listing.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 202
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 202,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 67,
+      "row": 228
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_sdk_signal_listing.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 226
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 226,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 26,
+      "row": 266
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_sdk_signal_listing.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 260
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 260,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 57,
+      "row": 293
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_sdk_signal_listing.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 291
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 291,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 86,
+      "row": 248
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_signal_execution.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 238
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 238,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 57,
+      "row": 84
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_signal_version_policy.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 81
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 81,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 57,
+      "row": 108
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_signal_version_policy.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 105
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 105,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 57,
+      "row": 126
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_signal_version_policy.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 123
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 123,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 57,
+      "row": 172
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_signal_version_policy.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 169
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 169,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 57,
+      "row": 327
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/test_signal_version_policy.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 324
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 324,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 100,
+      "row": 115
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 114
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 114,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 108,
+      "row": 145
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 144
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 144,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 95,
+      "row": 175
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 174
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 174,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 147,
+      "row": 202
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 201
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 201,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 112,
+      "row": 240
+    },
+    "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 239
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 239,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  }
+]

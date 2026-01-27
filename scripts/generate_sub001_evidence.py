@@ -13,7 +13,7 @@ import asyncio
 import json
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from app.sdk import create_instrument_client
 from data_services.subscription.migration_utils import create_migration_utility
@@ -174,7 +174,7 @@ async def validate_schema_migration(subscription_manager: SubscriptionManager) -
                 subscription_type=SubscriptionType.REAL_TIME_QUOTES
             )
             results["token_rejection"] = False  # Should have failed
-        except:
+        except Exception:
             results["token_rejection"] = True  # Correctly rejected
 
     except Exception as e:

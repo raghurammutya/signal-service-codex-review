@@ -54,7 +54,7 @@ class TermStructureRequest(BaseModel):
     """Term structure premium analysis request."""
     symbol: str = Field(..., description="Underlying symbol")
     underlying_price: float = Field(..., gt=0)
-    expiry_dates: list[str] = Field(..., min_items=1, max_items=10, description="List of expiry dates")
+    expiry_dates: list[str] = Field(..., min_items=1, max_items=10, description="list of expiry dates")
     strikes: list[float] = Field(..., min_items=1, description="Strike prices to analyze")
 
 
@@ -319,7 +319,7 @@ async def get_arbitrage_opportunities(
         expiry_date: Optional expiry filter
 
     Returns:
-        List of arbitrage opportunities with trading recommendations
+        list of arbitrage opportunities with trading recommendations
     """
     try:
         log_info(f"[AGENT-2] Arbitrage scan for {symbol}, min severity: {min_severity}")

@@ -181,7 +181,7 @@ async def execute_script(
         raise HTTPException(
             status_code=403,
             detail=f"Script execution blocked by security policy: {str(e)}"
-        )
+        ) from e
 
     except ExternalFunctionExecutionError as e:
         log_exception(f"Script execution failed: {e}")
@@ -217,7 +217,7 @@ async def execute_script(
         raise HTTPException(
             status_code=500,
             detail="Internal server error during script execution"
-        )
+        ) from e
 
 
 @router.post("/validate", response_model=ScriptValidationResponse)
@@ -290,7 +290,7 @@ async def validate_script(request: ScriptValidationRequest) -> ScriptValidationR
         raise HTTPException(
             status_code=500,
             detail="Script validation failed"
-        )
+        ) from e
 
 
 @router.get("/security-info")
@@ -329,7 +329,7 @@ async def get_security_info() -> dict[str, Any]:
 
     except Exception as e:
         log_exception(f"Failed to get security info: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get security information")
+        raise HTTPException(status_code=500, detail="Failed to get security information") from e
 
 
 @router.get("/examples")

@@ -168,11 +168,11 @@ class SignalProcessor:
 
         Args:
             user_id: User requesting computation
-            symbols: List of option symbols
+            symbols: list of option symbols
             context: Additional context for computation
 
         Returns:
-            Dict with computation results or error
+            dict with computation results or error
         """
         try:
             if not self.subscription_client:
@@ -256,11 +256,11 @@ class SignalProcessor:
 
         Args:
             user_id: User requesting computation
-            symbols: List of symbols
-            indicators: List of indicator configurations
+            symbols: list of symbols
+            indicators: list of indicator configurations
 
         Returns:
-            Dict with computation results or error
+            dict with computation results or error
         """
         try:
             if not self.subscription_client:
@@ -903,7 +903,7 @@ class SignalProcessor:
             if self.broker_symbol_converter:
                 output_data = await self.broker_symbol_converter.enrich_with_broker_info(output_data)
 
-            # Publish to Redis List (for backward compatibility)
+            # Publish to Redis list (for backward compatibility)
             list_key = settings.get_computed_data_key(instrument_key)
             await self.redis_client.lpush(list_key, json.dumps(output_data))
 
@@ -1136,7 +1136,7 @@ class SignalProcessor:
         try:
             process = psutil.Process(os.getpid())
             memory_info = process.memory_info()
-            # Return RSS (Resident Set Size) in MB
+            # Return RSS (Resident set Size) in MB
             memory_mb = memory_info.rss / 1024 / 1024
             return round(memory_mb, 2)
         except Exception as e:

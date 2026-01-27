@@ -207,7 +207,7 @@ class TestDynamicBillingTiers:
         mock_client.get_user_subscriptions = AsyncMock(return_value=mock_marketplace_response_premium)
         abuse_protection_service.marketplace_client = mock_client
 
-        # Set short TTL for test
+        # set short TTL for test
         abuse_protection_service._limits_cache_ttl = 0.1  # 100ms
 
         # First call

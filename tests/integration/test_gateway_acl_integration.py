@@ -12,14 +12,10 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-try:
-    from fastapi import FastAPI
-
-    from app.api.v2.sdk_signals import router as sdk_router
-    from app.middleware.entitlement_middleware import EntitlementMiddleware
-    from app.middleware.ratelimit import RateLimitMiddleware
+import importlib.util
+if importlib.util.find_spec('app.api.v2.sdk_signals'):
     MIDDLEWARE_AVAILABLE = True
-except ImportError:
+else:
     MIDDLEWARE_AVAILABLE = False
 
 
@@ -357,7 +353,7 @@ class TestGatewayACLIntegration:
         results = await asyncio.gather(*[task for task, _ in tasks], return_exceptions=True)
 
         # Verify responses
-        for (task, expected_codes), result in zip(tasks, results, strict=False):
+        for (_task, expected_codes), result in zip(tasks, results, strict=False):
             if not isinstance(result, Exception):
                 assert result.status_code in expected_codes
 
