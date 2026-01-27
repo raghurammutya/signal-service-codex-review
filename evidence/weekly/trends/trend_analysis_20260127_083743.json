@@ -1,0 +1,28 @@
+{
+  "trend_analysis": "complete",
+  "weeks_analyzed": 3,
+  "trend_direction": "degrading",
+  "metrics_history": {
+    "total_violations": [
+      0,
+      871,
+      872
+    ],
+    "p0_violations": [
+      0,
+      175,
+      0
+    ],
+    "auto_fixable": [
+      0,
+      91,
+      92
+    ]
+  },
+  "summary": {
+    "current_total": 872,
+    "previous_total": 871,
+    "change_since_last": 1,
+    "p0_stable": true
+  }
+}
