@@ -3,6 +3,7 @@ Comprehensive tests for malicious code detection and crash prevention
 Tests various attack vectors and system protection mechanisms
 """
 
+import contextlib
 import time
 
 import pytest
@@ -415,10 +416,8 @@ class TestCrashPrevention:
         finally:
             # Cleanup
             for ctx in contexts:
-                try:
+                with contextlib.suppress(Exception):
                     ctx.__exit__(None, None, None)
-                except:
-                    pass
 
     @pytest.mark.asyncio
     async def test_execute_with_crash_prevention_success(self, crash_prevention, basic_limits):
@@ -665,7 +664,7 @@ def multi_attack():
         threats = detector.analyze_code(complex_attack)
 
         # Should detect multiple threat categories
-        set(threat.category for threat in threats)
+        {threat.category for threat in threats}
 
 
         # Should detect multiple critical/high threats

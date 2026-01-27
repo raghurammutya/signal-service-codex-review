@@ -150,7 +150,7 @@ class FinalProductionReadinessSummary:
             }
         }
 
-        for achievement, details in achievements.items():
+        for _achievement, details in achievements.items():
             print(f"    ✅ {details['description']}")
             print(f"       Impact: {details['impact']}")
 

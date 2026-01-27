@@ -1,0 +1,12 @@
+{
+  "title": "\ud83d\udd34 Syntax Error Progress: 1,339 remaining",
+  "status": "CRITICAL",
+  "priority": "P0",
+  "metrics": {
+    "baseline_errors": 2154,
+    "current_errors": 1339,
+    "fixed_count": 815,
+    "percent_complete": 37.836583101207054
+  },
+  "next_actions": "Immediate syntax fix campaign"
+}

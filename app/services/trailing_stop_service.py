@@ -10,6 +10,7 @@ TRAILING_001: Trailing Stop Service Migration
 """
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -598,7 +599,7 @@ class TrailingStopService:
         """Clean up inactive price subscriptions"""
         instruments_to_remove = []
 
-        for instrument_key, subscription in self._price_subscriptions.items():
+        for instrument_key, _subscription in self._price_subscriptions.items():
             # Check if any active stops exist for this instrument
             has_active_stops = any(
                 config.instrument_key == instrument_key and
@@ -617,9 +618,7 @@ class TrailingStopService:
         """Shutdown trailing stop service"""
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("Trailing stop service shutdown complete")

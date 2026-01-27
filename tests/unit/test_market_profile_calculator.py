@@ -16,8 +16,7 @@ class TestMarketProfileCalculator:
     @pytest.fixture
     def mock_repository(self):
         """Mock repository for testing"""
-        repo = AsyncMock()
-        return repo
+        return AsyncMock()
 
     @pytest.fixture
     def calculator(self, mock_repository):
@@ -121,7 +120,7 @@ class TestMarketProfileCalculator:
         session2_data = sample_ohlcv_data[5:]
 
         # Modify timestamps to represent different sessions
-        for i, item in enumerate(session2_data):
+        for _i, item in enumerate(session2_data):
             item['timestamp'] = item['timestamp'] + timedelta(days=1)
 
         all_data = session1_data + session2_data

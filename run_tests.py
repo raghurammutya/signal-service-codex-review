@@ -12,13 +12,12 @@ from datetime import datetime
 def run_command(command, capture_output=True):
     """Run shell command and return result"""
     print(f"Running: {command}")
-    result = subprocess.run(
+    return subprocess.run(
         command,
         shell=True,
         capture_output=capture_output,
         text=True
     )
-    return result
 
 def setup_test_environment():
     """Setup test environment"""
@@ -199,16 +198,14 @@ def main():
     success = True
 
     # Setup test environment
-    if not args.no_setup:
-        if not setup_test_environment():
-            print("❌ Failed to setup test environment")
-            sys.exit(1)
+    if not args.no_setup and not setup_test_environment():
+        print("❌ Failed to setup test environment")
+        sys.exit(1)
 
     try:
         # Run linting if requested
-        if args.lint:
-            if not run_linting():
-                success = False
+        if args.lint and not run_linting():
+            success = False
 
         # Run specific pattern if provided
         if args.pattern:
@@ -216,26 +213,21 @@ def main():
                 success = False
         else:
             # Run test suites
-            if args.suite in ["unit", "all"]:
-                if not run_unit_tests():
-                    success = False
+            if args.suite in ["unit", "all"] and not run_unit_tests():
+                success = False
 
-            if args.suite in ["integration", "all"]:
-                if not run_integration_tests():
-                    success = False
+            if args.suite in ["integration", "all"] and not run_integration_tests():
+                success = False
 
-            if args.suite in ["performance", "all"]:
-                if not run_performance_tests():
-                    success = False
+            if args.suite in ["performance", "all"] and not run_performance_tests():
+                success = False
 
-            if args.suite in ["e2e", "all"]:
-                if not run_e2e_tests():
-                    success = False
+            if args.suite in ["e2e", "all"] and not run_e2e_tests():
+                success = False
 
         # Generate coverage report if requested
-        if args.coverage:
-            if not run_coverage_report():
-                success = False
+        if args.coverage and not run_coverage_report():
+            success = False
 
     finally:
         # Cleanup test environment

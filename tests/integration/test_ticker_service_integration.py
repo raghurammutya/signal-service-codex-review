@@ -206,7 +206,7 @@ class TestTickerServiceClient:
             end_time = datetime(2023, 1, 1, 11, 0)
 
             # First 3 failures
-            for i in range(3):
+            for _i in range(3):
                 with pytest.raises(DataAccessError):
                     await ticker_client.get_historical_moneyness_data(
                         underlying="AAPL",

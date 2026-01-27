@@ -46,7 +46,7 @@ class DatabaseFinalAssurance:
             usage_files = []
 
             # Search for table references in code
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         file_path = os.path.join(root, file)

@@ -196,10 +196,10 @@ class TokenUsageScanner:
         # Generate summary statistics
         summary_stats = {
             'total_findings': len(self.findings),
-            'files_affected': len(set(f.file_path for f in self.findings)),
+            'files_affected': len({f.file_path for f in self.findings}),
             'critical_issues': len([f for f in self.findings if f.severity == 'critical']),
             'high_priority_issues': len([f for f in self.findings if f.severity in ['critical', 'high']]),
-            'services_requiring_migration': len(set(self._extract_service(f.file_path) for f in self.findings))
+            'services_requiring_migration': len({self._extract_service(f.file_path) for f in self.findings})
         }
 
         return {

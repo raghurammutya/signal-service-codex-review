@@ -1,0 +1,12 @@
+{
+  "title": "\ud83d\udfe1 Syntax Error Progress: 2 remaining",
+  "status": "NEARLY_RESOLVED",
+  "priority": "P1",
+  "metrics": {
+    "baseline_errors": 19,
+    "current_errors": 2,
+    "fixed_count": 17,
+    "percent_complete": 89.47368421052632
+  },
+  "next_actions": "Immediate syntax fix campaign"
+}

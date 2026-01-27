@@ -130,7 +130,7 @@ async def demonstrate_week2_deployment():
     print("🎉" + "="*58 + "🎉\n")
 
     # Evidence summary
-    evidence = {
+    return {
         "deployment_success": deployment_success,
         "deployment_duration_seconds": deployment_duration.total_seconds(),
         "final_sla_compliance": final_sla_compliance,
@@ -149,7 +149,6 @@ async def demonstrate_week2_deployment():
         }
     }
 
-    return evidence
 
 if __name__ == "__main__":
     result = asyncio.run(demonstrate_week2_deployment())

@@ -284,7 +284,7 @@ async def get_historical_atm_iv(
     """
     try:
         # Use moneyness processor to get ATM IV history
-        result = await moneyness_processor.get_atm_iv_history(
+        return await moneyness_processor.get_atm_iv_history(
             underlying=underlying,
             expiry_date=expiry_date,
             start_time=start_time,
@@ -292,7 +292,6 @@ async def get_historical_atm_iv(
             timeframe=timeframe
         )
 
-        return result
 
     except Exception as e:
         logger.error(f"Error getting historical ATM IV: {e}")

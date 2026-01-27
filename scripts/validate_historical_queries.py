@@ -130,7 +130,7 @@ class HistoricalQueryValidator:
         index_test = await self._test_index_efficiency()
 
         # Generate migration report
-        migration_report = {
+        return {
             "validation_type": "historical_query_migration",
             "query_migration": {
                 "validation_timestamp": datetime.now().isoformat(),
@@ -171,7 +171,6 @@ class HistoricalQueryValidator:
             }
         }
 
-        return migration_report
 
     async def validate_performance_only(self, query_count: int = 1000) -> dict[str, Any]:
         """
@@ -199,7 +198,7 @@ class HistoricalQueryValidator:
         # Index performance test
         index_test_results = await self._test_index_performance_under_load()
 
-        performance_report = {
+        return {
             "performance_timestamp": datetime.now().isoformat(),
             "test_configuration": {
                 "query_count": query_count,
@@ -227,7 +226,6 @@ class HistoricalQueryValidator:
             }
         }
 
-        return performance_report
 
     async def _validate_single_query(self, query_id: str, query_entry: dict[str, Any]) -> QueryValidationResult:
         """Validate individual historical query migration"""
@@ -289,9 +287,8 @@ class HistoricalQueryValidator:
 
         # Validate time range parameters
         time_range = new_query.get("time_range")
-        if time_range:
-            if not self._validate_time_range(time_range):
-                errors.append("Invalid time_range format in query")
+        if time_range and not self._validate_time_range(time_range):
+            errors.append("Invalid time_range format in query")
 
         # Validate query type
         query_type = new_query.get("query_type")
@@ -341,10 +338,7 @@ class HistoricalQueryValidator:
                 return False
 
             # Validate reasonable time range (not more than 1 year)
-            if (end_dt - start_dt).days > 365:
-                return False
-
-            return True
+            return not (end_dt - start_dt).days > 365
         except (ValueError, TypeError):
             return False
 
@@ -390,7 +384,7 @@ class HistoricalQueryValidator:
 
             if old_value is not None and new_value is not None:
                 # Handle floating point comparison
-                if isinstance(old_value, (int, float)) and isinstance(new_value, (int, float)):
+                if isinstance(old_value, int | float) and isinstance(new_value, int | float):
                     if abs(old_value - new_value) > 0.001:  # Small tolerance for floating point
                         return False
                 elif old_value != new_value:
@@ -433,10 +427,7 @@ class HistoricalQueryValidator:
             return False
 
         # Time range should be specified for time-series data
-        if "time_range" not in query:
-            return False
-
-        return True
+        return not "time_range" not in query
 
     async def _execute_historical_query(self, query_entry: dict[str, Any]) -> list[dict[str, Any]]:
         """Execute historical query against real data"""
@@ -473,8 +464,7 @@ class HistoricalQueryValidator:
 
         try:
             # Attempt to connect to actual data sources
-            historical_data = await self._connect_to_historical_storage(instrument_key, query)
-            return historical_data
+            return await self._connect_to_historical_storage(instrument_key, query)
         except Exception as e:
             # Fallback: indicate this is a validation limitation, not a migration failure
             print(f"⚠️  Unable to connect to real historical data source: {e}")
@@ -485,8 +475,7 @@ class HistoricalQueryValidator:
         """Query real legacy historical data using token-based system"""
         try:
             # Attempt to connect to legacy data sources
-            legacy_data = await self._connect_to_legacy_storage(token, query)
-            return legacy_data
+            return await self._connect_to_legacy_storage(token, query)
         except Exception as e:
             print(f"⚠️  Unable to connect to real legacy data source: {e}")
             print(f"📋 Using validation stub for token {token}")
@@ -610,7 +599,7 @@ class HistoricalQueryValidator:
 
         async def concurrent_query_batch():
             latencies = []
-            for i in range(10):  # Each batch runs 10 queries
+            for _i in range(10):  # Each batch runs 10 queries
                 query = self._generate_synthetic_query()
                 start_time = time.time()
                 await self._execute_historical_query({"new_instrument_key_query": query})

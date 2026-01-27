@@ -320,7 +320,7 @@ class TechnicalIndicatorCacheCoordinator:
             )
 
             # Collect successful recalculations
-            for i, result in enumerate(results):
+            for _i, result in enumerate(results):
                 if isinstance(result, Exception):
                     logger.error(f"Indicator recalculation failed: {result}")
                     continue

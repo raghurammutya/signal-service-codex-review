@@ -10,6 +10,7 @@ Session 5A: Event consumer implementation with config service integration
 """
 
 import asyncio
+import contextlib
 import logging
 import random
 import time
@@ -99,10 +100,8 @@ class RegistryIntegrationService:
 
         if self.event_consumer_task:
             self.event_consumer_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.event_consumer_task
-            except asyncio.CancelledError:
-                pass
 
         await self.registry_client.close()
         logger.info("Registry integration service stopped")
@@ -394,7 +393,7 @@ class RegistryIntegrationService:
 
                     # Recalculate moneyness for all strikes
                     updated_moneyness = {}
-                    for strike_str, option_data in chain_data.items():
+                    for strike_str, _option_data in chain_data.items():
                         strike_price = float(strike_str)
                         moneyness = await moneyness_calc.calculate_moneyness(spot_price, strike_price)
 
@@ -654,7 +653,7 @@ class RegistryIntegrationService:
         registry_times = [r.registry_latency_ms for r in self.shadow_results if r.registry_latency_ms > 0]
         legacy_times = [r.legacy_latency_ms for r in self.shadow_results if r.legacy_latency_ms > 0]
 
-        summary = {
+        return {
             "total_comparisons": total_tests,
             "matching_results": matching_results,
             "match_rate": (matching_results / total_tests * 100) if total_tests > 0 else 0,
@@ -663,7 +662,6 @@ class RegistryIntegrationService:
             "recent_results": [asdict(r) for r in self.shadow_results[-10:]]  # Last 10 results
         }
 
-        return summary
 
     def get_metrics(self) -> dict[str, Any]:
         """Get integration service metrics"""

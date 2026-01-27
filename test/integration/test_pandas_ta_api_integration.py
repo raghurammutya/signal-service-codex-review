@@ -131,10 +131,10 @@ class TestPandasTAAPIIntegration:
             assert "bb" in result["results"]
 
             # Validate result types
-            assert isinstance(result["results"]["sma_20"], (float, type(None)))
-            assert isinstance(result["results"]["rsi_14"], (float, type(None)))
-            assert isinstance(result["results"]["macd"], (dict, type(None)))
-            assert isinstance(result["results"]["bb"], (dict, type(None)))
+            assert isinstance(result["results"]["sma_20"], float | type(None))
+            assert isinstance(result["results"]["rsi_14"], float | type(None))
+            assert isinstance(result["results"]["macd"], dict | type(None))
+            assert isinstance(result["results"]["bb"], dict | type(None))
 
     @pytest.mark.asyncio
     async def test_comprehensive_indicators_api_call(self, client, comprehensive_indicator_request):
@@ -415,9 +415,9 @@ class TestPandasTASubscriptionIntegration:
 
                     # Validate indicator results structure
                     results = update_data["results"]
-                    assert isinstance(results["sma_10"], (int, float))
-                    assert isinstance(results["sma_20"], (int, float))
-                    assert isinstance(results["rsi_14"], (int, float))
+                    assert isinstance(results["sma_10"], int | float)
+                    assert isinstance(results["sma_20"], int | float)
+                    assert isinstance(results["rsi_14"], int | float)
                     assert isinstance(results["macd"], dict)
                     assert isinstance(results["bb"], dict)
 

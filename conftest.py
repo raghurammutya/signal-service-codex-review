@@ -299,7 +299,7 @@ def signal_processor(request, redis_client, db_session, mock_instrument_service)
                     return True
 
                 async def _process_frequency_batch(self, *_a, **_k):
-                    instruments = {k[1] for k in self._subs.keys()}
+                    instruments = {k[1] for k in self._subs}
                     for inst in instruments:
                         if hasattr(self.parent, "compute_greeks_for_instrument"):
                             await self.parent.compute_greeks_for_instrument(inst)
@@ -374,8 +374,7 @@ def signal_processor(request, redis_client, db_session, mock_instrument_service)
     except Exception:
         ticker_adapter = None
 
-    proc = _StubProcessor(inst_client, ticker_adapter)
-    return proc
+    return _StubProcessor(inst_client, ticker_adapter)
 
 @pytest.fixture
 def moneyness_calculator():
@@ -409,14 +408,13 @@ def backpressure_monitor():
 @pytest.fixture
 def performance_metrics():
     """Fixture for collecting performance metrics"""
-    metrics = {
+    return {
         'start_time': None,
         'end_time': None,
         'operations': 0,
         'errors': 0,
         'latencies': []
     }
-    return metrics
 
 @pytest.fixture
 def load_test_data():

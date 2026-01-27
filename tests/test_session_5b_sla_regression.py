@@ -101,7 +101,7 @@ class StaleDataInjector:
         """Simulate fresh market data that should trigger cache refresh"""
         underlying = instrument_id.split(':')[1] if ':' in instrument_id else instrument_id
 
-        fresh_market_data = {
+        return {
             "instrument_id": instrument_id,
             "underlying": underlying,
             "spot_price": 2450.50,        # New spot price
@@ -114,7 +114,6 @@ class StaleDataInjector:
             "timestamp": datetime.now().isoformat()
         }
 
-        return fresh_market_data
 
 
 @pytest.fixture

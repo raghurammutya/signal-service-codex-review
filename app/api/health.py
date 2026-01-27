@@ -166,7 +166,7 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
 
         # Format according to dashboard expectations
         from app.core.config import settings
-        dashboard_format = {
+        return {
             "service_name": service_name,
             "service_type": "signal_processing",
             "status": "healthy",
@@ -177,7 +177,6 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
             "healthy_instances": len([i for i in cluster_data.get('instances', []) if i.get('healthy', False)])
         }
 
-        return dashboard_format
 
     except Exception as e:
         logger.error(f"Dashboard health summary failed: {e}")

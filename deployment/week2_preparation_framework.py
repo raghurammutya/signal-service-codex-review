@@ -347,7 +347,7 @@ class Week2PreparationFramework:
         # Proposed Week 2 timeline based on preparation
         base_time = datetime.now() + timedelta(hours=2)  # 2 hours from now
 
-        timeline = {
+        return {
             "week2_deployment_start": base_time.isoformat(),
             "phases": [
                 {
@@ -385,7 +385,6 @@ class Week2PreparationFramework:
             "week3_readiness_assessment": (base_time + timedelta(hours=102)).isoformat()
         }
 
-        return timeline
 
 async def execute_week2_preparation():
     """Execute Week 2 preparation demonstration"""

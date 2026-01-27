@@ -379,7 +379,7 @@ class EnhancedLoadBackpressureDrill:
         print()
 
         # Individual Scenario Results
-        for scenario_name, scenario_data in self.results["scenarios"].items():
+        for _scenario_name, scenario_data in self.results["scenarios"].items():
             if isinstance(scenario_data, dict) and "slo_compliance" in scenario_data:
                 print(f"📊 {scenario_data['scenario_name']}:")
                 print(f"   Requests: {scenario_data['successful_requests']}/{scenario_data['total_requests']} successful")

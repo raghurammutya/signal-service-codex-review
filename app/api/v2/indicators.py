@@ -182,8 +182,7 @@ class IndicatorCalculator:
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
 
         rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
+        return 100 - (100 / (1 + rs))
 
     def calculate_macd(self, df: pd.DataFrame, fast=12, slow=26, signal=9) -> dict[str, pd.Series]:
         """Calculate MACD"""
@@ -217,8 +216,7 @@ class IndicatorCalculator:
     def calculate_vwap(self, df: pd.DataFrame) -> pd.Series:
         """Calculate Volume Weighted Average Price"""
         typical_price = (df['high'] + df['low'] + df['close']) / 3
-        vwap = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
-        return vwap
+        return (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
 
     def calculate_atr(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
         """Calculate Average True Range"""
@@ -227,8 +225,7 @@ class IndicatorCalculator:
         low_close = np.abs(df['low'] - df['close'].shift())
 
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        atr = true_range.rolling(window=period).mean()
-        return atr
+        return true_range.rolling(window=period).mean()
 
     def get_available_indicators(self) -> dict[str, dict[str, Any]]:
         """Get all available pandas_ta indicators with their parameters"""
@@ -278,7 +275,7 @@ class IndicatorCalculator:
                 if isinstance(result, dict):
                     # Convert dict to DataFrame (for indicators like previous_high_low, pivot_points)
                     return pd.DataFrame([result])
-                if isinstance(result, (int, float)):
+                if isinstance(result, int | float):
                     return pd.DataFrame({indicator: [result]})
                 if isinstance(result, list):
                     return pd.DataFrame({indicator: result})
@@ -885,7 +882,7 @@ async def calculate_dynamic_indicator(
     symbol: str,
     timeframe: str = Query("1day", regex="^(1day|1hour|30min|15min|5min|1min)$"),
     data_points: int = Query(1, ge=1, le=100),
-    params: dict[str, Any] = {}
+    params: dict[str, Any] = None
 ):
     """
     Calculate any pandas_ta indicator dynamically
@@ -897,6 +894,8 @@ async def calculate_dynamic_indicator(
         data_points: Number of values to return
         params: Indicator-specific parameters (e.g., {"length": 20} for SMA)
     """
+    if params is None:
+        params = {}
     try:
         # For single data point, use caching
         if data_points == 1:

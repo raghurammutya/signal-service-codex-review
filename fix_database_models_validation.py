@@ -16,7 +16,7 @@ def validate_database_models_safely():
         model_files = []
         schema_patterns = ['model', 'schema', 'table', 'database', 'repository']
 
-        for root, dirs, files in os.walk("app"):
+        for root, _dirs, files in os.walk("app"):
             for file in files:
                 if file.endswith('.py'):
                     # Check if filename suggests database models

@@ -512,8 +512,7 @@ def strategy_{i}(tick_data, parameters):
                 exec(compiled_code, execution_context)
 
                 function = execution_context[config.function_name]
-                result = function(sample_tick_context.tick_data, config.parameters)
-                return result
+                return function(sample_tick_context.tick_data, config.parameters)
             except Exception as e:
                 return {"error": str(e)}
 

@@ -6,9 +6,10 @@ Manages database, Redis, and HTTP client pools with configuration from config se
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
-import httpx
+if TYPE_CHECKING:
+    import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -294,7 +295,7 @@ class ConfigDrivenPoolManager:
     async def _cleanup_http_clients(self):
         """Cleanup HTTP clients."""
         try:
-            for name, client in self._http_clients.items():
+            for _name, client in self._http_clients.items():
                 await client.aclose()
             self._http_clients.clear()
         except Exception as e:

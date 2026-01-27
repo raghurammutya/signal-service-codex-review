@@ -121,7 +121,7 @@ class TestScreenerServiceContract:
         # Confidence validation if present
         if "confidence" in signal:
             confidence = signal["confidence"]
-            assert isinstance(confidence, (int, float))
+            assert isinstance(confidence, int | float)
             assert 0.0 <= confidence <= 1.0, "Confidence must be between 0.0 and 1.0"
 
         # Instrument key format validation
@@ -229,7 +229,7 @@ class TestScreenerServiceContract:
 
                     for metric in required_metrics:
                         assert metric in metrics
-                        assert isinstance(metrics[metric], (int, float))
+                        assert isinstance(metrics[metric], int | float)
 
     @pytest.mark.asyncio
     async def test_error_response_format_contract(self, client):

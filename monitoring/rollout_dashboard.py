@@ -71,7 +71,7 @@ class RolloutDashboard:
         if not self.last_refresh or (datetime.now() - self.last_refresh).seconds > 300:
             await self.refresh_evidence_data()
 
-        summary = {
+        return {
             "phase_2_health": self._calculate_phase_health(),
             "sub001_summary": {
                 "status": "COMPLETE" if self.dashboard_data["sub001_migration_status"]["day_2_approval"] else "IN_PROGRESS",
@@ -88,7 +88,6 @@ class RolloutDashboard:
             }
         }
 
-        return summary
 
     async def get_detailed_migration_view(self) -> dict[str, Any]:
         """Get detailed migration status for troubleshooting"""

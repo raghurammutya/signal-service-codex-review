@@ -310,7 +310,7 @@ class Week1SLABaselineTracker:
 
         # Baseline stability analysis
         baseline_stability = {}
-        for metric_name in self.sla_baselines.keys():
+        for metric_name in self.sla_baselines:
             metric_measurements = [m for m in self.measurements if m.metric_name == metric_name]
             if metric_measurements:
                 variances = [abs(m.baseline_variance_pct) for m in metric_measurements]
@@ -423,7 +423,7 @@ class Week1SLABaselineTracker:
         {
             "report_type": "baseline_comparison",
             "session_5b_baselines": {name: asdict(baseline) for name, baseline in self.sla_baselines.items()},
-            "week1_performance": {name: summary for name, summary in self.baseline_validation["baseline_stability"].items()}
+            "week1_performance": dict(self.baseline_validation["baseline_stability"].items())
         }
 
         baseline_filename = f"baseline_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -446,7 +446,7 @@ class Week1SLABaselineTracker:
 
         # Get last measurement for each metric
         latest_measurements = {}
-        for metric_name in self.sla_baselines.keys():
+        for metric_name in self.sla_baselines:
             metric_measurements = [m for m in self.measurements if m.metric_name == metric_name]
             if metric_measurements:
                 latest_measurements[metric_name] = asdict(metric_measurements[-1])

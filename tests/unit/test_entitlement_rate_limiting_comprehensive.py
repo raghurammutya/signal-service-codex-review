@@ -28,13 +28,12 @@ class TestStreamAbuseProtectionComprehensive:
     async def abuse_protection(self):
         """Create StreamAbuseProtection with mocked marketplace client."""
         mock_marketplace = AsyncMock()
-        protection = StreamAbuseProtection(
+        return StreamAbuseProtection(
             marketplace_client=mock_marketplace,
             redis_client=AsyncMock(),
             rate_limit_window=60,
             max_connections_per_user=10
         )
-        return protection
 
     @pytest.fixture
     def mock_premium_user_subscriptions(self):

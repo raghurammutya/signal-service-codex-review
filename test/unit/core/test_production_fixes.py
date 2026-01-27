@@ -261,7 +261,7 @@ class TestEnvironmentConfiguration:
             ('test', False)
         ]
 
-        for env, should_be_prod in test_cases:
+        for env, _should_be_prod in test_cases:
             with patch.dict(os.environ, {'ENVIRONMENT': env}):
                 # Test Redis manager behavior
                 # In production without URL, should fail

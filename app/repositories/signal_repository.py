@@ -46,6 +46,7 @@ class DatabaseSessionContext:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session_cm:
             return await self.session_cm.__aexit__(exc_type, exc_val, exc_tb)
+        return None
 
     async def fetchrow(self, query, *params):
         """Execute query and return single row (asyncpg compatibility)"""

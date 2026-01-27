@@ -132,7 +132,7 @@ class PandasTAComprehensiveTester:
         prices = []
         current_price = base_price
 
-        for i in range(periods):
+        for _i in range(periods):
             # Apply trend
             current_price *= (1 + trend + np.random.normal(0, volatility))
             current_price = max(current_price, base_price * 0.1)  # Prevent negative prices
@@ -166,7 +166,7 @@ class PandasTAComprehensiveTester:
         prices = []
         current_price = base_price
 
-        for i in range(periods):
+        for _i in range(periods):
             # High volatility with occasional jumps
             if np.random.random() < 0.05:  # 5% chance of jump
                 jump = np.random.choice([-1, 1]) * np.random.uniform(0.03, 0.08)
@@ -286,7 +286,7 @@ class PandasTAComprehensiveTester:
         prices = []
         current_price = base_price
 
-        for i in range(periods):
+        for _i in range(periods):
             # Central bank intervention effects
             if abs(current_price - base_price) / base_price > 0.15:
                 # Mean reversion when too far from base
@@ -672,7 +672,7 @@ class PandasTAComprehensiveTester:
         """Safely convert pandas values to JSON-serializable types"""
         if pd.isna(value):
             return None
-        if isinstance(value, (np.integer, np.floating)):
+        if isinstance(value, np.integer | np.floating):
             return float(value)
         return value
 
@@ -684,7 +684,7 @@ class PandasTAComprehensiveTester:
 
         # Calculate success rates by data variant
         variant_success_rates = {}
-        for variant in self.test_data_variants.keys():
+        for variant in self.test_data_variants:
             successes = sum(1 for results in self.test_results.values()
                           if results.get(variant, {}).get('status') == 'success')
             variant_success_rates[variant] = (successes / total_indicators) * 100
@@ -703,7 +703,7 @@ class PandasTAComprehensiveTester:
                 if 'execution_time_ms' in result:
                     execution_times.append(result['execution_time_ms'])
 
-        summary = {
+        return {
             'test_summary': {
                 'total_indicators_tested': total_indicators,
                 'successful_indicators': successful_indicators,
@@ -731,7 +731,6 @@ class PandasTAComprehensiveTester:
             'detailed_results': self.test_results
         }
 
-        return summary
 
     def _save_test_results(self, summary: dict[str, Any]) -> None:
         """Save test results to files"""

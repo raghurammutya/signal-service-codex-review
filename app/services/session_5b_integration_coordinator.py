@@ -604,7 +604,7 @@ class Session5BCacheCoordinator:
             stats["failure_rate"] = stats["failed_coordinations"] / stats["total_coordinations"] * 100
 
         # Add individual service performance
-        for service, service_stats in stats["service_performance"].items():
+        for _service, service_stats in stats["service_performance"].items():
             if service_stats["calls"] > 0:
                 service_stats["success_rate"] = service_stats["success"] / service_stats["calls"] * 100
 

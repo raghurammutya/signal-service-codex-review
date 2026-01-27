@@ -261,7 +261,7 @@ class EnhancedCacheInvalidationService:
 
             # Record SLA monitoring metrics
             from .session_5b_sla_monitoring import record_invalidation_sla
-            cache_patterns_count = {cache_type: result for cache_type, result in zip(invalidation_patterns.keys(), [r for r in results if not isinstance(r, Exception)], strict=False)}
+            cache_patterns_count = dict(zip(invalidation_patterns.keys(), [r for r in results if not isinstance(r, Exception)], strict=False))
             record_invalidation_sla(
                 service="enhanced_cache_invalidation",
                 invalidation_type=request.invalidation_type.value,

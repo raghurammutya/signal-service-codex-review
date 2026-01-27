@@ -78,7 +78,7 @@ class ProductionDeploymentFreeze:
         """Create deployment evidence summary."""
         print("📋 Creating Deployment Evidence Summary...")
 
-        evidence = {
+        return {
             "validation_gates": {
                 "production_hardening": {"status": "PASSED", "confidence": 100},
                 "load_backpressure": {"status": "PASSED", "confidence": 100},
@@ -117,13 +117,12 @@ class ProductionDeploymentFreeze:
             }
         }
 
-        return evidence
 
     def create_rollback_plan(self) -> dict[str, Any]:
         """Create comprehensive rollback plan."""
         print("🔄 Creating Rollback Plan...")
 
-        rollback_plan = {
+        return {
             "triggers": [
                 {"condition": "Circuit breaker open > 30s", "action": "immediate_rollback"},
                 {"condition": "Error rate > 1%", "action": "investigate_then_rollback"},
@@ -155,7 +154,6 @@ class ProductionDeploymentFreeze:
             ]
         }
 
-        return rollback_plan
 
     def create_production_artifacts_archive(self, artifacts: list[str]) -> str:
         """Create production-ready artifacts archive."""

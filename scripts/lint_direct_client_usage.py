@@ -52,7 +52,7 @@ def find_direct_client_instantiations(root_dir: str) -> list[tuple[str, int, str
         'lint_direct_client_usage.py'  # This linter itself
     ]
 
-    for root, dirs, files in os.walk(root_dir):
+    for root, _dirs, files in os.walk(root_dir):
         for file in files:
             if not file.endswith('.py'):
                 continue
@@ -80,7 +80,7 @@ def find_direct_client_instantiations(root_dir: str) -> list[tuple[str, int, str
                         continue
 
                     # Skip imports
-                    if line.startswith('from ') or line.startswith('import '):
+                    if line.startswith(('from ', 'import ')):
                         continue
 
                     # Skip factory helper function definitions
@@ -88,11 +88,7 @@ def find_direct_client_instantiations(root_dir: str) -> list[tuple[str, int, str
                         continue
 
                     # Skip documentation strings, comments, and string literals that mention client patterns
-                    if (line.startswith('"""') or line.startswith("'''") or
-                        'description=' in line or 'help=' in line or
-                        'print(' in line and 'ServiceClient' in line or
-                        'logger.warning(' in line or 'logger.error(' in line or
-                        'logger.info(' in line or 'logger.debug(' in line):
+                    if (line.startswith(('"""', "'''")) or 'description=' in line or 'help=' in line or 'print(' in line and 'ServiceClient' in line or 'logger.warning(' in line or 'logger.error(' in line or 'logger.info(' in line or 'logger.debug(' in line):
                         continue
 
                     # Check for direct instantiation patterns
@@ -117,7 +113,7 @@ def check_client_factory_usage(root_dir: str) -> list[tuple[str, int, str]]:
     """
     suggestions = []
 
-    for root, dirs, files in os.walk(root_dir):
+    for root, _dirs, files in os.walk(root_dir):
         for file in files:
             if not file.endswith('.py'):
                 continue

@@ -206,7 +206,7 @@ class FEED001CheckpointAutomation:
             baseline_established = result.returncode == 0
 
             # Simulate production feed metrics
-            baseline_metrics = {
+            return {
                 "baseline_established": baseline_established,
                 "feed_avg_latency_ms": 18.4,
                 "feed_p95_latency_ms": 23.7,
@@ -217,7 +217,6 @@ class FEED001CheckpointAutomation:
                 "ready_for_migration": baseline_established
             }
 
-            return baseline_metrics
 
         except Exception as e:
             return {

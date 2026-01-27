@@ -325,8 +325,7 @@ class TestPerformanceBenchmarks:
                 except:
                     pass  # Expected with mocked exceptions
 
-                duration = time.time() - start_time
-                return duration
+                return time.time() - start_time
 
         duration = asyncio.run(test_repository_performance())
 

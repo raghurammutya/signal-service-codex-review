@@ -1,0 +1,123 @@
+{
+  "ruff_installation": {
+    "available": true,
+    "version": "ruff 0.7.1"
+  },
+  "configuration": {
+    "pyproject_toml": {
+      "exists": true,
+      "has_ruff_config": true,
+      "excludes_legacy": true
+    },
+    "ruffignore": {
+      "exists": true
+    }
+  },
+  "actual_violations": {
+    "by_rule": {
+      "W293": 3759,
+      "invalid-syntax": 2147,
+      "W291": 275,
+      "B904": 172,
+      "SIM117": 158,
+      "UP035": 131,
+      "F841": 102,
+      "UP006": 102,
+      "B007": 100,
+      "RET504": 91,
+      "F821": 79,
+      "SIM102": 48,
+      "E722": 42,
+      "F541": 41,
+      "UP038": 40,
+      "W292": 28,
+      "B905": 25,
+      "F401": 21,
+      "SIM105": 20,
+      "E402": 20,
+      "E712": 20,
+      "N805": 15,
+      "SIM118": 14,
+      "B017": 13,
+      "SIM103": 13,
+      "PIE810": 12,
+      "SIM108": 9,
+      "F402": 9,
+      "C401": 8,
+      "B023": 7,
+      "RET505": 5,
+      "UP007": 4,
+      "C416": 3,
+      "SIM110": 3,
+      "B006": 2,
+      "RET503": 2,
+      "SIM222": 2,
+      "I001": 2,
+      "N802": 2,
+      "N818": 2,
+      "E721": 2,
+      "E741": 2,
+      "B011": 1,
+      "C403": 1,
+      "RSE102": 1
+    },
+    "total": 7555,
+    "p0_critical": 88,
+    "invalid_syntax": 2147,
+    "p0_total": 2235
+  },
+  "scripts": {
+    "run_ruff.py": {
+      "exists": true,
+      "executable": true,
+      "size": 10558
+    },
+    "triage_ruff_violations.py": {
+      "exists": true,
+      "executable": true,
+      "size": 18420
+    },
+    "manage_ruff_exemptions.py": {
+      "exists": true,
+      "executable": true,
+      "size": 13840
+    }
+  },
+  "ci_workflows": {
+    "ruff-lint.yml": {
+      "exists": true,
+      "has_p0_blocking": true,
+      "excludes_legacy": true
+    },
+    "ruff-backlog-tracker.yml": {
+      "exists": true,
+      "has_p0_blocking": false,
+      "excludes_legacy": true
+    }
+  },
+  "evidence": {
+    "base_dir_exists": true,
+    "ruff_triage_exists": true,
+    "ruff_triage_file_count": 4,
+    "validation_exists": true,
+    "validation_file_count": 8
+  },
+  "triage_validation": {
+    "exit_code": 1,
+    "output": "",
+    "error": "[Errno 2] No such file or directory: 'python'"
+  },
+  "metric_comparison": {
+    "total_violations": {
+      "stated": 6891,
+      "actual": 7555,
+      "triage": 0,
+      "variance": 664
+    },
+    "p0_violations": {
+      "stated": 79,
+      "actual": 2235,
+      "variance": 2156
+    }
+  }
+}

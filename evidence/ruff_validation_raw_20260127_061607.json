@@ -1,0 +1,193 @@
+{
+  "ruff_installation": {
+    "available": true,
+    "version": "ruff 0.14.14"
+  },
+  "configuration": {
+    "pyproject_toml": {
+      "exists": true,
+      "has_ruff_config": true,
+      "excludes_legacy": true
+    },
+    "ruffignore": {
+      "exists": true
+    }
+  },
+  "actual_violations": {
+    "summary": "Found 7087 errors.",
+    "by_rule": {
+      "W293": 3514,
+      "invalid-syntax": 2144,
+      "W291": 229,
+      "B904": 172,
+      "SIM117": 158,
+      "UP035": 121,
+      "F841": 101,
+      "B007": 98,
+      "RET504": 89,
+      "F821": 79,
+      "SIM102": 48,
+      "UP006": 46,
+      "E722": 37,
+      "B905": 25,
+      "W292": 23,
+      "F401": 21,
+      "E402": 20,
+      "E712": 20,
+      "SIM105": 20,
+      "N805": 15,
+      "SIM118": 14,
+      "B017": 13,
+      "SIM103": 13,
+      "PIE810": 12,
+      "F402": 9,
+      "SIM108": 9,
+      "B023": 7,
+      "C401": 5,
+      "SIM110": 3,
+      "UP045": 3,
+      "B006": 2,
+      "C416": 2,
+      "E721": 2,
+      "E741": 2,
+      "N818": 2,
+      "RET503": 2,
+      "SIM222": 2,
+      "B011": 1,
+      "C403": 1,
+      "F541": 1,
+      "RET505": 1,
+      "RSE102": 1
+    },
+    "total": 7087,
+    "p0_critical": 88,
+    "invalid_syntax": 2144,
+    "p0_total": 2232
+  },
+  "scripts": {
+    "run_ruff.py": {
+      "exists": true,
+      "executable": true,
+      "size": 10558
+    },
+    "triage_ruff_violations.py": {
+      "exists": true,
+      "executable": true,
+      "size": 18420
+    },
+    "manage_ruff_exemptions.py": {
+      "exists": true,
+      "executable": true,
+      "size": 13840
+    }
+  },
+  "ci_workflows": {
+    "ruff-lint.yml": {
+      "exists": true,
+      "has_p0_blocking": true,
+      "excludes_legacy": true
+    },
+    "ruff-backlog-tracker.yml": {
+      "exists": true,
+      "has_p0_blocking": false,
+      "excludes_legacy": true
+    }
+  },
+  "evidence": {
+    "base_dir_exists": true,
+    "ruff_triage_exists": true,
+    "ruff_triage_file_count": 4,
+    "validation_exists": true,
+    "validation_file_count": 4
+  },
+  "triage_validation": {
+    "exit_code": 0,
+    "output": "\ud83d\udd0d Analyzing Ruff violations...\n\ud83d\udcca Gathering violation statistics...\n\ud83d\udcc1 Analyzing violations by file...\n\ud83c\udfd7\ufe0f Categorizing violations...\n\ud83d\udcc2 Analyzing by module...\n\ud83d\udccb Generating triage report...\n\u2705 Generating task list...\n\u26a0\ufe0f Identifying exemption candidates...\n\n\u2705 Triage complete!\n\n\ud83d\udcca **Summary:**\n- Total violations: 7,087\n- Files affected: 327\n- Rule types: 42\n\n\ud83d\udcc1 **Reports generated:**\n- Triage report: evidence/validation/ruff_triage_report_20260127_061607.md\n- Task list: evidence/validation/ruff_remediation_tasks_20260127_061607.md  \n- Exemption candidates: evidence/validation/ruff_exemption_candidates_20260127_061607.md\n- Raw data: evidence/validation/ruff_triage_data_20260127_061607.json\n\n\ud83d\ude80 **Next steps:**\n1. Review triage report for prioritization\n2. Assign tasks from remediation list\n3. Consider exemptions for high-violation files\n4. Track progress using raw data metrics\n\n",
+    "generated_files": [
+      "ruff_triage_report_20260127_061607.md",
+      "ruff_triage_report_20260127_061441.md",
+      "ruff_remediation_tasks_20260127_061607.md",
+      "ruff_triage_data_20260127_061607.json",
+      "ruff_triage_data_20260127_061441.json",
+      "ruff_remediation_tasks_20260127_061441.md",
+      "ruff_exemption_candidates_20260127_061441.md",
+      "ruff_exemption_candidates_20260127_061607.md"
+    ],
+    "categorized_violations": {
+      "formatting": {
+        "W293": 3514,
+        "W291": 229,
+        "W292": 23
+      },
+      "error_handling": {
+        "B904": 172,
+        "E722": 37,
+        "B905": 25,
+        "B017": 13,
+        "B011": 1
+      },
+      "complexity": {
+        "SIM117": 158,
+        "SIM102": 48,
+        "SIM105": 20,
+        "SIM103": 13,
+        "SIM108": 9,
+        "C401": 5
+      },
+      "imports": {
+        "UP035": 121,
+        "E402": 20
+      },
+      "code_quality": {
+        "F841": 101,
+        "B007": 98,
+        "RET504": 89,
+        "PIE810": 12,
+        "RET503": 2,
+        "RET505": 1
+      },
+      "critical": {
+        "F821": 79,
+        "F401": 21,
+        "F402": 9
+      },
+      "typing": {
+        "UP006": 46,
+        "UP045": 3
+      },
+      "style": {
+        "E712": 20,
+        "N805": 15,
+        "E721": 2,
+        "E741": 2,
+        "N818": 2
+      },
+      "uncategorized": {
+        "": 2144,
+        "SIM118": 14,
+        "B023": 7,
+        "SIM110": 3,
+        "B006": 2,
+        "C416": 2,
+        "SIM222": 2,
+        "C403": 1,
+        "F541": 1,
+        "RSE102": 1
+      }
+    },
+    "total_from_triage": 7087
+  },
+  "metric_comparison": {
+    "total_violations": {
+      "stated": 6891,
+      "actual": 7087,
+      "triage": 7087,
+      "variance": 196
+    },
+    "p0_violations": {
+      "stated": 79,
+      "actual": 2232,
+      "variance": 2153
+    }
+  }
+}

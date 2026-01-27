@@ -27,13 +27,13 @@ class MetricsBudgetConfig(BaseModel):
     heavy_pressure_threshold: float = Field(default=0.95, ge=0.1, le=1.0)
 
     @validator('moderate_pressure_threshold')
-    def moderate_must_be_greater_than_light(cls, v, values):
+    def moderate_must_be_greater_than_light(self, v, values):
         if 'light_pressure_threshold' in values and v <= values['light_pressure_threshold']:
             raise ValueError('moderate_pressure_threshold must be greater than light_pressure_threshold')
         return v
 
     @validator('heavy_pressure_threshold')
-    def heavy_must_be_greater_than_moderate(cls, v, values):
+    def heavy_must_be_greater_than_moderate(self, v, values):
         if 'moderate_pressure_threshold' in values and v <= values['moderate_pressure_threshold']:
             raise ValueError('heavy_pressure_threshold must be greater than moderate_pressure_threshold')
         return v
@@ -49,7 +49,7 @@ class DatabasePoolConfig(BaseModel):
     retry_attempts: int = Field(default=3, ge=1, le=10)
 
     @validator('max_connections')
-    def max_must_be_greater_than_min(cls, v, values):
+    def max_must_be_greater_than_min(self, v, values):
         if 'min_connections' in values and v <= values['min_connections']:
             raise ValueError('max_connections must be greater than min_connections')
         return v
@@ -74,7 +74,7 @@ class ClientPoolConfig(BaseModel):
     max_retries: int = Field(default=3, ge=0, le=10)
 
     @validator('max_keepalive_connections')
-    def keepalive_must_be_less_than_max(cls, v, values):
+    def keepalive_must_be_less_than_max(self, v, values):
         if 'max_connections' in values and v > values['max_connections']:
             raise ValueError('max_keepalive_connections must be <= max_connections')
         return v
@@ -213,7 +213,7 @@ class ConfigDrivenBudgetManager:
             }
 
             # Aggregate validation results
-            for section, result in validation_status['sections'].items():
+            for _section, result in validation_status['sections'].items():
                 if not result['valid']:
                     validation_status['valid'] = False
                     validation_status['errors'].extend(result['errors'])

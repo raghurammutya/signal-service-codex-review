@@ -205,7 +205,7 @@ class AGG001CheckpointAutomation:
             baseline_established = result.returncode == 0
 
             # Simulate production aggregation metrics
-            baseline_metrics = {
+            return {
                 "baseline_established": baseline_established,
                 "aggregation_avg_latency_ms": 142.3,
                 "aggregation_p95_latency_ms": 167.8,
@@ -216,7 +216,6 @@ class AGG001CheckpointAutomation:
                 "ready_for_migration": baseline_established
             }
 
-            return baseline_metrics
 
         except Exception as e:
             return {

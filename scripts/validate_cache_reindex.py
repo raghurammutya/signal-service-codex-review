@@ -115,7 +115,7 @@ class CacheReindexValidator:
         rollback_test = await self._test_migration_rollback()
 
         # Generate migration report
-        migration_report = {
+        return {
             "validation_type": "cache_migration",
             "cache_migration": {
                 "validation_timestamp": datetime.now().isoformat(),
@@ -152,7 +152,6 @@ class CacheReindexValidator:
             }
         }
 
-        return migration_report
 
     async def validate_performance_only(self, lookup_count: int = 5000) -> dict[str, Any]:
         """
@@ -175,7 +174,7 @@ class CacheReindexValidator:
         # Concurrent load test
         load_test_results = await self._simulate_concurrent_cache_load()
 
-        performance_report = {
+        return {
             "performance_timestamp": datetime.now().isoformat(),
             "test_configuration": {
                 "lookup_count": lookup_count,
@@ -199,7 +198,6 @@ class CacheReindexValidator:
             }
         }
 
-        return performance_report
 
     async def _validate_single_cache_entry(self, entry_id: str, cache_entry: dict[str, Any]) -> CacheValidationResult:
         """Validate individual cache entry migration"""

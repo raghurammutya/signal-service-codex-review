@@ -39,7 +39,7 @@ class TestCircuitBreaker:
         breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=60)
 
         # Record failures up to threshold
-        for i in range(3):
+        for _i in range(3):
             breaker.record_failure()
 
         # Should be open after threshold failures

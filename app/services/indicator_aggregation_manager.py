@@ -70,8 +70,7 @@ class IndicatorSubscription:
             MonitoringTier.ON_DEMAND: 1
         }
 
-        highest_tier = max(tiers, key=lambda t: tier_priority.get(t, 0))
-        return highest_tier
+        return max(tiers, key=lambda t: tier_priority.get(t, 0))
 
     def get_all_alert_configs(self) -> list[dict]:
         """Get all alert configurations from subscribers"""
@@ -102,8 +101,7 @@ class IndicatorSubscription:
                       for sub in self.subscribers.values()]
 
         freq_priority = {"real_time": 4, "1m": 3, "5m": 2, "1h": 1, "4h": 0}
-        max_freq = max(frequencies, key=lambda f: freq_priority.get(f, 0))
-        return max_freq
+        return max(frequencies, key=lambda f: freq_priority.get(f, 0))
 
 
 class IndicatorAggregationManager:

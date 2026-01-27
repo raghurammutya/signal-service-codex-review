@@ -414,8 +414,7 @@ def log_performance(calculation_type: str, operation: str = "unknown"):
             error = None
 
             try:
-                result = await func(*args, **kwargs)
-                return result
+                return await func(*args, **kwargs)
             except Exception as e:
                 success = False
                 error = str(e)
@@ -446,8 +445,7 @@ def log_performance(calculation_type: str, operation: str = "unknown"):
             error = None
 
             try:
-                result = func(*args, **kwargs)
-                return result
+                return func(*args, **kwargs)
             except Exception as e:
                 success = False
                 error = str(e)

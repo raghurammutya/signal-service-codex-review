@@ -804,8 +804,7 @@ class ThresholdMonitor:
         # Simple Moving Average
         def sma(data: dict[str, Any], period: int = 20) -> float:
             # Simplified implementation
-            ltp = data.get('ltp', 0)
-            return ltp  # Would use actual historical data
+            return data.get('ltp', 0)
 
         # RSI
         def rsi(data: dict[str, Any], period: int = 14) -> float:

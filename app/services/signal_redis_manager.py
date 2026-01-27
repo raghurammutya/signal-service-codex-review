@@ -411,7 +411,7 @@ class SignalRedisManager:
             )
 
             results = []
-            for stream, stream_messages in messages:
+            for _stream, stream_messages in messages:
                 for msg_id, data in stream_messages:
                     try:
                         results.append({

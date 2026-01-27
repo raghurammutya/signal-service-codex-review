@@ -58,8 +58,7 @@ def swing_highs_lows_smc(
         if not SMC_AVAILABLE:
             return _get_real_swings(df, swing_length)
 
-        swings = smc.swing_highs_lows(df, swing_length=swing_length)
-        return swings
+        return smc.swing_highs_lows(df, swing_length=swing_length)
 
     except Exception as e:
         logger.exception(f"Error calculating SMC swings: {e}")
@@ -99,9 +98,8 @@ def break_of_structure(
         swings = smc.swing_highs_lows(df, swing_length=swing_length)
 
         # Calculate BOS
-        bos = smc.bos(df, swings)
+        return smc.bos(df, swings)
 
-        return bos
 
     except Exception as e:
         logger.exception(f"Error calculating BOS: {e}")
@@ -141,9 +139,8 @@ def change_of_character(
         swings = smc.swing_highs_lows(df, swing_length=swing_length)
 
         # Calculate CHoCH
-        choch = smc.choch(df, swings)
+        return smc.choch(df, swings)
 
-        return choch
 
     except Exception as e:
         logger.exception(f"Error calculating CHoCH: {e}")
@@ -184,9 +181,8 @@ def order_blocks(
         swings = smc.swing_highs_lows(df, swing_length=swing_length)
 
         # Calculate order blocks
-        ob = smc.ob(df, swings)
+        return smc.ob(df, swings)
 
-        return ob
 
     except Exception as e:
         logger.exception(f"Error calculating order blocks: {e}")
@@ -222,9 +218,8 @@ def fair_value_gaps(
             return _real_fvg(df)
 
         # Calculate fair value gaps
-        fvg = smc.fvg(df)
+        return smc.fvg(df)
 
-        return fvg
 
     except Exception as e:
         logger.exception(f"Error calculating FVG: {e}")
@@ -264,9 +259,8 @@ def liquidity_levels(
         swings = smc.swing_highs_lows(df, swing_length=swing_length)
 
         # Calculate liquidity levels
-        liq = smc.liquidity(df, swings)
+        return smc.liquidity(df, swings)
 
-        return liq
 
     except Exception as e:
         logger.exception(f"Error calculating liquidity: {e}")
@@ -303,9 +297,8 @@ def previous_high_low(
             return _real_prev_hl(df)
 
         # Get previous period
-        prev_high = smc.previous_high_low(df, period=period)
+        return smc.previous_high_low(df, period=period)
 
-        return prev_high
 
     except Exception as e:
         logger.exception(f"Error calculating previous high/low: {e}")
@@ -340,9 +333,8 @@ def trading_sessions(
             return _real_sessions(df)
 
         # Calculate session data
-        sessions = smc.sessions(df)
+        return smc.sessions(df)
 
-        return sessions
 
     except Exception as e:
         logger.exception(f"Error calculating sessions: {e}")
@@ -808,14 +800,13 @@ def _real_prev_hl(df: pd.DataFrame) -> dict[str, float]:
         prev_low = prev_data['low'].min()
 
         # Add additional context
-        result = {
+        return {
             'previous_high': float(prev_high),
             'previous_low': float(prev_low),
             'previous_close': float(df['close'].iloc[-2]) if len(df) >= 2 else float(df['close'].iloc[-1]),
             'range_pct': float((prev_high - prev_low) / prev_low * 100) if prev_low > 0 else 0.0
         }
 
-        return result
 
     except Exception as e:
         logger.exception(f"Error calculating previous high/low: {e}")

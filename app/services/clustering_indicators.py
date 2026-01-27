@@ -198,9 +198,8 @@ def kmeans_price_levels(
         })
 
         # Sort by volume weight
-        result_df = result_df.sort_values('volume_weight', ascending=False).reset_index(drop=True)
+        return result_df.sort_values('volume_weight', ascending=False).reset_index(drop=True)
 
-        return result_df
 
     except Exception as e:
         logger.exception(f"Error calculating K-means levels: {e}")
@@ -317,9 +316,8 @@ def persistent_peaks(
         })
 
         # Sort by persistence (most significant first)
-        peak_df = peak_df.sort_values('persistence', ascending=False).reset_index(drop=True)
+        return peak_df.sort_values('persistence', ascending=False).reset_index(drop=True)
 
-        return peak_df
 
     except Exception as e:
         from app.errors import ComputationError
@@ -378,9 +376,8 @@ def persistent_valleys(
         })
 
         # Sort by persistence
-        valley_df = valley_df.sort_values('persistence', ascending=False).reset_index(drop=True)
+        return valley_df.sort_values('persistence', ascending=False).reset_index(drop=True)
 
-        return valley_df
 
     except Exception as e:
         from app.errors import ComputationError
@@ -424,10 +421,9 @@ def peaks_ranked_by_persistence(
             return peaks_df
 
         # Filter by minimum persistence
-        peaks_df = peaks_df[peaks_df['persistence'] >= min_persistence]
+        return peaks_df[peaks_df['persistence'] >= min_persistence]
 
         # Already sorted by persistence (done in persistent_peaks)
-        return peaks_df
 
     except Exception as e:
         from app.errors import ComputationError

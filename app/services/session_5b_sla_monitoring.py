@@ -217,10 +217,7 @@ class Session5BSLAMonitor:
                                                selective_keys: int, full_keys: int):
         """Record selective invalidation efficiency"""
 
-        if full_keys == 0:
-            efficiency = 100.0
-        else:
-            efficiency = max(0, (1 - selective_keys / full_keys) * 100)
+        efficiency = 100.0 if full_keys == 0 else max(0, (1 - selective_keys / full_keys) * 100)
 
         self.metrics.selective_invalidation_efficiency.labels(
             service=service,

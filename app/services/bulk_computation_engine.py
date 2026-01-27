@@ -307,9 +307,8 @@ class TechnicalIndicatorCalculator:
             return 100.0
 
         rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
+        return 100 - (100 / (1 + rs))
 
-        return rsi
 
     @staticmethod
     def calculate_sma(prices: list[float], period: int) -> float:
@@ -673,8 +672,8 @@ class BulkComputationEngine:
                     block=1000  # 1 second timeout
                 )
 
-                for stream, messages in streams:
-                    for message_id, fields in messages:
+                for _stream, messages in streams:
+                    for _message_id, fields in messages:
                         try:
                             if fields.get(b'action') == b'bulk_compute':
                                 await self._handle_computation_request(fields)

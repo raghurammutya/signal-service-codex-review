@@ -532,7 +532,7 @@ class TestPhase1StrategyIntegration:
             # Create multiple concurrent strategy operations
             concurrent_operations = []
 
-            for i in range(20):  # 20 concurrent operations
+            for _i in range(20):  # 20 concurrent operations
                 operation = services['api'].get_enriched_quote("AAPL_NASDAQ_EQUITY")
                 concurrent_operations.append(operation)
 

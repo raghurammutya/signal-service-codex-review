@@ -160,11 +160,10 @@ class MetadataEnrichmentMiddleware:
                 response = await func(*args, **kwargs)
 
                 # Enrich response
-                enriched_response = await self.enrich_response_data(
+                return await self.enrich_response_data(
                     response, extract_keys_func
                 )
 
-                return enriched_response
             return wrapper
         return decorator
 
@@ -380,7 +379,7 @@ class MetadataEnrichmentMiddleware:
 
         # Recursively enrich nested structures
         for key, value in data.items():
-            if isinstance(value, (dict, list)):
+            if isinstance(value, dict | list):
                 enriched[key] = await self._apply_enrichment(value, metadata_map)
 
         return enriched

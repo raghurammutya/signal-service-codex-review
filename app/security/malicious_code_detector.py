@@ -203,7 +203,7 @@ class MaliciousCodeDetector:
         line_no = getattr(node, 'lineno', 0)
 
         # Import statements
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
+        if isinstance(node, ast.Import | ast.ImportFrom):
             self._check_import_node(node, line_no)
 
         # Function calls
@@ -227,7 +227,7 @@ class MaliciousCodeDetector:
             self._check_exception_handler(node, line_no)
 
         # Loop constructs
-        elif isinstance(node, (ast.While, ast.For)):
+        elif isinstance(node, ast.While | ast.For):
             self._check_loop_node(node, line_no)
 
     def _check_import_node(self, node: ast.AST, line_no: int):
@@ -236,9 +236,8 @@ class MaliciousCodeDetector:
 
         if isinstance(node, ast.Import):
             modules = [alias.name for alias in node.names]
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                modules = [node.module]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules = [node.module]
 
         for module in modules:
             base_module = module.split('.')[0]
@@ -375,7 +374,7 @@ class MaliciousCodeDetector:
             # Check system patterns
             for pattern in self.system_patterns:
                 matches = re.finditer(pattern, line, re.IGNORECASE)
-                for match in matches:
+                for _match in matches:
                     self.threats_found.append(SecurityThreat(
                         level=ThreatLevel.HIGH,
                         category="system_access_pattern",
@@ -388,7 +387,7 @@ class MaliciousCodeDetector:
             # Check crypto patterns (medium threat - could be legitimate)
             for pattern in self.crypto_patterns:
                 matches = re.finditer(pattern, line, re.IGNORECASE)
-                for match in matches:
+                for _match in matches:
                     self.threats_found.append(SecurityThreat(
                         level=ThreatLevel.MEDIUM,
                         category="crypto_usage",

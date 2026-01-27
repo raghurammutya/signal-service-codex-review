@@ -166,7 +166,7 @@ class TestCORSProductionSecurityRequirements:
                     validation["security_issues"].append("Missing domain")
                 elif domain == "localhost" or domain.startswith("localhost:"):
                     validation["security_issues"].append("Localhost domain in production")
-                elif domain.startswith("127.0.0.1") or domain.startswith("0.0.0.0"):
+                elif domain.startswith(("127.0.0.1", "0.0.0.0")):
                     validation["security_issues"].append("IP address domain in production")
                 elif "." not in domain and domain != "localhost":
                     validation["security_issues"].append("Invalid domain format")
@@ -395,7 +395,7 @@ class TestCORSSecurityCompliance:
                     if not domain:
                         origin_issues.append(f"Missing domain: {origin}")
                         security_score -= 30
-                    elif domain.startswith("127.0.0.1") or domain.startswith("0.0.0.0"):
+                    elif domain.startswith(("127.0.0.1", "0.0.0.0")):
                         if environment == "production":
                             origin_issues.append(f"IP address in production: {origin}")
                             security_score -= 15

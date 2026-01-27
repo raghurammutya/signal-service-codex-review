@@ -363,7 +363,7 @@ class AutomatedSecurityValidator:
             ("Auth Enforcement", self.validation_results["auth_enforcement"])
         ]
 
-        for test_name, result in test_results:
+        for _test_name, result in test_results:
             if isinstance(result, dict) and "success_rate" in result:
                 security_scores.append(result["success_rate"])
             elif isinstance(result, dict) and result.get("passed"):

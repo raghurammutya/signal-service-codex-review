@@ -412,7 +412,7 @@ def peaks_with_metadata(
         widths, width_heights, left_ips, right_ips = signal.peak_widths(prices, peaks, rel_height=0.5)
 
         # Create result DataFrame
-        result_df = pd.DataFrame({
+        return pd.DataFrame({
             'index': peaks,
             'timestamp': [df.index[i] for i in peaks],
             'price': prices[peaks],
@@ -422,7 +422,6 @@ def peaks_with_metadata(
             'right_base': properties['right_bases']
         })
 
-        return result_df
 
     except Exception as e:
         logger.exception(f"Error finding peaks with metadata: {e}")

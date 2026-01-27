@@ -293,7 +293,7 @@ class EnhancedMonitoringService:
 
                     # Check if status code indicates error (4xx, 5xx)
                     status_code = labels.get('status_code', '200')
-                    if status_code.startswith('4') or status_code.startswith('5'):
+                    if status_code.startswith(("4", "5")):
                         error_requests += count
 
                 if total_requests > 0:
@@ -313,7 +313,7 @@ class EnhancedMonitoringService:
                 slow_requests = 0
                 threshold_seconds = 5.0
 
-                for labels, h in histogram._metrics.items():
+                for _labels, h in histogram._metrics.items():
                     total_requests += h._count._value
 
                     # Count requests in buckets > 5.0 seconds
@@ -1133,8 +1133,7 @@ async def monitoring_status():
 async def get_enhanced_metrics():
     """Get comprehensive enhanced metrics"""
     try:
-        metrics = await monitoring_service.collect_comprehensive_metrics()
-        return metrics
+        return await monitoring_service.collect_comprehensive_metrics()
     except Exception as e:
         logger.error(f"Error collecting enhanced metrics: {e}")
         raise HTTPException(status_code=500, detail=str(e))

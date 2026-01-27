@@ -61,9 +61,8 @@ class StrategyAPIEnriched:
         )
 
         # Create strategy (response will be auto-enriched)
-        result = await strategy_service.create_strategy(config)
+        return await strategy_service.create_strategy(config)
 
-        return result
 
     @metadata_middleware.enrich_response()
     async def open_position(self,
@@ -71,7 +70,7 @@ class StrategyAPIEnriched:
                           position_request: dict[str, Any]) -> dict[str, Any]:
         """Open strategy position with enriched metadata"""
 
-        result = await strategy_service.open_position(
+        return await strategy_service.open_position(
             strategy_id=strategy_id,
             instrument_key=position_request["instrument_key"],
             position_type=PositionType(position_request["position_type"]),
@@ -79,7 +78,6 @@ class StrategyAPIEnriched:
             entry_price=position_request.get("entry_price")
         )
 
-        return result
 
     @metadata_middleware.enrich_response()
     async def get_strategy_performance(self, strategy_id: str) -> dict[str, Any]:
@@ -100,9 +98,8 @@ class StrategyAPIEnriched:
     async def get_active_strategies(self) -> dict[str, Any]:
         """Get all active strategies with enriched instrument info"""
 
-        strategies = await strategy_service.get_active_strategies()
+        return await strategy_service.get_active_strategies()
 
-        return strategies
 
     # =============================================================================
     # RISK MANAGEMENT ENDPOINTS (with enrichment)
@@ -117,7 +114,7 @@ class StrategyAPIEnriched:
         risk_metrics = await risk_service.calculate_portfolio_risk(portfolio_id, positions)
 
         # Convert to dict format for enrichment
-        result = {
+        return {
             "portfolio_id": risk_metrics.portfolio_id,
             "total_exposure": risk_metrics.total_exposure,
             "value_at_risk": risk_metrics.value_at_risk,
@@ -131,7 +128,6 @@ class StrategyAPIEnriched:
             "positions": positions
         }
 
-        return result
 
     @metadata_middleware.enrich_response()
     async def validate_position(self,
@@ -140,7 +136,7 @@ class StrategyAPIEnriched:
                               current_positions: list[dict[str, Any]]) -> dict[str, Any]:
         """Validate position with enriched risk analysis"""
 
-        validation = await risk_service.validate_position(
+        return await risk_service.validate_position(
             portfolio_id=portfolio_id,
             instrument_key=position_request["instrument_key"],
             quantity=position_request["quantity"],
@@ -148,15 +144,13 @@ class StrategyAPIEnriched:
             current_positions=current_positions
         )
 
-        return validation
 
     @metadata_middleware.enrich_response()
     async def get_portfolio_risk_summary(self, portfolio_id: str) -> dict[str, Any]:
         """Get portfolio risk summary with enriched metadata"""
 
-        summary = await risk_service.get_portfolio_risk_summary(portfolio_id)
+        return await risk_service.get_portfolio_risk_summary(portfolio_id)
 
-        return summary
 
     # =============================================================================
     # TRAILING STOP ENDPOINTS (with enrichment)
@@ -166,7 +160,7 @@ class StrategyAPIEnriched:
     async def create_trailing_stop(self, stop_request: dict[str, Any]) -> dict[str, Any]:
         """Create trailing stop with enriched instrument metadata"""
 
-        result = await trailing_service.create_trailing_stop(
+        return await trailing_service.create_trailing_stop(
             instrument_key=stop_request["instrument_key"],
             side=stop_request["side"],
             quantity=stop_request["quantity"],
@@ -176,23 +170,20 @@ class StrategyAPIEnriched:
             expires_in_hours=stop_request.get("expires_in_hours", 24)
         )
 
-        return result
 
     @metadata_middleware.enrich_response()
     async def get_trailing_stop_status(self, stop_id: str) -> dict[str, Any]:
         """Get trailing stop status with enriched metadata"""
 
-        status = await trailing_service.get_trailing_stop_status(stop_id)
+        return await trailing_service.get_trailing_stop_status(stop_id)
 
-        return status
 
     @metadata_middleware.enrich_response()
     async def get_active_trailing_stops(self, instrument_key: str | None = None) -> dict[str, Any]:
         """Get active trailing stops with enriched metadata"""
 
-        stops = await trailing_service.get_active_trailing_stops(instrument_key)
+        return await trailing_service.get_active_trailing_stops(instrument_key)
 
-        return stops
 
     # =============================================================================
     # ALERT ENDPOINTS (with enrichment)
@@ -212,7 +203,7 @@ class StrategyAPIEnriched:
             NotificationChannel(ch) for ch in alert_request.get("channels", ["in_app"])
         ]
 
-        result = await alert_service.create_price_alert(
+        return await alert_service.create_price_alert(
             user_id=alert_request["user_id"],
             instrument_key=alert_request["instrument_key"],
             condition=condition,
@@ -222,23 +213,20 @@ class StrategyAPIEnriched:
             expires_in_hours=alert_request.get("expires_in_hours", 24)
         )
 
-        return result
 
     @metadata_middleware.enrich_response()
     async def get_user_alerts(self, user_id: str, include_history: bool = True) -> dict[str, Any]:
         """Get user alerts with enriched metadata"""
 
-        alerts = await alert_service.get_user_alerts(user_id, include_history)
+        return await alert_service.get_user_alerts(user_id, include_history)
 
-        return alerts
 
     @metadata_middleware.enrich_response()
     async def get_instrument_alerts(self, instrument_key: str) -> dict[str, Any]:
         """Get alerts for specific instrument with enriched metadata"""
 
-        alerts = await alert_service.get_instrument_alerts(instrument_key)
+        return await alert_service.get_instrument_alerts(instrument_key)
 
-        return alerts
 
     # =============================================================================
     # MARKET DATA ENDPOINTS (with enrichment)
@@ -262,9 +250,8 @@ class StrategyAPIEnriched:
         }
 
         # Enrich with metadata
-        enriched_quote = await metadata_middleware.enrich_market_data(quote_data)
+        return await metadata_middleware.enrich_market_data(quote_data)
 
-        return enriched_quote
 
     @metadata_middleware.enrich_response()
     async def get_enriched_historical_data(self,
@@ -274,7 +261,7 @@ class StrategyAPIEnriched:
         """Get historical data enriched with metadata"""
 
         # Mock historical data
-        historical_data = {
+        return {
             "instrument_key": instrument_key,
             "timeframe": timeframe,
             "periods": periods,
@@ -292,7 +279,6 @@ class StrategyAPIEnriched:
             "data_source": "Phase_1_SDK"
         }
 
-        return historical_data
 
     # =============================================================================
     # ENRICHMENT MONITORING ENDPOINTS

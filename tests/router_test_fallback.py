@@ -149,10 +149,7 @@ async def realtime_indicator(instrument_token: int, indicator: str, period: int 
         # Extract latest value
         if len(result_df.columns) == 1:
             value = result_df.iloc[-1, 0]
-            if pd.isna(value):
-                value = None
-            else:
-                value = round(float(value), 4)
+            value = None if pd.isna(value) else round(float(value), 4)
         else:
             # Multiple columns - return first column's value
             value = round(float(result_df.iloc[-1, 0]), 4)

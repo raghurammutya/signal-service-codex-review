@@ -313,7 +313,7 @@ class TestLoggingSecurityRareFailures:
                     assert 'secret123' not in str(result)
             except Exception as e:
                 # Should not crash on malformed input
-                assert False, f"Filter crashed on input '{test_input}': {e}"
+                raise AssertionError(f"Filter crashed on input '{test_input}': {e}")
 
     def test_security_audit_logger_concurrent_access(self):
         """Test security audit logger under concurrent load."""
@@ -354,7 +354,7 @@ class TestLoggingSecurityRareFailures:
         result = filter_obj._redact_structured_data(large_data)
 
         # Should have redacted all sensitive fields
-        for key, value in result.items():
+        for _key, value in result.items():
             assert value == "***REDACTED***"
 
         # Should not have grown the data structure significantly

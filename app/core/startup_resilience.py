@@ -146,9 +146,7 @@ class StartupHealthChecker:
                     db = get_db_func()
 
                 # Simple connectivity test
-                if hasattr(db, 'pool') and db.pool:
-                    return True
-                return False
+                return bool(hasattr(db, "pool") and db.pool)
             except Exception as e:
                 logger.warning(f"Database health check failed: {e}")
                 raise

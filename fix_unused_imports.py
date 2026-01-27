@@ -43,11 +43,7 @@ class UnusedImportFixer:
             rf'{re.escape(import_name)}\(',    # Function call
         ]
 
-        for pattern in patterns_to_check:
-            if re.search(pattern, check_content):
-                return True
-
-        return False
+        return any(re.search(pattern, check_content) for pattern in patterns_to_check)
 
     def fix_file_imports(self, file_path: str) -> bool:
         """Fix unused imports in a single file."""
@@ -59,7 +55,7 @@ class UnusedImportFixer:
             new_lines = []
             imports_removed = []
 
-            for i, line in enumerate(lines):
+            for _i, line in enumerate(lines):
                 stripped = line.strip()
 
                 # Handle simple import statements
@@ -134,9 +130,8 @@ class UnusedImportFixer:
             if fixed_count >= max_files:
                 break
 
-            if os.path.exists(file_path):
-                if self.fix_file_imports(file_path):
-                    fixed_count += 1
+            if os.path.exists(file_path) and self.fix_file_imports(file_path):
+                fixed_count += 1
 
         print(f"\n📊 Import cleanup: {fixed_count} files fixed")
         return fixed_count

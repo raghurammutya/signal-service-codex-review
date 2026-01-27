@@ -302,7 +302,7 @@ class DataClient:
 
         # Simulate real-time quote
         import random
-        quote = {
+        return {
             'ltp': round(100 + random.uniform(-5, 5), 2),
             'bid': round(99.5 + random.uniform(-5, 5), 2),
             'ask': round(100.5 + random.uniform(-5, 5), 2),
@@ -310,7 +310,6 @@ class DataClient:
             'timestamp': datetime.now().isoformat()
         }
 
-        return quote
 
     async def _stream_broker_data(self,
                                 broker_tokens: list[str],

@@ -105,7 +105,7 @@ def sample_market_data():
         prices.append(new_price)
 
     ohlcv_data = []
-    for i, (date, price) in enumerate(zip(dates, prices, strict=False)):
+    for _i, (date, price) in enumerate(zip(dates, prices, strict=False)):
         high = price * (1 + abs(np.random.normal(0, 0.002)))
         low = price * (1 - abs(np.random.normal(0, 0.002)))
         close = low + (high - low) * np.random.random()

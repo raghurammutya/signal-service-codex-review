@@ -74,8 +74,7 @@ class ProductionTimescaleDB:
         """Execute query and return results."""
         async with self.get_connection() as conn:
             try:
-                result = await conn.fetch(query, *args)
-                return result
+                return await conn.fetch(query, *args)
             except Exception as e:
                 logger.error(f"Query execution failed: {e}")
                 raise DatabaseConnectionError(f"Query execution failed: {e}")

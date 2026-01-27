@@ -5,6 +5,7 @@ Enhanced with external config service integration for testing
 performance under dynamic configuration scenarios.
 """
 import asyncio
+import contextlib
 import json
 import os
 import statistics
@@ -280,10 +281,8 @@ class TestWebSocketPerformance:
         finally:
             # Cleanup connections
             for ws in connections:
-                try:
+                with contextlib.suppress(Exception):
                     await ws.close()
-                except:
-                    pass
 
     @pytest.mark.asyncio
     async def test_websocket_message_throughput(self):

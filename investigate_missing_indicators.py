@@ -120,7 +120,7 @@ def generate_test_data():
     closes = [100 + i * 0.5 + np.random.normal(0, 1) for i in range(periods)]
 
     data = []
-    for i, (date, close) in enumerate(zip(dates, closes, strict=False)):
+    for _i, (date, close) in enumerate(zip(dates, closes, strict=False)):
         open_price = close + np.random.uniform(-0.5, 0.5)
         high = max(open_price, close) + np.random.uniform(0, 1)
         low = min(open_price, close) - np.random.uniform(0, 1)

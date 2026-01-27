@@ -197,9 +197,7 @@ class ExternalFunctionExecutor:
     def _is_safe_path(self, path: str) -> bool:
         """Validate function path for security"""
         # Basic path validation - extend as needed
-        if not path or '..' in path or path.startswith('/'):
-            return False
-        return True
+        return not (not path or ".." in path or path.startswith("/"))
 
     async def _load_function_securely(self, func_config: ExternalFunctionConfig) -> str:
         """
@@ -358,7 +356,7 @@ class ExternalFunctionExecutor:
         """Execute function with resource limits"""
         try:
             # Set resource limits in a subprocess/thread
-            result = await asyncio.get_event_loop().run_in_executor(
+            return await asyncio.get_event_loop().run_in_executor(
                 None,
                 self._execute_in_subprocess,
                 compiled_code,
@@ -366,7 +364,6 @@ class ExternalFunctionExecutor:
                 func_config
             )
 
-            return result
 
         except Exception as e:
             raise ExternalFunctionExecutionError(f"Function execution failed: {str(e)}")
@@ -393,11 +390,10 @@ class ExternalFunctionExecutor:
             function_name = func_config.function_name
             if function_name in execution_context:
                 function = execution_context[function_name]
-                result = function(
+                return function(
                     execution_context['tick_data'],
                     execution_context['parameters']
                 )
-                return result
             raise ExternalFunctionExecutionError(f"Function {function_name} not found after execution")
 
         except Exception as e:
@@ -413,10 +409,7 @@ class ExternalFunctionExecutor:
             return False
 
         # Check for absolute paths
-        if os.path.isabs(path):
-            return False
-
-        return True
+        return not os.path.isabs(path)
 
     def _validate_function_code(self, code: str, config: ExternalFunctionConfig):
         """Enhanced function code validation with malicious code detection"""
@@ -490,10 +483,7 @@ class ExternalFunctionExecutor:
                 return False
 
             # Check if user owns the function (basic access control)
-            if user_id not in config.file_path:
-                return False
-
-            return True
+            return not user_id not in config.file_path
         except Exception:
             return False
 

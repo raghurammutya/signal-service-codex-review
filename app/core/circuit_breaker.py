@@ -329,10 +329,7 @@ class GreeksCircuitBreaker:
                 return True
 
         # Check slow call rate
-        if self.metrics.slow_call_rate() >= self.config.slow_call_rate_threshold:
-            return True
-
-        return False
+        return self.metrics.slow_call_rate() >= self.config.slow_call_rate_threshold
 
     def _should_close_circuit(self) -> bool:
         """Determine if circuit should transition to CLOSED (from HALF_OPEN)"""

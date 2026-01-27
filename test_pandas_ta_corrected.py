@@ -40,7 +40,7 @@ def create_test_data(periods: int = 100, base_price: float = 100.0) -> pd.DataFr
 
     # Create OHLCV from closes
     data = []
-    for i, (date, close) in enumerate(zip(dates, prices, strict=False)):
+    for i, (_date, close) in enumerate(zip(dates, prices, strict=False)):
         if i == 0:
             open_price = close
         else:

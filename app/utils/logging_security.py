@@ -42,10 +42,7 @@ class SensitiveDataFilter(logging.Filter):
         """Filter log record to remove sensitive information."""
 
         # Get the formatted message
-        if hasattr(record, 'getMessage'):
-            message = record.getMessage()
-        else:
-            message = str(record.msg)
+        message = record.getMessage() if hasattr(record, "getMessage") else str(record.msg)
 
         # Apply redaction patterns
         redacted_message = self._redact_sensitive_data(message)
@@ -71,7 +68,7 @@ class SensitiveDataFilter(logging.Filter):
 
         redacted_text = text
 
-        for pattern_name, pattern in self.sensitive_patterns.items():
+        for _pattern_name, pattern in self.sensitive_patterns.items():
             # Replace sensitive data with redaction marker
             # Keep prefix and suffix, redact the sensitive middle part
             try:
@@ -115,10 +112,9 @@ class SensitiveDataFilter(logging.Filter):
         redacted_text = re.sub(r'session_token_[a-zA-Z0-9_-]+', self.redaction_marker, redacted_text)
 
         # Value patterns (catch "value: secret" format)
-        redacted_text = re.sub(r'(value:\s*)([a-zA-Z0-9_.-]{15,})',
+        return re.sub(r'(value:\s*)([a-zA-Z0-9_.-]{15,})',
                               r'\1' + self.redaction_marker, redacted_text, flags=re.IGNORECASE)
 
-        return redacted_text
 
 
 class StructuredDataFilter(logging.Filter):
@@ -154,7 +150,7 @@ class StructuredDataFilter(logging.Filter):
         for key, value in vars(record).items():
             if key.lower() in self.sensitive_fields:
                 setattr(record, key, "***REDACTED***")
-            elif isinstance(value, (dict, list)):
+            elif isinstance(value, dict | list):
                 setattr(record, key, self._redact_structured_data(value))
 
         return True

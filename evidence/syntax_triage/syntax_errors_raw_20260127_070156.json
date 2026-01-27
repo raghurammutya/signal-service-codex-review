@@ -1,0 +1,489 @@
+{
+  "timestamp": "20260127_070156",
+  "syntax_violations": [
+    {
+      "cell": null,
+      "code": null,
+      "end_location": {
+        "column": 1,
+        "row": 178
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/api/health.py",
+      "fix": null,
+      "location": {
+        "column": 1,
+        "row": 178
+      },
+      "message": "SyntaxError: unexpected EOF while parsing",
+      "noqa_row": null,
+      "url": null
+    },
+    {
+      "cell": null,
+      "code": "F821",
+      "end_location": {
+        "column": 27,
+        "row": 45
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/email_webhook.py",
+      "fix": null,
+      "location": {
+        "column": 12,
+        "row": 45
+      },
+      "message": "Undefined name `expected_secret`",
+      "noqa_row": 45,
+      "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+    },
+    {
+      "cell": null,
+      "code": "F821",
+      "end_location": {
+        "column": 67,
+        "row": 45
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/api/v2/email_webhook.py",
+      "fix": null,
+      "location": {
+        "column": 52,
+        "row": 45
+      },
+      "message": "Undefined name `expected_secret`",
+      "noqa_row": 45,
+      "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+    },
+    {
+      "cell": null,
+      "code": null,
+      "end_location": {
+        "column": 25,
+        "row": 318
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/brokers/broker_factory.py",
+      "fix": null,
+      "location": {
+        "column": 24,
+        "row": 318
+      },
+      "message": "SyntaxError: Unparenthesized generator expression cannot be used here",
+      "noqa_row": null,
+      "url": null
+    },
+    {
+      "cell": null,
+      "code": null,
+      "end_location": {
+        "column": 25,
+        "row": 319
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/brokers/broker_factory.py",
+      "fix": null,
+      "location": {
+        "column": 24,
+        "row": 319
+      },
+      "message": "SyntaxError: Unparenthesized generator expression cannot be used here",
+      "noqa_row": null,
+      "url": null
+    },
+    {
+      "cell": null,
+      "code": "RET503",
+      "end_location": {
+        "column": 33,
+        "row": 55
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/clients/user_service_client.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "\n        return None",
+            "end_location": {
+              "column": 33,
+              "row": 55
+            },
+            "location": {
+              "column": 33,
+              "row": 55
+            }
+          }
+        ],
+        "message": "Add explicit `return` statement"
+      },
+      "location": {
+        "column": 9,
+        "row": 54
+      },
+      "message": "Missing explicit `return` at the end of function able to return non-`None` value",
+      "noqa_row": 54,
+      "url": "https://docs.astral.sh/ruff/rules/implicit-return"
+    },
+    {
+      "cell": null,
+      "code": null,
+      "end_location": {
+        "column": 1,
+        "row": 81
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/core/dashboard_registrar.py",
+      "fix": null,
+      "location": {
+        "column": 1,
+        "row": 81
+      },
+      "message": "SyntaxError: unexpected EOF while parsing",
+      "noqa_row": null,
+      "url": null
+    },
+    {
+      "cell": null,
+      "code": "RET503",
+      "end_location": {
+        "column": 78,
+        "row": 51
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/repositories/signal_repository.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "\n        return None",
+            "end_location": {
+              "column": 78,
+              "row": 51
+            },
+            "location": {
+              "column": 78,
+              "row": 51
+            }
+          }
+        ],
+        "message": "Add explicit `return` statement"
+      },
+      "location": {
+        "column": 9,
+        "row": 50
+      },
+      "message": "Missing explicit `return` at the end of function able to return non-`None` value",
+      "noqa_row": 50,
+      "url": "https://docs.astral.sh/ruff/rules/implicit-return"
+    },
+    {
+      "cell": null,
+      "code": null,
+      "end_location": {
+        "column": 10,
+        "row": 360
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/services/clustering_indicators_temp.py",
+      "fix": null,
+      "location": {
+        "column": 9,
+        "row": 360
+      },
+      "message": "SyntaxError: Expected an indented block after `if` statement",
+      "noqa_row": null,
+      "url": null
+    },
+    {
+      "cell": null,
+      "code": null,
+      "end_location": {
+        "column": 10,
+        "row": 418
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/services/clustering_indicators_temp.py",
+      "fix": null,
+      "location": {
+        "column": 9,
+        "row": 418
+      },
+      "message": "SyntaxError: Expected an indented block after `if` statement",
+      "noqa_row": null,
+      "url": null
+    },
+    {
+      "cell": null,
+      "code": "RET503",
+      "end_location": {
+        "column": 36,
+        "row": 117
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/services/instrument_service_client.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "\n        return None",
+            "end_location": {
+              "column": 36,
+              "row": 117
+            },
+            "location": {
+              "column": 36,
+              "row": 117
+            }
+          }
+        ],
+        "message": "Add explicit `return` statement"
+      },
+      "location": {
+        "column": 9,
+        "row": 116
+      },
+      "message": "Missing explicit `return` at the end of function able to return non-`None` value",
+      "noqa_row": 116,
+      "url": "https://docs.astral.sh/ruff/rules/implicit-return"
+    },
+    {
+      "cell": null,
+      "code": "RET503",
+      "end_location": {
+        "column": 47,
+        "row": 130
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/services/instrument_service_client.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "\n        return None",
+            "end_location": {
+              "column": 47,
+              "row": 130
+            },
+            "location": {
+              "column": 47,
+              "row": 130
+            }
+          }
+        ],
+        "message": "Add explicit `return` statement"
+      },
+      "location": {
+        "column": 9,
+        "row": 129
+      },
+      "message": "Missing explicit `return` at the end of function able to return non-`None` value",
+      "noqa_row": 129,
+      "url": "https://docs.astral.sh/ruff/rules/implicit-return"
+    },
+    {
+      "cell": null,
+      "code": "RET503",
+      "end_location": {
+        "column": 77,
+        "row": 69
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/services/signal_delivery_service.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "\n        return None",
+            "end_location": {
+              "column": 77,
+              "row": 69
+            },
+            "location": {
+              "column": 77,
+              "row": 69
+            }
+          }
+        ],
+        "message": "Add explicit `return` statement"
+      },
+      "location": {
+        "column": 9,
+        "row": 69
+      },
+      "message": "Missing explicit `return` at the end of function able to return non-`None` value",
+      "noqa_row": 69,
+      "url": "https://docs.astral.sh/ruff/rules/implicit-return"
+    },
+    {
+      "cell": null,
+      "code": "RET503",
+      "end_location": {
+        "column": 51,
+        "row": 89
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/app/utils/resilience.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "\n    return None",
+            "end_location": {
+              "column": 51,
+              "row": 89
+            },
+            "location": {
+              "column": 51,
+              "row": 89
+            }
+          }
+        ],
+        "message": "Add explicit `return` statement"
+      },
+      "location": {
+        "column": 5,
+        "row": 81
+      },
+      "message": "Missing explicit `return` at the end of function able to return non-`None` value",
+      "noqa_row": 81,
+      "url": "https://docs.astral.sh/ruff/rules/implicit-return"
+    },
+    {
+      "cell": null,
+      "code": "B007",
+      "end_location": {
+        "column": 37,
+        "row": 54
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/security_validation.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "_expected",
+            "end_location": {
+              "column": 37,
+              "row": 54
+            },
+            "location": {
+              "column": 29,
+              "row": 54
+            }
+          }
+        ],
+        "message": "Rename unused `expected` to `_expected`"
+      },
+      "location": {
+        "column": 29,
+        "row": 54
+      },
+      "message": "Loop control variable `expected` not used within loop body",
+      "noqa_row": 54,
+      "url": "https://docs.astral.sh/ruff/rules/unused-loop-control-variable"
+    },
+    {
+      "cell": null,
+      "code": "F841",
+      "end_location": {
+        "column": 28,
+        "row": 670
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/test/security/test_malicious_code_detection.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "",
+            "end_location": {
+              "column": 1,
+              "row": 675
+            },
+            "location": {
+              "column": 1,
+              "row": 670
+            }
+          }
+        ],
+        "message": "Remove assignment to unused variable `expected_categories`"
+      },
+      "location": {
+        "column": 9,
+        "row": 670
+      },
+      "message": "Local variable `expected_categories` is assigned to but never used",
+      "noqa_row": 670,
+      "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+    },
+    {
+      "cell": null,
+      "code": "F841",
+      "end_location": {
+        "column": 31,
+        "row": 423
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/tests/contracts/test_external_service_contracts.py",
+      "fix": {
+        "applicability": "unsafe",
+        "edits": [
+          {
+            "content": "",
+            "end_location": {
+              "column": 1,
+              "row": 428
+            },
+            "location": {
+              "column": 1,
+              "row": 423
+            }
+          }
+        ],
+        "message": "Remove assignment to unused variable `expected_health_schema`"
+      },
+      "location": {
+        "column": 9,
+        "row": 423
+      },
+      "message": "Local variable `expected_health_schema` is assigned to but never used",
+      "noqa_row": 423,
+      "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+    },
+    {
+      "cell": null,
+      "code": "B023",
+      "end_location": {
+        "column": 51,
+        "row": 248
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+      "fix": null,
+      "location": {
+        "column": 40,
+        "row": 248
+      },
+      "message": "Function definition does not bind loop variable `missing_lib`",
+      "noqa_row": 248,
+      "url": "https://docs.astral.sh/ruff/rules/function-uses-loop-variable"
+    },
+    {
+      "cell": null,
+      "code": "B023",
+      "end_location": {
+        "column": 68,
+        "row": 252
+      },
+      "filename": "/home/stocksadmin/signal-service-codex-review/tests/unit/test_optional_dependencies_computation_errors.py",
+      "fix": null,
+      "location": {
+        "column": 57,
+        "row": 252
+      },
+      "message": "Function definition does not bind loop variable `missing_lib`",
+      "noqa_row": 252,
+      "url": "https://docs.astral.sh/ruff/rules/function-uses-loop-variable"
+    }
+  ],
+  "categories": {
+    "by_module": {
+      "/": 19
+    },
+    "by_error_type": {
+      "missing_syntax": 2,
+      "other_syntax": 15,
+      "indentation_error": 2
+    },
+    "summary": {
+      "total_files": 14,
+      "total_errors": 19,
+      "modules_affected": [
+        "/"
+      ]
+    }
+  }
+}

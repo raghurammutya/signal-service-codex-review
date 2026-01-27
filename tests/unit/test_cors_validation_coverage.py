@@ -420,7 +420,7 @@ class TestCORSDeploymentSafetyNets:
                     return False
 
                 # Basic URL format check
-                if not (origin.startswith("http://") or origin.startswith("https://")):
+                if not (origin.startswith(("http://", "https://"))):
                     return False
 
                 # Check for wildcards in production

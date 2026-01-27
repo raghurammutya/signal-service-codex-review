@@ -378,7 +378,7 @@ class SignalProcessingIntegration:
         for indicator in indicators:
             value = indicator_results.get(indicator)
             if isinstance(value, dict):
-                numeric_values = [v for v in value.values() if isinstance(v, (int, float))]
+                numeric_values = [v for v in value.values() if isinstance(v, int | float)]
                 value = numeric_values[0] if numeric_values else None
 
             if value is None:

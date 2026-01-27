@@ -435,8 +435,10 @@ class TestCacheInvalidationScenarios:
         popular_instruments = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"]
 
         # Mock cache warming method
-        async def warm_cache_for_instruments(instruments, timeframes=["1m", "5m", "15m"]):
+        async def warm_cache_for_instruments(instruments, timeframes=None):
             """Pre-populate cache for popular instruments."""
+            if timeframes is None:
+                timeframes = ["1m", "5m", "15m"]
             tasks = []
             for instrument in instruments:
                 for timeframe in timeframes:

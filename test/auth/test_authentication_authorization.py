@@ -3,6 +3,7 @@ Comprehensive authentication and authorization testing
 Tests gateway trust validation, token validation, and entitlement middleware
 """
 import asyncio
+import contextlib
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -590,10 +591,8 @@ class TestSecurityAuditLogging:
                     "X-Forwarded-For": "192.168.1.1"
                 }
 
-                try:
+                with contextlib.suppress(AuthenticationError):
                     validator.validate_gateway_trust(headers)
-                except AuthenticationError:
-                    pass
 
                 # Verify failed auth was logged
                 mock_log.assert_called_with("Gateway trust validation failed for user: user_123 from IP: 192.168.1.1")

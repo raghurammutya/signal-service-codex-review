@@ -100,7 +100,7 @@ async def demo_premium_analysis():
         print(f"{'Strike':<8} {'Type':<4} {'Market':<8} {'Theoretical':<11} {'Premium%':<9} {'Severity':<8} {'Arbitrage'}")
         print("-" * 80)
 
-        for i, analysis in enumerate(result['results']):
+        for _i, analysis in enumerate(result['results']):
             strike = analysis['strike']
             option_type = analysis['option_type']
             market_price = analysis['market_price']

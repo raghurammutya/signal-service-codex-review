@@ -218,7 +218,7 @@ class TestSignalDeliveryServiceComprehensiveCoverage:
         delivery_service.alert_client.send_signal_alert.side_effect = Exception("Service down")
 
         # Trigger failures to open circuit breaker
-        for i in range(3):  # max_failures_before_circuit_open = 3
+        for _i in range(3):  # max_failures_before_circuit_open = 3
             result = await delivery_service.deliver_signal(
                 user_id=user_id,
                 signal_data=sample_signal_data,

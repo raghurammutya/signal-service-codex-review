@@ -1,0 +1,74 @@
+# Ruff ignore file for signal-service-codex-review
+# Additional exclusions beyond pyproject.toml
+
+# Legacy service tree (already in pyproject.toml exclude, but explicit here)
+signal_service_legacy/
+
+# Generated or third-party files
+**/generated/
+**/*_pb2.py
+**/*_pb2_grpc.py
+**/proto/
+
+# Large data files and artifacts
+*.json.large
+phase0_token_inventory.json
+*backup*.tar.gz
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation builds
+docs/_build/
+site/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+temp_*
+
+# Archive and backup files
+*.tar.gz
+*.zip
+*.bak
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# mypy cache
+.mypy_cache/
+
+# Ruff cache
+.ruff_cache/

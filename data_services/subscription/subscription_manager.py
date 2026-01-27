@@ -350,7 +350,7 @@ class SubscriptionManager:
 
         try:
             migration_requests = []
-            for token, instrument_key in token_mappings.items():
+            for token, _instrument_key in token_mappings.items():
                 migration_requests.append({
                     "user_id": user_id,
                     "legacy_token": token,

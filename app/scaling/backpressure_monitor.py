@@ -261,8 +261,7 @@ class BackpressureMonitor:
                 sum_xy = sum(x[i] * values[i] for i in range(n))
                 sum_x2 = sum(x[i] ** 2 for i in range(n))
 
-                slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
-                return slope
+                return (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
 
             queue_trend = calculate_trend(queue_depths)
             cpu_trend = calculate_trend(cpu_usages)

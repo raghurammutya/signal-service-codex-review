@@ -126,7 +126,7 @@ class AggregationServiceValidator:
         concurrency_test = await self._test_concurrent_aggregations()
 
         # Generate migration report
-        migration_report = {
+        return {
             "validation_type": "aggregation_migration",
             "aggregation_migration": {
                 "validation_timestamp": datetime.now().isoformat(),
@@ -167,7 +167,6 @@ class AggregationServiceValidator:
             }
         }
 
-        return migration_report
 
     async def validate_performance_only(self, aggregation_count: int = 500) -> dict[str, Any]:
         """
@@ -195,7 +194,7 @@ class AggregationServiceValidator:
         # Accuracy under load test
         accuracy_test_results = await self._test_accuracy_under_load()
 
-        performance_report = {
+        return {
             "performance_timestamp": datetime.now().isoformat(),
             "test_configuration": {
                 "aggregation_count": aggregation_count,
@@ -222,7 +221,6 @@ class AggregationServiceValidator:
             }
         }
 
-        return performance_report
 
     async def _validate_single_aggregation(self, agg_id: str, agg_entry: dict[str, Any]) -> AggregationValidationResult:
         """Validate individual aggregation service migration"""
@@ -289,9 +287,8 @@ class AggregationServiceValidator:
 
         # Validate time window
         time_window = new_aggregation.get("time_window")
-        if time_window:
-            if not self._validate_time_window(time_window):
-                errors.append("Invalid time_window format in aggregation")
+        if time_window and not self._validate_time_window(time_window):
+            errors.append("Invalid time_window format in aggregation")
 
         return errors
 
@@ -341,10 +338,7 @@ class AggregationServiceValidator:
                     return False
 
                 # Validate reasonable time range (not more than 30 days for aggregation)
-                if (end_dt - start_dt).days > 30:
-                    return False
-
-                return True
+                return not (end_dt - start_dt).days > 30
             except (ValueError, TypeError):
                 return False
 
@@ -383,7 +377,7 @@ class AggregationServiceValidator:
                 results = []
                 for _ in range(3):
                     result = await self._execute_aggregation(agg_entry)
-                    if isinstance(result, (int, float)):
+                    if isinstance(result, int | float):
                         results.append(result)
                     elif isinstance(result, dict) and "value" in result:
                         results.append(result["value"])
@@ -412,13 +406,13 @@ class AggregationServiceValidator:
             return False
 
         # Handle numeric comparison with tolerance
-        if isinstance(old_value, (int, float)) and isinstance(new_value, (int, float)):
+        if isinstance(old_value, int | float) and isinstance(new_value, int | float):
             tolerance = abs(old_value) * 0.001  # 0.1% tolerance
             return abs(old_value - new_value) <= tolerance
 
         # Handle dictionary comparison (e.g., OHLC)
         if isinstance(old_value, dict) and isinstance(new_value, dict):
-            for key in old_value.keys():
+            for key in old_value:
                 if key not in new_value:
                     return False
                 if not self._compare_numeric_values(old_value[key], new_value[key]):
@@ -440,7 +434,7 @@ class AggregationServiceValidator:
 
     def _compare_numeric_values(self, val1: Any, val2: Any) -> bool:
         """Compare two numeric values with tolerance"""
-        if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+        if isinstance(val1, int | float) and isinstance(val2, int | float):
             tolerance = max(abs(val1), abs(val2)) * 0.001 + 1e-10  # 0.1% + small epsilon
             return abs(val1 - val2) <= tolerance
         return val1 == val2
@@ -672,7 +666,7 @@ class AggregationServiceValidator:
         if result is None:
             return False
 
-        if isinstance(result, (int, float)):
+        if isinstance(result, int | float):
             # Check for NaN, infinity, or unreasonable values
             if math.isnan(result) or math.isinf(result):
                 return False
@@ -683,7 +677,7 @@ class AggregationServiceValidator:
         if isinstance(result, dict):
             # Check OHLC or other dictionary results
             for value in result.values():
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     if math.isnan(value) or math.isinf(value) or abs(value) > 1e6:
                         return False
             return True
@@ -698,7 +692,7 @@ class AggregationServiceValidator:
 
         async def concurrent_aggregation_batch():
             latencies = []
-            for i in range(5):  # Each batch runs 5 aggregations
+            for _i in range(5):  # Each batch runs 5 aggregations
                 aggregation = self._generate_synthetic_aggregation()
                 start_time = time.time()
                 await self._execute_aggregation(aggregation)
@@ -732,7 +726,7 @@ class AggregationServiceValidator:
         # Test each aggregation function
         accuracy_tests = []
 
-        for func_name in self.aggregation_functions.keys():
+        for func_name in self.aggregation_functions:
             test_aggregation = {
                 "aggregation_id": f"accuracy_test_{func_name}",
                 "new_instrument_key_aggregation": {

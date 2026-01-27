@@ -176,7 +176,7 @@ async def get_model_configuration_status():
         model_info = model_config.get_model_info()
 
         # Add monitoring-specific information
-        status_data = {
+        return {
             'model_configuration': model_info,
             'validation_status': 'valid',
             'last_updated': datetime.utcnow().isoformat(),
@@ -202,7 +202,6 @@ async def get_model_configuration_status():
             'fallback_mode': False
         }
 
-        return status_data
 
     except Exception as e:
         logger.error(f"Model configuration monitoring failed: {e}")

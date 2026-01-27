@@ -1,0 +1,144 @@
+name: Ruff Linting
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Ruff Lint Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install Ruff
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff
+        
+    - name: Verify Ruff installation
+      run: ruff --version
+      
+    - name: Run Ruff linting (check only)
+      run: |
+        echo "Running Ruff check on signal-service-codex-review sources..."
+        ruff check . --exclude signal_service_legacy --statistics --output-format=github
+        
+    - name: Run Ruff format check
+      run: |
+        echo "Checking code formatting..."
+        ruff format . --exclude signal_service_legacy --check --diff
+        
+    # MANDATORY: Block merge on critical violations
+    - name: Check for critical violations (P0)
+      run: |
+        echo "Checking for critical violations that block merge..."
+        # Critical rules that must be fixed before merge
+        CRITICAL_VIOLATIONS=$(ruff check . --exclude signal_service_legacy --select F821,F811,E999,F402 --statistics --quiet | wc -l)
+        if [ "$CRITICAL_VIOLATIONS" -gt 0 ]; then
+          echo "❌ CRITICAL: $CRITICAL_VIOLATIONS P0 violations found. Merge blocked."
+          echo "Run: ruff check . --select F821,F811,E999,F402 --exclude signal_service_legacy"
+          exit 1
+        else
+          echo "✅ No critical violations found"
+        fi
+        
+    # WARNING: Report on high-priority violations but don't block
+    - name: Report high-priority violations (P1)
+      continue-on-error: true
+      run: |
+        echo "Checking for high-priority violations (P1)..."
+        P1_COUNT=$(ruff check . --exclude signal_service_legacy --select F401,I001,W291,W292,W293 --statistics --quiet | wc -l)
+        echo "⚠️ Found $P1_COUNT P1 violations (imports/formatting)"
+        if [ "$P1_COUNT" -gt 100 ]; then
+          echo "Consider running: ruff check . --select F401,I001,W291,W292,W293 --fix --exclude signal_service_legacy"
+        fi
+        
+    # Optional: Save results as artifacts
+    - name: Generate lint report
+      if: always()
+      run: |
+        echo "# Ruff Lint Results" > ruff_report.md
+        echo "" >> ruff_report.md
+        echo "## Summary" >> ruff_report.md
+        ruff check . --exclude signal_service_legacy --statistics >> ruff_report.md 2>&1 || true
+        echo "" >> ruff_report.md
+        echo "## Format Check" >> ruff_report.md
+        ruff format . --exclude signal_service_legacy --check --diff >> ruff_report.md 2>&1 || true
+        
+    - name: Upload lint report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: ruff-lint-report
+        path: ruff_report.md
+        retention-days: 30
+
+  # Optional: Auto-fix workflow (runs on push to develop)
+  auto-fix:
+    runs-on: ubuntu-latest
+    name: Auto-fix Linting Issues
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Ruff
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff
+        
+    - name: Run Ruff auto-fix
+      run: |
+        echo "Applying Ruff auto-fixes..."
+        ruff check . --exclude signal_service_legacy --fix
+        ruff format . --exclude signal_service_legacy
+        
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Commit auto-fixes
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Auto-fix Ruff linting violations
+
+        🤖 Generated with Ruff auto-fix
+
+        Co-Authored-By: GitHub Actions <noreply@github.com>"
+        git push

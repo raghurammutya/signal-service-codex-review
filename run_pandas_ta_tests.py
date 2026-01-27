@@ -59,7 +59,7 @@ class PandasTATestRunner:
         prices = []
         current_price = base_price
 
-        for i in range(periods):
+        for _i in range(periods):
             # Add trend and noise
             current_price *= (1 + trend + np.random.normal(0, volatility))
             current_price = max(current_price, base_price * 0.1)
@@ -67,7 +67,7 @@ class PandasTATestRunner:
 
         # Create OHLCV data
         data = []
-        for i, (date, close) in enumerate(zip(dates, prices, strict=False)):
+        for _i, (date, close) in enumerate(zip(dates, prices, strict=False)):
             open_price = close * (1 + np.random.uniform(-0.002, 0.002))
             daily_range = abs(np.random.normal(0, 0.015))
             high = max(open_price, close) * (1 + daily_range)
@@ -384,7 +384,7 @@ class PandasTATestRunner:
                         )
 
                         if result is not None:
-                            if isinstance(result, (pd.Series, pd.DataFrame)):
+                            if isinstance(result, pd.Series | pd.DataFrame):
                                 if not (isinstance(result, pd.Series) and result.isna().all()) and \
                                    not (isinstance(result, pd.DataFrame) and result.empty):
                                     success_count += 1

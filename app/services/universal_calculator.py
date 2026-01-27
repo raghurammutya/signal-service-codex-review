@@ -493,10 +493,7 @@ class UniversalCalculator:
             result = eval(formula, {"__builtins__": {}}, eval_context)
 
             # Get latest value if series
-            if isinstance(result, pd.Series):
-                value = result.iloc[-1]
-            else:
-                value = result
+            value = result.iloc[-1] if isinstance(result, pd.Series) else result
 
             return {
                 "value": value,

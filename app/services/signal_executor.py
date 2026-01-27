@@ -423,7 +423,7 @@ class SignalExecutor:
                         safe_signal = {}
                         for k, v in signal.items():
                             if isinstance(k, str) and len(k) < 50:
-                                if isinstance(v, (int, float, str, bool)):
+                                if isinstance(v, int | float | str | bool):
                                     if isinstance(v, str) and len(v) < 500 or not isinstance(v, str):
                                         safe_signal[k] = v
                         signals_generated.append(safe_signal)
@@ -544,7 +544,7 @@ class SignalExecutor:
             # Convert to Redis format (flatten nested dicts)
             redis_data = {}
             for key, value in signal_data.items():
-                if isinstance(value, (dict, list)):
+                if isinstance(value, dict | list):
                     redis_data[key] = json.dumps(value)
                 else:
                     redis_data[key] = str(value)

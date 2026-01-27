@@ -153,10 +153,10 @@ class FakeRedis:
 
     async def xread(self, streams: dict, count: int = 1, block=None):
         result = []
-        for name, start_id in streams.items():
+        for name, _start_id in streams.items():
             stream = self.store.get(name, [])
             if stream:
-                result.append((name, [(mid, data) for mid, data in stream[:count]]))
+                result.append((name, list(stream[:count])))
         return result
 
     async def scan(self, cursor=0, match=None, count=None):

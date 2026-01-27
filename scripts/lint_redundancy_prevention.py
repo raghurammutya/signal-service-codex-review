@@ -20,7 +20,7 @@ def check_historical_data_duplication() -> list[str]:
         (r'async def.*historical.*ticker', "Multiple ticker service integrations found")
     ]
 
-    for root, dirs, files in os.walk("app"):
+    for root, _dirs, files in os.walk("app"):
         for file in files:
             if file.endswith('.py') and file != 'unified_historical_data_service.py':
                 file_path = os.path.join(root, file)
@@ -47,7 +47,7 @@ def check_unused_imports() -> list[str]:
         r'^from\s+typing\s+import.*$'      # Typing imports often become unused
     ]
 
-    for root, dirs, files in os.walk("app"):
+    for root, _dirs, files in os.walk("app"):
         for file in files:
             if file.endswith('.py'):
                 file_path = os.path.join(root, file)

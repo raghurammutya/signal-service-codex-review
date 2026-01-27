@@ -32,8 +32,7 @@ class TestSignalProcessorIntegration:
     @pytest.fixture
     def mock_timescale_session(self):
         """Mock TimescaleDB session."""
-        session = AsyncMock()
-        return session
+        return AsyncMock()
 
     @pytest.fixture
     def mock_greeks_calculator(self):

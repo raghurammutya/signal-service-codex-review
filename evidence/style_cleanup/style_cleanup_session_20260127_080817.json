@@ -1,0 +1,33 @@
+{
+  "cleanup_session": {
+    "session_id": "style_cleanup_1769501295",
+    "timestamp": "2026-01-27T08:08:17.713345",
+    "session_complete": true,
+    "baseline_metrics": {
+      "initial_violations": 2196,
+      "initial_auto_fixable": 1213,
+      "final_violations": 1141,
+      "final_auto_fixable": 223
+    },
+    "cleanup_impact": {
+      "total_violations_fixed": 1055,
+      "directories_processed": 1,
+      "files_modified": 385,
+      "cleanup_rate": 86.97444352844188
+    },
+    "batch_details": [
+      {
+        "directory": ".",
+        "violations_fixed": 1055,
+        "files_modified": 385,
+        "processing_time_ms": 276.52525901794434
+      }
+    ]
+  },
+  "automation_metrics": {
+    "batch_size": 50,
+    "total_processing_time": 276.52525901794434,
+    "avg_batch_time": 276.52525901794434,
+    "efficiency_score": 3815.203008024445
+  }
+}

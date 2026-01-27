@@ -39,7 +39,7 @@ class TechnicalIndicatorConfig(BaseModel):
     output_key: str = Field(..., description="Key to store output in results")
 
     @validator('name')
-    def validate_indicator_name(cls, v):
+    def validate_indicator_name(self, v):
         """Validate indicator name"""
         valid_indicators = [
             'sma', 'ema', 'rsi', 'macd', 'bb', 'stoch', 'adx', 'atr',
@@ -63,7 +63,7 @@ class OptionGreeksConfig(BaseModel):
     use_indvix: bool = Field(True, description="Use INDVIX for volatility")
 
     @validator('calculate')
-    def validate_greeks(cls, v):
+    def validate_greeks(self, v):
         """Validate Greek names"""
         valid_greeks = ['delta', 'gamma', 'theta', 'vega', 'rho']
         for greek in v:
@@ -130,7 +130,7 @@ class SignalConfigData(BaseModel):
     max_concurrent: int = Field(5, description="Maximum concurrent computations", ge=1, le=20)
 
     @validator('instrument_key')
-    def validate_instrument_key(cls, v):
+    def validate_instrument_key(self, v):
         """Validate instrument key format - must use ExchangeCode as standard"""
         if not v or len(v) < 3:
             raise ValueError('Instrument key must be at least 3 characters')
@@ -157,7 +157,7 @@ class ConfigurationMessage(BaseModel):
     source: str = Field('subscription_manager', description="Source of the configuration")
 
     @validator('action')
-    def validate_action(cls, v):
+    def validate_action(self, v):
         """Validate action type"""
         valid_actions = ['create', 'update', 'delete']
         if v not in valid_actions:

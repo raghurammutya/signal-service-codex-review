@@ -34,7 +34,7 @@ class MockHistoricalDataManager:
             prices.append(max(new_price, base_price * 0.5))  # Prevent unrealistic drops
 
         data = []
-        for i, (date, close) in enumerate(zip(dates, prices, strict=False)):
+        for _i, (date, close) in enumerate(zip(dates, prices, strict=False)):
             open_price = close * (1 + np.random.uniform(-0.002, 0.002))
             high = max(open_price, close) * (1 + np.random.uniform(0, 0.01))
             low = min(open_price, close) * (1 - np.random.uniform(0, 0.01))
@@ -226,7 +226,7 @@ class PandasTAIntegrationTest:
             macd_data = results['macd']
 
             # Check if it has the expected keys (column names may vary)
-            has_macd_structure = any(key.startswith('MACD') for key in macd_data.keys())
+            has_macd_structure = any(key.startswith('MACD') for key in macd_data)
             if has_macd_structure:
                 print(f"  ✅ MACD has proper structure: {list(macd_data.keys())}")
             else:

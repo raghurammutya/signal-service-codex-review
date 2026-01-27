@@ -72,7 +72,7 @@ def calculate_option_delta(
         calculator = GreeksCalculator()
 
         # Calculate delta using the configured model
-        delta = calculator.calculate_delta(
+        return calculator.calculate_delta(
             option_type=option_type,
             spot_price=spot_price,
             strike_price=strike_price,
@@ -81,7 +81,6 @@ def calculate_option_delta(
             volatility=volatility
         )
 
-        return delta
 
     except Exception as e:
         log_error(f"Error calculating option delta: {e}")
@@ -118,7 +117,7 @@ def calculate_option_gamma(
         from app.services.greeks_calculator import GreeksCalculator
 
         calculator = GreeksCalculator()
-        gamma = calculator.calculate_gamma(
+        return calculator.calculate_gamma(
             option_type=option_type,
             spot_price=spot_price,
             strike_price=strike_price,
@@ -127,7 +126,6 @@ def calculate_option_gamma(
             volatility=volatility
         )
 
-        return gamma
 
     except Exception as e:
         log_error(f"Error calculating option gamma: {e}")
@@ -164,7 +162,7 @@ def calculate_option_theta(
         from app.services.greeks_calculator import GreeksCalculator
 
         calculator = GreeksCalculator()
-        theta = calculator.calculate_theta(
+        return calculator.calculate_theta(
             option_type=option_type,
             spot_price=spot_price,
             strike_price=strike_price,
@@ -173,7 +171,6 @@ def calculate_option_theta(
             volatility=volatility
         )
 
-        return theta
 
     except Exception as e:
         log_error(f"Error calculating option theta: {e}")
@@ -210,7 +207,7 @@ def calculate_option_vega(
         from app.services.greeks_calculator import GreeksCalculator
 
         calculator = GreeksCalculator()
-        vega = calculator.calculate_vega(
+        return calculator.calculate_vega(
             option_type=option_type,
             spot_price=spot_price,
             strike_price=strike_price,
@@ -219,7 +216,6 @@ def calculate_option_vega(
             volatility=volatility
         )
 
-        return vega
 
     except Exception as e:
         log_error(f"Error calculating option vega: {e}")
@@ -256,7 +252,7 @@ def calculate_option_rho(
         from app.services.greeks_calculator import GreeksCalculator
 
         calculator = GreeksCalculator()
-        rho = calculator.calculate_rho(
+        return calculator.calculate_rho(
             option_type=option_type,
             spot_price=spot_price,
             strike_price=strike_price,
@@ -265,7 +261,6 @@ def calculate_option_rho(
             volatility=volatility
         )
 
-        return rho
 
     except Exception as e:
         log_error(f"Error calculating option rho: {e}")

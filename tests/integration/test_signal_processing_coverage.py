@@ -330,7 +330,7 @@ class TestSignalProcessingCoverageMetrics:
         ]
 
         # In practice, this would verify test coverage for each integration point
-        for path in critical_integration_paths:
+        for _path in critical_integration_paths:
             # Placeholder - would check test coverage reports
             assert True  # Would validate coverage exists for this path
 

@@ -36,13 +36,13 @@ class ScriptExecutionRequest(BaseModel):
     custom_limits: dict[str, Any] | None = Field(None, description="Custom resource limits")
 
     @validator('script_content')
-    def validate_script_content(cls, v):
+    def validate_script_content(self, v):
         if not v.strip():
             raise ValueError("Script content cannot be empty")
         return v
 
     @validator('security_level')
-    def validate_security_level(cls, v):
+    def validate_security_level(self, v):
         if v and v not in ['minimal', 'standard', 'high', 'maximum']:
             raise ValueError("Invalid security level")
         return v

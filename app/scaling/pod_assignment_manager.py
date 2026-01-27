@@ -282,10 +282,9 @@ class PodAssignmentManager:
         """Update instrument assignment"""
         # Remove from old pod if reassigning
         old_pod = self.instrument_assignments.get(instrument_key)
-        if old_pod and old_pod != pod_id:
-            if old_pod in self.pods:
-                self.pods[old_pod].assigned_instruments.discard(instrument_key)
-                self.pods[old_pod].current_load = len(self.pods[old_pod].assigned_instruments)
+        if old_pod and old_pod != pod_id and old_pod in self.pods:
+            self.pods[old_pod].assigned_instruments.discard(instrument_key)
+            self.pods[old_pod].current_load = len(self.pods[old_pod].assigned_instruments)
 
         # Add to new pod
         self.instrument_assignments[instrument_key] = pod_id

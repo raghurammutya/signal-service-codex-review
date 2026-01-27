@@ -624,7 +624,7 @@ class MoneynessRefreshService:
             lower_bound = new_spot_price * (1 - price_tolerance / 100)
             upper_bound = new_spot_price * (1 + price_tolerance / 100)
 
-            for strike_str in chain_data.keys():
+            for strike_str in chain_data:
                 try:
                     strike_price = float(strike_str)
 
@@ -661,7 +661,7 @@ class MoneynessRefreshService:
             lower_bound = spot_price * (1 - tolerance)
             upper_bound = spot_price * (1 + tolerance)
 
-            for strike_str in chain_data.keys():
+            for strike_str in chain_data:
                 try:
                     strike_price = float(strike_str)
                     if lower_bound <= strike_price <= upper_bound:

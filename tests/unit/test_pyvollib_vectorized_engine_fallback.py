@@ -61,8 +61,7 @@ class TestVectorizedPyvolibProductionBehavior:
                 mock_config.return_value = mock_greeks_model_config
                 mock_breaker.return_value = mock_circuit_breaker
 
-                engine = VectorizedPyvolibGreeksEngine(chunk_size=100, max_workers=2)
-                return engine
+                return VectorizedPyvolibGreeksEngine(chunk_size=100, max_workers=2)
 
     @pytest.fixture
     def valid_option_chain_data(self):

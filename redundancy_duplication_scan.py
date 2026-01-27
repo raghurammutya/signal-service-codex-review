@@ -39,7 +39,7 @@ class RedundancyDuplicationScan:
                 "HistoricalClient"
             ]
 
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         file_path = os.path.join(root, file)
@@ -105,7 +105,7 @@ class RedundancyDuplicationScan:
                 "notification", "alert", "signal_delivery"
             ]
 
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py') and any(pattern in file for pattern in delivery_patterns):
                         file_path = os.path.join(root, file)
@@ -174,7 +174,7 @@ class RedundancyDuplicationScan:
             entitlement_files = []
 
             # Find files with entitlement logic
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         file_path = os.path.join(root, file)
@@ -250,7 +250,7 @@ class RedundancyDuplicationScan:
             # Find configuration files
             config_patterns = ["config", "settings", "env", "conf"]
 
-            for root, dirs, files in os.walk("."):
+            for root, _dirs, files in os.walk("."):
                 for file in files:
                     if any(pattern in file.lower() for pattern in config_patterns):
                         if file.endswith(('.py', '.json', '.yaml', '.yml', '.ini', '.toml')):
@@ -326,7 +326,7 @@ class RedundancyDuplicationScan:
             import_analysis = []
 
             # Analyze Python files for imports
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         file_path = os.path.join(root, file)

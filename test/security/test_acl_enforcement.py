@@ -472,10 +472,7 @@ def market_indicator(tick_data, parameters):
 
         # Verify results match expectations
         for i, (result, expected) in enumerate(zip(results, expected_results, strict=False)):
-            if isinstance(result, Exception):
-                actual = False
-            else:
-                actual = result
+            actual = False if isinstance(result, Exception) else result
 
             assert actual == expected, f"ACL check failed for user {concurrent_configs[i][1]}: expected {expected}, got {actual}"
 

@@ -46,7 +46,7 @@ class TestMetricsServiceContract:
             ("POST", "/api/v2/signals/batch", 1200.0, 503),  # Slow error
         ]
 
-        for method, endpoint, duration, status_code in test_requests:
+        for _method, endpoint, duration, status_code in test_requests:
             metrics_collector.record_request(endpoint, duration, status_code)
 
         # Verify metrics aggregation
@@ -173,7 +173,7 @@ class TestMetricsServiceContract:
             ("GET", "/api/data", 1000.0, 503), # Very slow, error
         ]
 
-        for method, endpoint, duration, status_code in test_metrics:
+        for _method, endpoint, duration, status_code in test_metrics:
             metrics_collector.record_request(endpoint, duration, status_code)
 
         # Calculate health score

@@ -115,7 +115,7 @@ class MockBrokerClient(BaseBrokerClient):
         # Try to find matching instrument in mock prices
         # In real implementation, broker_token would be used to identify instrument
         matching_instrument = None
-        for instrument_key, price in self._mock_prices.items():
+        for instrument_key, _price in self._mock_prices.items():
             # Simple heuristic: if token matches part of instrument key
             if broker_token in instrument_key or broker_token.isdigit():
                 matching_instrument = instrument_key

@@ -328,15 +328,9 @@ class FormulaEngine:
 
         if isinstance(node, ast.BoolOp):
             if isinstance(node.op, ast.And):
-                for value in node.values:
-                    if not self._eval_node(value, context):
-                        return False
-                return True
+                return all(self._eval_node(value, context) for value in node.values)
             # Or
-            for value in node.values:
-                if self._eval_node(value, context):
-                    return True
-            return False
+            return any(self._eval_node(value, context) for value in node.values)
 
         if isinstance(node, ast.Call):
             func = context.get(node.func.id)
@@ -362,7 +356,7 @@ class FormulaEngine:
         if isinstance(node, ast.Constant):
             return node.value
 
-        if isinstance(node, (ast.Num, ast.Str)):  # For Python < 3.8
+        if isinstance(node, ast.Num | ast.Str):  # For Python < 3.8
             return node.n if isinstance(node, ast.Num) else node.s
 
         if isinstance(node, ast.List):

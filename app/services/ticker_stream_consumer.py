@@ -118,7 +118,7 @@ class TickerStreamConsumer:
                     block=1000  # Block for 1 second if no messages
                 )
 
-                for stream, stream_messages in messages:
+                for _stream, stream_messages in messages:
                     for msg_id, data in stream_messages:
                         try:
                             # Process the tick

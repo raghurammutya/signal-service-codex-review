@@ -21,8 +21,7 @@ class TestPremiumDiscountCalculator:
     @pytest.fixture
     def mock_vectorized_engine(self):
         """Create mock vectorized engine for testing."""
-        engine = Mock(spec=VectorizedPyvolibGreeksEngine)
-        return engine
+        return Mock(spec=VectorizedPyvolibGreeksEngine)
 
     @pytest.fixture
     def calculator(self, mock_vectorized_engine):

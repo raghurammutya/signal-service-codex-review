@@ -48,7 +48,7 @@ class ComputationRequest(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict, description="Computation parameters")
 
     @validator('type')
-    def validate_type(cls, v):
+    def validate_type(self, v):
         if not v:
             raise ValueError("Computation type cannot be empty")
         return v.lower()
@@ -67,13 +67,13 @@ class UniversalComputeRequest(BaseModel):
     )
 
     @validator('computations')
-    def validate_computations(cls, v):
+    def validate_computations(self, v):
         if not v:
             raise ValueError("At least one computation must be specified")
         return v
 
     @validator('instrument_key')
-    def validate_instrument_key(cls, v):
+    def validate_instrument_key(self, v):
         if not v:
             raise ValueError("Instrument key cannot be empty")
         return v
@@ -117,7 +117,7 @@ class BatchComputeRequest(BaseModel):
     )
 
     @validator('instruments')
-    def validate_instruments(cls, v):
+    def validate_instruments(self, v):
         if not v:
             raise ValueError("At least one instrument must be specified")
         if len(v) > 100:  # Reasonable limit

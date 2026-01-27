@@ -51,7 +51,7 @@ class SecurityValidation:
             ]
 
             redaction_passed = 0
-            for test_input, expected in test_patterns:
+            for test_input, _expected in test_patterns:
                 # Create a mock log record
                 class MockRecord:
                     def __init__(self, msg):

@@ -163,7 +163,7 @@ class HealthChecker:
         # Determine overall health status
         overall_status = self._determine_overall_status(components)
 
-        health_data = {
+        return {
             'status': overall_status.value,
             'timestamp': datetime.utcnow().isoformat(),
             'service': 'signal_service',
@@ -175,7 +175,6 @@ class HealthChecker:
             'summary': self._generate_health_summary(components, overall_status)
         }
 
-        return health_data
 
     async def _check_api_responsiveness(self) -> dict[str, Any]:
         """Check API endpoint responsiveness"""
@@ -610,10 +609,7 @@ class HealthChecker:
                         pass
 
                 # Calculate error rate
-                if total_requests > 0:
-                    error_rate = (error_count / total_requests) * 100
-                else:
-                    error_rate = 0.0
+                error_rate = error_count / total_requests * 100 if total_requests > 0 else 0.0
 
                 # Determine status
                 if error_rate < 1.0:  # Less than 1% error rate

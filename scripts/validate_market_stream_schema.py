@@ -141,7 +141,7 @@ class StreamSchemaValidator:
                 self.validation_stats["schema_errors"].extend(result.errors)
 
         # Generate validation summary
-        validation_report = {
+        return {
             "validation_timestamp": datetime.now().isoformat(),
             "samples_file": samples_file,
             "schema_version": "v2_instrument_key_first",
@@ -166,7 +166,6 @@ class StreamSchemaValidator:
             "consumer_compatibility": await self._test_consumer_compatibility(message_samples)
         }
 
-        return validation_report
 
     async def validate_performance_only(self, message_count: int = 1000) -> dict[str, Any]:
         """
@@ -201,7 +200,7 @@ class StreamSchemaValidator:
         validation_metrics = self._calculate_performance_metrics(validation_latencies)
         consumer_metrics = self._calculate_performance_metrics(consumer_latencies)
 
-        performance_report = {
+        return {
             "performance_timestamp": datetime.now().isoformat(),
             "test_configuration": {
                 "message_count": message_count,
@@ -231,7 +230,6 @@ class StreamSchemaValidator:
             }
         }
 
-        return performance_report
 
     async def _validate_single_message(self, message_id: str, message: dict[str, Any]) -> ValidationResult:
         """Validate individual stream message"""
@@ -305,10 +303,7 @@ class StreamSchemaValidator:
 
         # Instrument type should be valid
         valid_types = ["EQUITY", "OPTION", "FUTURE", "BOND", "ETF"]
-        if instrument_type not in valid_types:
-            return False
-
-        return True
+        return not instrument_type not in valid_types
 
     def _validate_metadata_enrichment(self, message: dict[str, Any]) -> tuple[float, list[str]]:
         """Validate metadata enrichment completeness"""
@@ -360,7 +355,7 @@ class StreamSchemaValidator:
         try:
             if isinstance(timestamp, str):
                 datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-            elif isinstance(timestamp, (int, float)):
+            elif isinstance(timestamp, int | float):
                 datetime.fromtimestamp(timestamp)
             else:
                 return False, f"Invalid timestamp type: {type(timestamp)}"

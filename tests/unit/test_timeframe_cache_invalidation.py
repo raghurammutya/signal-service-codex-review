@@ -277,7 +277,7 @@ class TestTimeframeCacheInvalidation:
 
         # Launch concurrent requests
         tasks = []
-        for i in range(3):
+        for _i in range(3):
             task = timeframe_manager.get_aggregated_data(
                 instrument_key=instrument_key,
                 signal_type=signal_type,

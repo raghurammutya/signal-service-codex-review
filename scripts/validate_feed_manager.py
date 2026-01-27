@@ -184,7 +184,7 @@ class FeedManagerValidator:
         routing_accuracies = []
 
         # Simulate feed processing
-        for i in range(feed_count):
+        for _i in range(feed_count):
             # Simulate feed routing latency (realistic values)
             feed_latency = random.uniform(5.0, 25.0)  # 5-25ms range
             feed_latencies.append(feed_latency)
@@ -415,7 +415,7 @@ class FeedManagerValidator:
                     "routing_accuracy_rate": (routing_correct_count / total_feeds * 100) if total_feeds > 0 else 0,
                     "feed_manager_v2_ready": successful_migrations == total_feeds,
                     "performance_compliant": True,
-                    "common_errors": list(set([error for r in validation_results for error in r.errors]))
+                    "common_errors": list({error for r in validation_results for error in r.errors})
                 }
             },
             "subscription_validation": subscription_validation,

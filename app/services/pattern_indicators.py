@@ -371,9 +371,8 @@ def zigzag(
                     last_pivot = price
 
         # Forward fill zigzag line
-        result = result.ffill()
+        return result.ffill()
 
-        return result
 
     except Exception as e:
         logger.exception(f"Error calculating ZigZag: {e}")
@@ -544,10 +543,7 @@ def anchored_vwap(
     """
     try:
         # Use first bar if no anchor specified
-        if anchor_datetime is None:
-            anchor_dt = df.index[0]
-        else:
-            anchor_dt = pd.to_datetime(anchor_datetime)
+        anchor_dt = df.index[0] if anchor_datetime is None else pd.to_datetime(anchor_datetime)
 
         # Find anchor index
         if anchor_dt not in df.index:

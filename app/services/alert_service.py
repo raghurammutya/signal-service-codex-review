@@ -11,6 +11,7 @@ TRAILING_002: Alert Service Integration
 """
 
 import asyncio
+import contextlib
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -702,7 +703,7 @@ class AlertService:
         """Clean up inactive price subscriptions"""
         instruments_to_remove = []
 
-        for instrument_key, subscription in self._price_subscriptions.items():
+        for instrument_key, _subscription in self._price_subscriptions.items():
             # Check if any active alerts exist for this instrument
             has_active_alerts = any(
                 alert.instrument_key == instrument_key and alert.status == AlertStatus.ACTIVE
@@ -739,9 +740,7 @@ class AlertService:
         """Shutdown alert service"""
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("Alert service shutdown complete")

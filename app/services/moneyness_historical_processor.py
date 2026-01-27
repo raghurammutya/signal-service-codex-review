@@ -145,7 +145,7 @@ class MoneynessHistoricalProcessor:
                 await self.timeframe_manager.initialize()
 
             # Use unified timeframe manager for all historical data retrieval
-            aggregated_data = await self.timeframe_manager.get_aggregated_data(
+            return await self.timeframe_manager.get_aggregated_data(
                 instrument_key=virtual_instrument_key,
                 signal_type="moneyness_greeks",
                 timeframe=timeframe,
@@ -154,7 +154,6 @@ class MoneynessHistoricalProcessor:
                 fields=['delta', 'gamma', 'theta', 'vega', 'rho', 'iv']
             )
 
-            return aggregated_data
 
         except Exception as e:
             log_error(f"Failed to get aggregated moneyness data through timeframe manager: {e}")

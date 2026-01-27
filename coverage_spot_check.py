@@ -49,7 +49,7 @@ class CoverageSpotCheck:
 
             for test_dir in test_directories:
                 if os.path.exists(test_dir):
-                    for root, dirs, files in os.walk(test_dir):
+                    for root, _dirs, files in os.walk(test_dir):
                         for file in files:
                             if file.startswith("test_") and file.endswith(".py"):
                                 test_files_found.append(os.path.join(root, file))
@@ -158,13 +158,13 @@ class CoverageSpotCheck:
                 module_info = {"module": module, "files": [], "test_files": []}
 
                 # Find module files
-                for root, dirs, files in os.walk("app"):
+                for root, _dirs, files in os.walk("app"):
                     for file in files:
                         if file.endswith(".py") and module in file:
                             module_info["files"].append(os.path.join(root, file))
 
                 # Find corresponding test files
-                for root, dirs, files in os.walk("."):
+                for root, _dirs, files in os.walk("."):
                     for file in files:
                         if file.startswith("test_") and module in file and file.endswith(".py"):
                             module_info["test_files"].append(os.path.join(root, file))
@@ -281,7 +281,7 @@ class CoverageSpotCheck:
 
             # Check for 95% threshold requirement
             has_95_percent = False
-            for root, dirs, files in os.walk("."):
+            for root, _dirs, files in os.walk("."):
                 for file in files:
                     if file in [".coveragerc", "pyproject.toml", "setup.cfg", "pytest.ini"]:
                         try:

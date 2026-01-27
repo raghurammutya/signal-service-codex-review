@@ -43,7 +43,7 @@ async def get_market_profile(
         Market profile with price levels, volumes/TPO, and value areas
     """
     try:
-        result = await calculator.calculate_market_profile(
+        return await calculator.calculate_market_profile(
             instrument_key=instrument_key,
             interval=interval,
             lookback_period=lookback_period,
@@ -51,7 +51,6 @@ async def get_market_profile(
             tick_size=tick_size
         )
 
-        return result
 
     except Exception as e:
         log_error(f"Error calculating market profile: {e}")
@@ -77,13 +76,12 @@ async def get_composite_profile(
         Composite market profile combining multiple sessions
     """
     try:
-        result = await calculator.calculate_composite_profile(
+        return await calculator.calculate_composite_profile(
             instrument_key=instrument_key,
             sessions=sessions,
             profile_type=profile_type
         )
 
-        return result
 
     except Exception as e:
         log_error(f"Error calculating composite profile: {e}")
@@ -107,12 +105,11 @@ async def get_developing_profile(
         Current session's developing market profile
     """
     try:
-        result = await calculator.get_developing_profile(
+        return await calculator.get_developing_profile(
             instrument_key=instrument_key,
             interval=interval
         )
 
-        return result
 
     except Exception as e:
         log_error(f"Error getting developing profile: {e}")

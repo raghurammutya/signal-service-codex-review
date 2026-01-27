@@ -680,10 +680,7 @@ class MetricsCollector:
             return False
 
         # Emergency mode - only critical operations
-        if restrictions.get('emergency_mode') and operation_type not in ['critical', 'essential']:
-            return False
-
-        return True
+        return not (restrictions.get('emergency_mode') and operation_type not in ['critical', 'essential'])
 
     async def acquire_operation_permit(self, operation_type: str = 'default', priority: str = 'normal') -> bool:
         """Acquire a permit to perform an operation (with backpressure check)."""

@@ -135,7 +135,7 @@ The `instrument_registry_experiments` directory has been successfully archived t
         lines = content.split('\n')
         insert_index = 1
         for i, line in enumerate(lines):
-            if line.startswith('# ') or line.startswith('## '):
+            if line.startswith(("# ", "## ")):
                 insert_index = i + 1
                 break
 

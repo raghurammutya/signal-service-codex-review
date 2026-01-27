@@ -64,7 +64,7 @@ class TestCoreSLOCompliance:
 
             print(f"🔍 Testing health endpoint SLO ({total_requests} requests)...")
 
-            for i in range(total_requests):
+            for _i in range(total_requests):
                 start_time = time.time()
                 try:
                     response = await client.get("/health", timeout=5.0)
@@ -106,7 +106,7 @@ class TestCoreSLOCompliance:
 
             print(f"📊 Testing metrics endpoint SLO ({total_requests} requests)...")
 
-            for i in range(total_requests):
+            for _i in range(total_requests):
                 start_time = time.time()
                 try:
                     response = await client.get("/metrics", timeout=10.0)
@@ -159,7 +159,7 @@ class TestCoreSLOCompliance:
                 endpoint_times = []
                 endpoint_errors = 0
 
-                for i in range(total_requests // len(test_endpoints)):
+                for _i in range(total_requests // len(test_endpoints)):
                     start_time = time.time()
                     try:
                         response = await client.get(endpoint, timeout=15.0)
@@ -217,7 +217,7 @@ class TestCoreSLOCompliance:
             print(f"📈 Testing historical API SLO ({total_requests} requests)...")
 
             for endpoint in historical_endpoints:
-                for i in range(total_requests // len(historical_endpoints)):
+                for _i in range(total_requests // len(historical_endpoints)):
                     start_time = time.time()
                     try:
                         response = await client.get(endpoint, timeout=20.0)

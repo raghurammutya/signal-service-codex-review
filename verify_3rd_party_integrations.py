@@ -206,7 +206,7 @@ class IntegrationVerifier:
         is_real_value = False
         if success and isinstance(response_data, dict):
             value = response_data.get("value", response_data.get("result"))
-            is_real_value = isinstance(value, (int, float)) and 0 < value < 1  # Delta should be between 0 and 1
+            is_real_value = isinstance(value, int | float) and 0 < value < 1  # Delta should be between 0 and 1
 
         details = f"Delta calculation returned: {response_data.get('value', 'N/A') if success else 'Failed'}"
 

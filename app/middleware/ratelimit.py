@@ -160,7 +160,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _get_endpoint_key(self, path: str) -> str:
         """Get endpoint key for rate limiting"""
         # Match path patterns
-        for pattern in self.endpoint_limits.keys():
+        for pattern in self.endpoint_limits:
             if path.startswith(pattern):
                 return pattern
 

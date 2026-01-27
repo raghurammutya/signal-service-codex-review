@@ -107,8 +107,7 @@ class TestPandasTARealOHLCVData:
         if not PANDAS_TA_AVAILABLE:
             pytest.skip("pandas_ta not available")
 
-        executor = PandasTAExecutor(mock_redis_client)
-        return executor
+        return PandasTAExecutor(mock_redis_client)
 
     @pytest.mark.asyncio
     async def test_successful_indicator_calculation_with_real_data(self, pandas_ta_executor, real_ohlcv_data, mock_historical_manager):
@@ -165,8 +164,8 @@ class TestPandasTARealOHLCVData:
 
             # Verify specific indicator results
             results = result['results']
-            assert 'sma_20' in results or any('sma' in str(k).lower() for k in results.keys())
-            assert 'rsi_14' in results or any('rsi' in str(k).lower() for k in results.keys())
+            assert 'sma_20' in results or any('sma' in str(k).lower() for k in results)
+            assert 'rsi_14' in results or any('rsi' in str(k).lower() for k in results)
 
     @pytest.mark.asyncio
     async def test_indicator_failure_with_missing_historical_data(self, pandas_ta_executor, mock_historical_manager):

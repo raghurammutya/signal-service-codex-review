@@ -453,7 +453,7 @@ class DistributedHealthManager:
             health_data = json.loads(aggregate_data)
 
             # Format for dashboard
-            dashboard_data = {
+            return {
                 'service_name': 'signal_service',
                 'status': health_data['status'],
                 'timestamp': health_data['timestamp'],
@@ -477,7 +477,6 @@ class DistributedHealthManager:
                 ]
             }
 
-            return dashboard_data
 
         except Exception as e:
             logger.error(f"Failed to get cluster health for dashboard: {e}")

@@ -94,9 +94,8 @@ def extract_custom_indicator_results(self, indicator_name: str, result_df: pd.Da
             value = result_df['combined_premium'].iloc[-1]
             return float(value) if pd.notna(value) else None
 
-    elif indicator_name == 'premium_ratio':
-        if 'premium_ratio' in result_df.columns:
-            value = result_df['premium_ratio'].iloc[-1]
-            return float(value) if pd.notna(value) else None
+    elif indicator_name == 'premium_ratio' and 'premium_ratio' in result_df.columns:
+        value = result_df['premium_ratio'].iloc[-1]
+        return float(value) if pd.notna(value) else None
 
     return None

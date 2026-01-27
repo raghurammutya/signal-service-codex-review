@@ -108,10 +108,7 @@ class MarketProfileCalculator:
             left = sum(volumes[:midpoint])
             right = sum(volumes[midpoint:])
             ratio = left / max(right, 1)
-            if 0.6 <= ratio <= 1.4:
-                pattern = "Normal Day"
-            else:
-                pattern = "Trend Day"
+            pattern = "Normal Day" if 0.6 <= ratio <= 1.4 else "Trend Day"
             # detect multiple peaks
             max_vol = max(volumes)
             peaks = [profile.get("poc")] if profile.get("poc") is not None else []

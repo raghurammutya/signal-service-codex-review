@@ -112,6 +112,7 @@ class InstrumentServiceClient:
         service_response = await self._make_request("POST", "/api/v1/moneyness/calculate", json=payload)
         if service_response:
             return service_response
+        return None
 
 
     async def get_strikes_by_moneyness(self, underlying_symbol, moneyness_level, expiry_date=None) -> list[dict[str, Any]]:
@@ -125,6 +126,7 @@ class InstrumentServiceClient:
         service_response = await self._make_request("GET", "/api/v1/options/strikes/moneyness", params=params)
         if service_response and service_response.get("strikes"):
             return service_response["strikes"]
+        return None
 
 
     async def enrich_instrument(self, instrument_data: dict[str, Any]) -> dict[str, Any]:

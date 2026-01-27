@@ -621,7 +621,7 @@ class Session5CShadowModeValidator:
         while time.time() < stress_end_time:
             # Batch of operations per second
             batch_tasks = []
-            for i in range(target_ops_per_second):
+            for _i in range(target_ops_per_second):
                 test_instrument = f"STRESS:INSTRUMENT_{random.randint(1, 100)}"
                 market_data = {
                     "instrument_id": test_instrument,

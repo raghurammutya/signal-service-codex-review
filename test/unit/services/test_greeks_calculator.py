@@ -32,7 +32,7 @@ class TestGreeksCalculator:
         required_greeks = ['delta', 'gamma', 'theta', 'vega', 'rho']
         for greek in required_greeks:
             assert greek in result, f"Missing {greek} in Greeks calculation"
-            assert isinstance(result[greek], (int, float)), f"{greek} should be numeric"
+            assert isinstance(result[greek], int | float), f"{greek} should be numeric"
 
         # Assert expected ranges for ATM call option
         assert 0.4 <= result["delta"] <= 0.6, f"ATM call delta should be ~0.5, got {result['delta']}"
@@ -106,7 +106,7 @@ class TestGreeksCalculator:
         result = calculator.calculate_greeks(**sample_option_data)
 
         # Basic sanity checks
-        assert isinstance(result["delta"], (int, float))
+        assert isinstance(result["delta"], int | float)
         assert 0 <= abs(result["delta"]) <= 1, f"Delta magnitude should be ≤1, got {result['delta']}"
         assert result["gamma"] >= 0, "Gamma should be non-negative"
         assert result["vega"] >= 0, "Vega should be non-negative"
@@ -138,7 +138,7 @@ class TestGreeksCalculator:
         for i, result in enumerate(results):
             assert isinstance(result, dict)
             assert "delta" in result
-            assert isinstance(result["delta"], (int, float))
+            assert isinstance(result["delta"], int | float)
 
             # Delta should increase with spot price for calls
             if i > 0:
@@ -189,7 +189,7 @@ class TestGreeksCalculator:
                     **sample_option_data
                 )
 
-                assert isinstance(iv, (int, float))
+                assert isinstance(iv, int | float)
                 assert 0 < iv < 10, f"IV should be reasonable, got {iv}"
 
             except NotImplementedError:

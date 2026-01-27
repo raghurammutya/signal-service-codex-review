@@ -33,7 +33,7 @@ class TestValidator:
             lines = content.split('\n')
             for line in lines:
                 stripped = line.strip()
-                if stripped.startswith('def test_') or stripped.startswith('async def test_'):
+                if stripped.startswith(("def test_", "async def test_")):
                     # Extract method name
                     method_name = stripped.split('(')[0].replace('def ', '').replace('async def ', '')
                     test_methods.append(method_name)

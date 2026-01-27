@@ -8,16 +8,18 @@ import os
 import tempfile
 import time
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import psutil
 
 import docker
 from app.errors import ExternalFunctionExecutionError, SecurityError
-from app.services.external_function_executor import ExternalFunctionExecutor
 
 logger = logging.getLogger(__name__)
 from app.utils.logging_utils import log_exception, log_info, log_warning
+
+if TYPE_CHECKING:
+    from app.services.external_function_executor import ExternalFunctionExecutor
 
 
 class EnhancedSandbox:
@@ -198,13 +200,12 @@ class EnhancedSandbox:
 
             with self._cgroup_context(cgroup_name, limits):
                 # Execute in subprocess with cgroup limits
-                result = await asyncio.get_event_loop().run_in_executor(
+                return await asyncio.get_event_loop().run_in_executor(
                     None,
                     self._execute_in_cgroup,
                     script_content, function_name, input_data,
                     cgroup_name, limits
                 )
-                return result
 
         except Exception as e:
             log_exception(f"Cgroups sandbox execution failed: {e}")
@@ -408,8 +409,7 @@ class EnhancedSandbox:
                 # Call the function
                 if function_name in execution_context:
                     function = execution_context[function_name]
-                    result = function(input_data, {})
-                    return result
+                    return function(input_data, {})
                 raise ExternalFunctionExecutionError(f"Function {function_name} not found")
 
             finally:

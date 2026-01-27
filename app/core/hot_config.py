@@ -249,9 +249,7 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
         if not re.match(r'^postgresql://[^:]+:[^@]+@[^/]+/[^?]+.*', value):
             return False
         # Additional validation: check for required components
-        if 'localhost' not in value and not re.match(r'.*@[\d.]+/', value) and not re.match(r'.*@[a-zA-Z0-9.-]+/', value):
-            return False
-        return True
+        return not ("localhost" not in value and not re.match(".*@[\\d.]+/", value) and not re.match(".*@[a-zA-Z0-9.-]+/", value))
 
     def _validate_redis_url(self, value: str) -> bool:
         """Validate Redis URL format."""
@@ -264,7 +262,7 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
         if not re.match(r'^https?://[^/]+', value):
             return False
         # Prevent external URLs in production
-        if self.environment == 'production' and not ('localhost' in value or '.local' in value or value.startswith('http://10.') or value.startswith('http://172.') or value.startswith('http://192.168.')):
+        if self.environment == 'production' and not ("localhost" in value or ".local" in value or value.startswith(("http://10.", "http://172.", "http://192.168."))):
             logger.error(f"External service URL not allowed in production: {value}")
             return False
         return True
@@ -311,9 +309,8 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
                     raise SchemaValidationError(f"Parameter {parameter_key} does not match required pattern")
 
             # Custom validator
-            if schema.validator is not None:
-                if not schema.validator(new_value):
-                    raise SchemaValidationError(f"Parameter {parameter_key} failed custom validation")
+            if schema.validator is not None and not schema.validator(new_value):
+                raise SchemaValidationError(f"Parameter {parameter_key} failed custom validation")
 
             return True
 

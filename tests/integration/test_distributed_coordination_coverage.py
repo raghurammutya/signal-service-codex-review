@@ -81,12 +81,12 @@ class TestDistributedCoordinationQueueGrowth:
 
         coordination_decisions = []
 
-        for t, scenario in enumerate(queue_growth_scenario):
+        for _t, scenario in enumerate(queue_growth_scenario):
             # Update mock cluster state to reflect queue growth
             updated_state = mock_redis_cluster_state.copy()
             growth_factor = scenario["total_queue_size"] / 750  # Relative to initial state
 
-            for node_id, node_data in updated_state.items():
+            for _node_id, node_data in updated_state.items():
                 node_data["queue_size"] = int(node_data["queue_size"] * growth_factor)
                 node_data["processing_rate"] = node_data["processing_rate"] / growth_factor
 
@@ -199,7 +199,7 @@ class TestDistributedCoordinationQueueGrowth:
 
         # Verify reassignments are distributed among surviving nodes
         surviving_nodes = list(remaining_state.keys())
-        assigned_nodes = set(r["new_node"] for r in reassignments)
+        assigned_nodes = {r["new_node"] for r in reassignments}
         assert assigned_nodes.issubset(set(surviving_nodes))
 
     async def test_auto_scaling_coordination_with_metrics(self, distributed_coordinator):

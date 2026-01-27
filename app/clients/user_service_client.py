@@ -53,6 +53,7 @@ class UserServiceClient:
 
         if last_exception:
             raise last_exception
+        return None
 
     async def get_user_permissions(self, user_id: str) -> dict[str, Any] | None:
         """Get user permissions from user service with retry logic"""

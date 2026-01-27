@@ -467,7 +467,7 @@ class EnhancedTickerAdapter:
             if isinstance(ltp, dict):
                 if "value" not in ltp or "currency" not in ltp:
                     return False, "Invalid LTP format: missing value or currency"
-            elif not isinstance(ltp, (int, float, str)):
+            elif not isinstance(ltp, int | float | str):
                 return False, "Invalid LTP format: must be dict or numeric"
 
             # Validate timezone

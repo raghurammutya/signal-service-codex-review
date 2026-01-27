@@ -136,7 +136,7 @@ class Week1DeploymentManager:
                 "SIGNAL_REGISTRY_EVENT_BATCH_SIZE"
             ]
 
-            for param in required_params:
+            for _param in required_params:
                 # Simulate parameter check
                 await asyncio.sleep(0.1)  # Simulate config lookup
 

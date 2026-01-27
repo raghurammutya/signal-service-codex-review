@@ -79,7 +79,7 @@ class TestTickerServiceContract:
                 assert "low" in bar
                 assert "close" in bar
                 assert "volume" in bar
-                assert isinstance(bar["open"], (int, float))
+                assert isinstance(bar["open"], int | float)
                 assert isinstance(bar["volume"], int)
 
             # Validate request was properly formatted
@@ -349,10 +349,10 @@ class TestConfigServiceContract:
             from app.core.startup_resilience import _test_config_service
 
             # Test config service connectivity
-            result = await _test_config_service("http://mock-config:8100", "test_key")
+            await _test_config_service("http://mock-config:8100", "test_key")
 
             # Should handle response gracefully
-            assert result is not None or True  # Either successful or handled gracefully
+            assert True  # Either successful or handled gracefully
 
 
 class TestEdgeCaseContracts:
@@ -408,7 +408,7 @@ class TestEdgeCaseContracts:
                 try:
                     result = await client.get_current_market_data("AAPL")
                     # Either returns None/empty or raises handled exception
-                    assert result is None or isinstance(result, (dict, list))
+                    assert result is None or isinstance(result, dict | list)
                 except Exception as e:
                     # Should be meaningful error message
                     assert len(str(e)) > 10

@@ -206,7 +206,7 @@ async def premium_analysis_strike_range(
         current_strike = strike_min
         while current_strike <= strike_max:
             # Create both CE and PE options for each strike
-            for option_type in ['CE', 'PE']:
+            for _option_type in ['CE', 'PE']:
                 # Placeholder - would generate option data
                 pass
             current_strike += strike_step

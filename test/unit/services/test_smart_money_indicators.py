@@ -27,7 +27,7 @@ class TestSmartMoneyIndicators:
         noise = np.random.normal(0, 20, 100)
 
         ohlcv_data = []
-        for i, (date, base_price) in enumerate(zip(dates, base_prices, strict=False)):
+        for i, (_date, base_price) in enumerate(zip(dates, base_prices, strict=False)):
             price = base_price + noise[i]
 
             # Create realistic OHLC
@@ -57,7 +57,7 @@ class TestSmartMoneyIndicators:
         bos_signals = indicators.calculate_break_of_structure(sample_ohlcv_data)
 
         # Verify return type and structure
-        assert isinstance(bos_signals, (pd.Series, pd.DataFrame)), "BOS should return pandas Series or DataFrame"
+        assert isinstance(bos_signals, pd.Series | pd.DataFrame), "BOS should return pandas Series or DataFrame"
         assert len(bos_signals) == len(sample_ohlcv_data), "BOS output length should match input"
 
         # Test that it's not returning mock data (should have variation)
@@ -79,7 +79,7 @@ class TestSmartMoneyIndicators:
         choch_signals = indicators.calculate_change_of_character(sample_ohlcv_data)
 
         # Verify return type
-        assert isinstance(choch_signals, (pd.Series, pd.DataFrame)), "CHoCH should return pandas Series or DataFrame"
+        assert isinstance(choch_signals, pd.Series | pd.DataFrame), "CHoCH should return pandas Series or DataFrame"
         assert len(choch_signals) == len(sample_ohlcv_data), "CHoCH output length should match input"
 
         # Should detect some character changes in trending data
@@ -142,7 +142,7 @@ class TestSmartMoneyIndicators:
         liquidity_levels = indicators.calculate_liquidity_levels(sample_ohlcv_data)
 
         # Verify return structure
-        assert isinstance(liquidity_levels, (pd.DataFrame, dict)), "Liquidity levels should return DataFrame or dict"
+        assert isinstance(liquidity_levels, pd.DataFrame | dict), "Liquidity levels should return DataFrame or dict"
 
         if isinstance(liquidity_levels, pd.DataFrame):
             expected_columns = ['level', 'type', 'strength', 'touches']

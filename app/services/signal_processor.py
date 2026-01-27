@@ -471,7 +471,7 @@ class SignalProcessor:
                         block=settings.STREAM_READ_TIMEOUT_MS
                     )
 
-                    for stream, msgs in messages:
+                    for _stream, msgs in messages:
                         for msg_id, fields in msgs:
                             await self.process_config_update_message(msg_id, fields)
 

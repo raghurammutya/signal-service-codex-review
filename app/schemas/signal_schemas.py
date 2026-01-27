@@ -223,7 +223,7 @@ class TimeframeRequest(BaseModel):
     timeframe: str
 
     @validator('timeframe')
-    def validate_timeframe(cls, v):
+    def validate_timeframe(self, v):
         """Validate timeframe format"""
         if v.endswith('m'):
             try:

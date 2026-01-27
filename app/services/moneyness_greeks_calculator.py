@@ -534,7 +534,7 @@ class MoneynessAwareGreeksCalculator:
             "strikes": {
                 "min": min(r.strike_price for r in results),
                 "max": max(r.strike_price for r in results),
-                "count": len(set(r.strike_price for r in results))
+                "count": len({r.strike_price for r in results})
             }
         }
 

@@ -102,7 +102,7 @@ class InstrumentRegistryCache:
     def invalidate(self, pattern: str = None) -> None:
         """Invalidate cache entries matching pattern"""
         if pattern:
-            keys_to_remove = [k for k in self.cache.keys() if pattern in k]
+            keys_to_remove = [k for k in self.cache if pattern in k]
             for key in keys_to_remove:
                 del self.cache[key]
                 logger.debug(f"Invalidated cache key: {key}")

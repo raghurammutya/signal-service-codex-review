@@ -332,7 +332,7 @@ async def get_active_connections(
             return {"error": "WebSocket manager not initialized"}
 
         connections = []
-        for client_id, websocket in manager.active_connections.items():
+        for client_id, _websocket in manager.active_connections.items():
             subscriptions = list(manager.connection_subscriptions.get(client_id, set()))
             connections.append({
                 "client_id": client_id,

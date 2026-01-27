@@ -139,7 +139,7 @@ class TestMetricsCollectorPositiveCoverage:
     async def test_health_score_calculation_positive_path(self, metrics_collector):
         """Test health score calculation with positive metrics."""
         # Set up positive metrics scenario
-        for i in range(20):
+        for _i in range(20):
             metrics_collector.record_request(
                 endpoint="/api/v1/signals/greeks",
                 duration_ms=120.0,  # Good response time
@@ -173,7 +173,7 @@ class TestMetricsCollectorPositiveCoverage:
     async def test_circuit_breaker_metrics_positive_tracking(self, metrics_collector):
         """Test circuit breaker metrics tracking with positive outcomes."""
         # Record successful circuit breaker operations
-        for i in range(10):
+        for _i in range(10):
             metrics_collector.record_circuit_breaker_event(
                 breaker_type='vectorized_greeks',
                 event='call_success',
@@ -217,7 +217,7 @@ class TestMetricsCollectorPositiveCoverage:
         """Test metrics collection under concurrent load."""
         async def record_metrics(worker_id: int):
             """Worker function to record metrics concurrently."""
-            for i in range(10):
+            for _i in range(10):
                 metrics_collector.record_request(
                     endpoint=f"/worker/{worker_id}",
                     duration_ms=100.0 + worker_id,
@@ -517,7 +517,7 @@ class TestMetricsIntegrationPositiveCoverage:
 
         # Simulate high-frequency positive operations
         async def generate_positive_load():
-            for i in range(100):
+            for _i in range(100):
                 metrics_collector.record_request(
                     endpoint="/api/v1/signals/stream",
                     duration_ms=50.0,  # Fast response

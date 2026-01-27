@@ -241,7 +241,7 @@ class TestMemoryPerformance:
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
 
         # Process many signals
-        for batch in range(10):
+        for _batch in range(10):
             instruments = [f'NSE@MEM{i}@equity_options@2025-07-10@call@{21000+i}'
                           for i in range(100)]
 

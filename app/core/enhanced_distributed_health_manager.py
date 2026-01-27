@@ -474,8 +474,7 @@ class EnhancedDistributedHealthManager:
                     cv = std_dev / mean_rate
 
                     # Convert to balance score (lower CV = better balance)
-                    balance_score = max(0, 100 - (cv * 100))
-                    return balance_score
+                    return max(0, 100 - (cv * 100))
 
             return 100.0
 

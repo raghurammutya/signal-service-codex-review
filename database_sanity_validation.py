@@ -30,7 +30,7 @@ class DatabaseSanityValidation:
             model_files = []
             schema_patterns = ['model', 'schema', 'table', 'database', 'repository']
 
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         # Check if filename suggests database models
@@ -102,7 +102,7 @@ class DatabaseSanityValidation:
                 "signal_greeks", "signal_indicators", "time_series"
             ]
 
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         file_path = os.path.join(root, file)
@@ -126,7 +126,7 @@ class DatabaseSanityValidation:
 
             for dir_name in migration_dirs:
                 if os.path.exists(dir_name):
-                    for root, dirs, files in os.walk(dir_name):
+                    for root, _dirs, files in os.walk(dir_name):
                         for file in files:
                             if file.endswith('.sql') or 'migration' in file.lower():
                                 migration_files.append(os.path.join(root, file))
@@ -238,7 +238,7 @@ class DatabaseSanityValidation:
             ]
 
             # Search for table references across codebase
-            for root, dirs, files in os.walk("app"):
+            for root, _dirs, files in os.walk("app"):
                 for file in files:
                     if file.endswith('.py'):
                         file_path = os.path.join(root, file)

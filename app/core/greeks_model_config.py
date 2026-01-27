@@ -106,7 +106,7 @@ class GreeksModelConfig:
             logger.info(f"Greeks model configuration initialized: {self._model_name}")
 
         except Exception as e:
-            if isinstance(e, (UnsupportedModelError, ConfigurationError)):
+            if isinstance(e, UnsupportedModelError | ConfigurationError):
                 raise
             raise ConfigurationError(
                 f"Failed to initialize Greeks model configuration: {str(e)}",

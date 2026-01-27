@@ -87,3 +87,4 @@ async def retry_with_exponential_backoff(
                 raise
             await asyncio.sleep(min(delay, max_delay))
             delay = min(delay * factor, max_delay)
+    return None

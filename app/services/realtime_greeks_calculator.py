@@ -225,10 +225,7 @@ class RealTimeGreeksCalculator:
             for field in price_fields:
                 if field in tick_data:
                     price_data = tick_data[field]
-                    if isinstance(price_data, dict):
-                        price = price_data.get('value')
-                    else:
-                        price = price_data
+                    price = price_data.get("value") if isinstance(price_data, dict) else price_data
 
                     if price is not None:
                         try:
@@ -323,7 +320,7 @@ class RealTimeGreeksCalculator:
             # Calculate implied volatility as fallback
             time_to_expiry = self.engine.calculate_time_to_expiry(option_details['expiry_date'])
 
-            implied_vol = await self.engine.calculate_implied_volatility(
+            return await self.engine.calculate_implied_volatility(
                 option_price,
                 underlying_price,
                 option_details['strike'],
@@ -332,7 +329,6 @@ class RealTimeGreeksCalculator:
                 greeks_config.risk_free_rate
             )
 
-            return implied_vol
 
         except Exception as e:
             log_exception(f"Failed to get volatility: {e}")

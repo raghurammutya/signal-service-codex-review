@@ -103,10 +103,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
             return False
 
         # Check status code (only compress successful responses)
-        if response.status_code >= 300:
-            return False
-
-        return True
+        return not response.status_code >= 300
 
     def _compress_body(self, body: bytes, accept_encoding: str) -> tuple[bytes, str]:
         """

@@ -5,6 +5,7 @@ Critical End-to-End Smoke Tests
 Tests critical flows with minimal bootstrap variables to validate production readiness.
 """
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -201,20 +202,14 @@ async def test_production_hardening_integration():
             # Test that all key components are importable
             components_tested = []
 
-            try:
+            with contextlib.suppress(Exception):
                 components_tested.append("client_factory")
-            except:
-                pass
 
-            try:
+            with contextlib.suppress(Exception):
                 components_tested.append("budget_config")
-            except:
-                pass
 
-            try:
+            with contextlib.suppress(Exception):
                 components_tested.append("metrics_service")
-            except:
-                pass
 
             print(f"    ✅ Production hardening components available: {len(components_tested)}/3")
             return len(components_tested) >= 2

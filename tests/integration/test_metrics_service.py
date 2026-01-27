@@ -31,7 +31,7 @@ class TestMetricsServiceIntegration:
 
             # Simulate different response scenarios
             if "timeout" in url:
-                raise aiohttp.ServerTimeoutError()
+                raise aiohttp.ServerTimeoutError
             if "error" in url:
                 response_mock.status = 500
                 response_mock.text = AsyncMock(return_value="Internal server error")

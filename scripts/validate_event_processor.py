@@ -120,7 +120,7 @@ class EventProcessorValidator:
         compatibility_test = await self._test_backward_compatibility()
 
         # Generate migration report
-        migration_report = {
+        return {
             "validation_type": "event_migration",
             "event_migration": {
                 "validation_timestamp": datetime.now().isoformat(),
@@ -160,7 +160,6 @@ class EventProcessorValidator:
             }
         }
 
-        return migration_report
 
     async def validate_performance_only(self, event_count: int = 10000) -> dict[str, Any]:
         """
@@ -188,7 +187,7 @@ class EventProcessorValidator:
         # Ordering test under load
         ordering_test_results = await self._test_ordering_under_load()
 
-        performance_report = {
+        return {
             "performance_timestamp": datetime.now().isoformat(),
             "test_configuration": {
                 "event_count": event_count,
@@ -215,7 +214,6 @@ class EventProcessorValidator:
             }
         }
 
-        return performance_report
 
     async def _validate_single_event(self, event_id: str, event_entry: dict[str, Any]) -> EventValidationResult:
         """Validate individual event migration"""
@@ -338,7 +336,7 @@ class EventProcessorValidator:
             try:
                 if isinstance(timestamp, str):
                     datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                elif isinstance(timestamp, (int, float)):
+                elif isinstance(timestamp, int | float):
                     if timestamp < 0 or timestamp > time.time() + 86400:  # Future events allowed up to 24h
                         errors.append("Event timestamp out of reasonable range")
             except (ValueError, TypeError):
@@ -464,7 +462,7 @@ class EventProcessorValidator:
 
         async def concurrent_event_batch():
             latencies = []
-            for i in range(50):  # Each stream processes 50 events
+            for _i in range(50):  # Each stream processes 50 events
                 event = self._generate_synthetic_event()
                 start_time = time.time()
                 await self._process_event(event)

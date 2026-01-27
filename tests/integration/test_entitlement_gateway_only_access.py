@@ -120,7 +120,7 @@ class TestGatewayOnlyAccess:
             response = client.get("/api/v1/health", headers=headers)
 
             # Any attempt with Authorization header should be rejected
-            if any("authorization" in k.lower() for k in headers.keys()):
+            if any("authorization" in k.lower() for k in headers):
                 assert response.status_code == 403, f"Bypass attempt not blocked: {headers}"
 
     def test_entitlement_verification_flow(self):
@@ -221,7 +221,7 @@ class TestGatewayOnlyAccess:
 
         # Make multiple requests to test rate limiting
         responses = []
-        for i in range(5):
+        for _i in range(5):
             response = client.get("/api/v1/health", headers=user_headers)
             responses.append(response.status_code)
 
@@ -289,7 +289,7 @@ class TestEntitlementVerificationPaths:
             ("enterprise-user", {"X-Gateway-User-ID": "enterprise-user-789", "X-Gateway-User-Tier": "enterprise"})
         ]
 
-        for user_type, headers in tier_tests:
+        for _user_type, headers in tier_tests:
             response = client.get("/api/v1/health", headers=headers)
 
             # Should accept gateway-provided tier information

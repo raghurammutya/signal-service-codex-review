@@ -79,7 +79,7 @@ class TestPrometheusScrapeFOrmat:
 
             if line.startswith('#'):
                 # Validate comment format
-                assert line.startswith('# HELP ') or line.startswith('# TYPE ')
+                assert line.startswith(("# HELP ", "# TYPE "))
                 continue
 
             # Validate metric line format

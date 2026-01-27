@@ -301,7 +301,7 @@ class WorkerPool:
         queue_sizes = []
 
         worker_metrics = []
-        for worker_id, queue in self.workers.items():
+        for _worker_id, queue in self.workers.items():
             metrics = queue.get_metrics()
             worker_metrics.append(metrics)
 

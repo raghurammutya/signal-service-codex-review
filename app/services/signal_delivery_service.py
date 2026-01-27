@@ -66,6 +66,7 @@ class SignalDeliveryService:
         self._total_delivery_attempts = 0
 
         logger.info("SignalDeliveryService initialized with API delegation")
+        return None
 
     async def deliver_signal(
         self,

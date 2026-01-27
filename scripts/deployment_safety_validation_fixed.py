@@ -105,7 +105,7 @@ class ConfigServiceDeploymentValidator:
                         ))
 
                 elif var == "CONFIG_SERVICE_URL":
-                    if not (value.startswith("http://") or value.startswith("https://")):
+                    if not (value.startswith(('http://', 'https://'))):
                         results.append(ValidationResult(
                             name="bootstrap_config_url_format",
                             passed=False,

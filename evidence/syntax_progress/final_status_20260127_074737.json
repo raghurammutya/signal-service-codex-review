@@ -1,0 +1,30 @@
+{
+  "timestamp": "20260127_074737",
+  "campaign_success": false,
+  "current_status": {
+    "total_violations": 6191,
+    "syntax_errors": 12,
+    "other_critical": 6,
+    "p0_total": 18,
+    "timestamp": "2026-01-27T07:47:37.635948",
+    "ruff_output": "3425\tW293  \t[ ] blank-line-with-whitespace\n 556\tUP006 \t[*] non-pep585-annotation\n 277\tB904  \t[ ] raise-without-from-inside-except\n 271\tW291  \t[ ] trailing-whitespace\n 214\tUP035 \t[ ] deprecated-import\n 166\tUP007 \t[*] non-pep604-annotation\n 158\tSIM117\t[ ] multiple-with-statements\n 154\tF401  \t[ ] unused-import\n 117\tF841  \t[*] unused-variable\n 104\tB007  \t[ ] unused-loop-control-variable\n 104\tRET504\t[*] unnecessary-assign\n  73\tI001  \t[*] unsorted-imports\n  55\tRET505\t[*] superfluous-else-return\n  52\tSIM102\t[ ] collapsible-if\n  52\tE402  \t[ ] module-import-not-at-top-of-file\n  46\tF541  \t[*] f-string-missing-placeholders\n  45\tE722  \t[ ] bare-except\n  43\tUP038 \t[*] non-pep604-isinstance\n  29\tB905  \t[*] zip-without-explicit-strict\n  28\tW292  \t[*] missing-newline-at-end-of-file\n  21\tSIM105\t[ ] suppressible-exception\n  21\tE712  \t[*] true-false-comparison\n  18\tSIM103\t[ ] needless-bool\n  16\tSIM118\t[*] in-dict-keys\n  15\tN805  \t[*] invalid-first-argument-name-for-method\n  13\tB017  \t[ ] assert-raises-exception\n  12\t      \t[ ] syntax-error\n  11\tPIE810\t[*] multiple-starts-ends-with\n  11\tSIM108\t[ ] if-else-block-instead-of-if-exp\n   8\tC401  \t[*] unnecessary-generator-set\n   7\tB023  \t[ ] function-uses-loop-variable\n   7\tUP017 \t[*] datetime-timezone-utc\n   6\tPIE790\t[*] unnecessary-placeholder\n   6\tRET503\t[*] implicit-return\n   6\tRET506\t[*] superfluous-else-raise\n   6\tSIM114\t[*] if-with-same-arms\n   6\tF402  \t[ ] import-shadowed-by-loop-var\n   5\tUP041 \t[*] timeout-error-alias\n   3\tC416  \t[*] unnecessary-comprehension\n   3\tSIM110\t[*] reimplemented-builtin\n   2\tB006  \t[*] mutable-argument-default\n   2\tSIM222\t[*] expr-or-true\n   2\tN802  \t[ ] invalid-function-name\n   2\tN818  \t[ ] error-suffix-on-exception-name\n   2\tE721  \t[ ] type-comparison\n   2\tE741  \t[ ] ambiguous-variable-name\n   2\tUP015 \t[*] redundant-open-modes\n   1\tB011  \t[*] assert-false\n   1\tB019  \t[ ] cached-instance-method\n   1\tB025  \t[ ] duplicate-try-block-exception\n   1\tC403  \t[*] unnecessary-list-comprehension-set\n   1\tRSE102\t[*] unnecessary-paren-on-raise-exception\n   1\tTCH001\t[*] typing-only-first-party-import\n   1\tTCH002\t[*] typing-only-third-party-import\n[*] fixable with `ruff check --fix`\n"
+  },
+  "campaign_metrics": {
+    "baseline_syntax_errors": 1950,
+    "current_syntax_errors": 12,
+    "syntax_errors_fixed": 1938,
+    "syntax_completion_percent": 99.38461538461539,
+    "baseline_files": 43,
+    "current_total_violations": 6191,
+    "current_p0_total": 18,
+    "campaign_success": false,
+    "syntax_resolved": false,
+    "all_critical_resolved": false,
+    "completion_timestamp": "2026-01-27T07:47:37.635948",
+    "baseline_reference": "evidence/syntax_triage/syntax_errors_raw_20260127_061953.json"
+  },
+  "artifacts": {
+    "progress_report": "evidence/syntax_progress/campaign_progress_20260127_074737.md",
+    "notification": "evidence/syntax_progress/success_notification_20260127_074737.json"
+  }
+}

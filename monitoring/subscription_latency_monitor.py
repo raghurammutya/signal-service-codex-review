@@ -134,7 +134,7 @@ class SubscriptionLatencyMonitor:
         self.current_load_level = load_level
 
         # Calculate load impact on latencies
-        load_analysis = {
+        return {
             "current_load_level": load_level,
             "operations_per_minute": total_ops_per_minute,
             "latency_impact": {
@@ -144,7 +144,7 @@ class SubscriptionLatencyMonitor:
                     "sla_margin_ms": self.sla_thresholds["p95_critical_ms"] - metrics[op_type].p95_ms,
                     "sla_risk": "HIGH" if metrics[op_type].p95_ms > self.sla_thresholds["p95_warning_ms"] else "LOW"
                 }
-                for op_type in metrics.keys()
+                for op_type in metrics
             },
             "day_2_readiness": {
                 "streaming_pressure_tolerance": load_level != "high",
@@ -156,7 +156,6 @@ class SubscriptionLatencyMonitor:
             }
         }
 
-        return load_analysis
 
     async def generate_sla_compliance_report(self) -> dict[str, Any]:
         """Generate comprehensive SLA compliance report"""

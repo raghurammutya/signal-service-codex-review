@@ -31,8 +31,7 @@ class TestSignalWatermarkService:
     def watermark_service(self, mock_settings):
         """Create watermark service with mocked settings."""
         with patch('app.services.watermark_integration.settings', mock_settings):
-            service = SignalWatermarkService()
-            return service
+            return SignalWatermarkService()
 
     @pytest.fixture
     def sample_signal_data(self):
