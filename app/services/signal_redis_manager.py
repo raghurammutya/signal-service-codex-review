@@ -5,6 +5,7 @@ Provides cluster-aware Redis operations with proper key patterns
 
 import json
 import logging
+from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
@@ -395,12 +396,9 @@ class SignalRedisManager:
         try:
             stream_key = self.streams["indicator_requests"].format(priority=priority)
 
-            # Create consumer group if needed
-            try:
+            # Create consumer group if needed (suppress if already exists)
+            with suppress(Exception):
                 await self.redis_client.xgroup_create(stream_key, consumer_group, id="0")
-            except Exception:
-                # Consumer group already exists, continue
-                pass
             # Read messages
             messages = await self.redis_client.xreadgroup(
                 consumer_group,
