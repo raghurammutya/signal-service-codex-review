@@ -38,7 +38,7 @@ def fix_b904_violation(file_path: str, line_no: int) -> bool:
         if 'raise ' in line and ' from ' not in line:
             # Check if line ends with a closing parenthesis or quote
             stripped = line.rstrip()
-            if stripped.endswith(')') or stripped.endswith('"') or stripped.endswith("'"):
+            if stripped.endswith((')', '"', "'")):
                 # Add ' from e' before the newline
                 new_line = stripped + ' from e\n'
                 lines[line_no - 1] = new_line

@@ -135,7 +135,7 @@ class ExternalFunctionExecutor:
                 log_info(f"External function {func_config.name} executed successfully")
                 return result
 
-            except TimeoutError:
+            except TimeoutError as e:
                 error_msg = f"Function {func_config.name} timed out after {func_config.timeout}s"
                 log_exception(error_msg)
                 raise ExternalFunctionExecutionError(error_msg) from e
@@ -616,7 +616,7 @@ class ExternalFunctionExecutor:
                 self.execution_count += 1
                 return result
 
-            except TimeoutError:
+            except TimeoutError as e:
                 error_msg = f"Function {func_config.name} timed out after {func_config.timeout}s"
                 log_exception(error_msg)
                 self.error_count += 1

@@ -6,7 +6,7 @@ This script eliminates ALL remaining SIM117 violations using advanced AST parsin
 and pattern detection. It handles:
 
 1. Async with statements with aiohttp.ClientSession + session.get/post patterns
-2. Multi-line with statements that span multiple lines  
+2. Multi-line with statements that span multiple lines
 3. Complex patch combinations with environment variables and multiple patches
 4. Nested patch.dict patterns with ImportError side effects
 5. Mixed sync/async contexts
@@ -111,7 +111,7 @@ class SIM117Fixer:
                     # Check if the body contains another with statement as the first statement
                     if len(node.body) > 0:
                         first_stmt = node.body[0]
-                        if isinstance(first_stmt, (ast.With, ast.AsyncWith)):
+                        if isinstance(first_stmt, ast.With | ast.AsyncWith):
                             # Found nested with statement
                             outer_line = node.lineno - 1  # Convert to 0-based
                             inner_line = first_stmt.lineno - 1

@@ -159,14 +159,13 @@ def fix_nested_with(lines, violation_line_num):
                 adjusted_body.append(line)  # Keep empty lines as-is
 
         # Reconstruct file
-        new_lines = (
+        return (
             lines[:start_idx] +  # Before the with blocks
             [combined_with] +    # Combined with statement
             adjusted_body +      # Adjusted body
             lines[current_idx:]  # After the body
         )
 
-        return new_lines
 
     except Exception as e:
         print(f"Error fixing nested with at line {violation_line_num}: {e}")

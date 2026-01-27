@@ -167,7 +167,7 @@ class EnhancedWatermarkIntegration:
 
             return gateway_secret
 
-        except AttributeError:
+        except AttributeError as e:
             raise SecurityError("GATEWAY_SECRET not configured in config service") from e
         except Exception as e:
             raise SecurityError(f"Failed to get gateway secret from config service: {e}") from e
@@ -217,7 +217,7 @@ class EnhancedWatermarkIntegration:
             # Parse response with validation
             try:
                 result = response.json()
-            except (ValueError, json.JSONDecodeError):
+            except (ValueError, json.JSONDecodeError) as e:
                 raise WatermarkError("Invalid watermark service response - malformed JSON") from e
 
             # Validate response structure
@@ -241,9 +241,9 @@ class EnhancedWatermarkIntegration:
 
             return watermarked_data
 
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as e:
             raise WatermarkError("Watermarking request timeout - service unavailable") from e
-        except httpx.ConnectError:
+        except httpx.ConnectError as e:
             raise WatermarkError("Watermarking service unavailable - connection failed") from e
         except httpx.RequestError as e:
             raise WatermarkError(f"Watermarking request failed: {e}") from e

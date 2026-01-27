@@ -143,14 +143,13 @@ def fix_nested_if(lines, violation_line_num):
             body_idx += 1
 
         # Replace the lines
-        new_lines = (
+        return (
             lines[:outer_if_idx] +
             [new_if_line] +
             body_lines +
             lines[body_idx:]
         )
 
-        return new_lines
 
     except Exception as e:
         print(f"Error fixing nested if at line {violation_line_num}: {e}")

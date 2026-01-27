@@ -56,7 +56,7 @@ def fix_e402_violations():
                 stripped = line.strip()
 
                 # Handle docstring detection
-                if not in_docstring and (stripped.startswith('"""') or stripped.startswith("'''")):
+                if not in_docstring and (stripped.startswith(('"""', "'''"))):
                     docstring_char = stripped[:3]
                     in_docstring = True
                     if stripped.endswith(docstring_char) and len(stripped) > 3:
@@ -65,7 +65,7 @@ def fix_e402_violations():
                 elif in_docstring and stripped.endswith(docstring_char):
                     in_docstring = False
                     insert_position = i + 1
-                elif not in_docstring and (stripped.startswith('import ') or stripped.startswith('from ')):
+                elif not in_docstring and (stripped.startswith(('import ', 'from '))):
                     insert_position = i + 1
                 elif not in_docstring and stripped and not stripped.startswith('#'):
                     break

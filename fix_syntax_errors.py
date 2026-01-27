@@ -65,16 +65,15 @@ def fix_common_syntax_patterns(content):
     content = re.sub(r'(\bwith\s+[^:]+),\s*:', r'\1:', content)
 
     # Pattern 9: Fix malformed patch calls with empty arguments
-    content = re.sub(r"patch\('([^']+)',\s*,", r"patch('\1',", content)
+    return re.sub(r"patch\('([^']+)',\s*,", r"patch('\1',", content)
 
-    return content
 
 
 def fix_indentation_issues(lines):
     """Fix indentation issues from automated combining."""
     fixed_lines = []
 
-    for i, line in enumerate(lines):
+    for _i, line in enumerate(lines):
         # Check for excessive indentation (more than 20 spaces)
         if line.strip() and len(line) - len(line.lstrip()) > 20:
             # Reduce to more reasonable indentation
@@ -135,7 +134,7 @@ def main():
     fixed_files = 0
 
     # Fix each file
-    for file_path in error_files.keys():
+    for file_path in error_files:
         if fix_file_syntax_errors(file_path):
             print(f"✅ Fixed syntax errors in {file_path}")
             fixed_files += 1

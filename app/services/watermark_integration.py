@@ -58,7 +58,7 @@ class SignalWatermarkService:
 
                 log_info(f"Watermark service configured from config service - policy: {self._enforcement_policy}")
 
-            except ImportError:
+            except ImportError as e:
                 log_error("Config service not available - watermark service cannot operate")
                 raise RuntimeError("Config service required for watermark configuration") from e
         except Exception as e:

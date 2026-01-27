@@ -76,7 +76,7 @@ def fix_unused_import(file_path, line_num, violation_text):
             return False
 
         # Simple unused import - remove the line
-        if stripped.startswith('import ') or stripped.startswith('from '):
+        if stripped.startswith(('import ', 'from ')):
             # Check if removing this line would create syntax issues
             # by looking for multi-line import statements
             if '(' in original_line and ')' not in original_line:
