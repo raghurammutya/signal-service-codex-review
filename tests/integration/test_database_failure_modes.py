@@ -501,8 +501,8 @@ class TestSchemaDriftDetection:
         ]
 
         for exception_class, error_message in constraint_violations:
-            async def mock_constraint_violation(query, *args):
-                raise exception_class(error_message)
+            async def mock_constraint_violation(query, *args, exc_class=exception_class, err_msg=error_message):
+                raise exc_class(err_msg)
 
             mock_connection = AsyncMock()
             mock_connection.execute = mock_constraint_violation

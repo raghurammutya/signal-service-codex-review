@@ -51,14 +51,13 @@ class PandasTAComprehensiveTester:
             if not attr.startswith('_') and not attr.startswith('__'):
                 try:
                     func = getattr(ta, attr)
-                    if callable(func) and hasattr(func, '__doc__'):
-                        # Filter out utility functions
-                        if not any(skip in attr.lower() for skip in [
+                    if (callable(func) and hasattr(func, '__doc__') and
+                        not any(skip in attr.lower() for skip in [
                             'category', 'camelcase', 'deprecated', 'utils', 'version',
                             'donchian', 'increasing', 'decreasing', 'cross', 'signals',
                             'above', 'below', 'long_run', 'short_run'
-                        ]):
-                            indicators.append(attr)
+                        ])):
+                        indicators.append(attr)
                 except Exception:
                     pass
 
@@ -618,19 +617,16 @@ class PandasTAComprehensiveTester:
         max_val = float(result.max())
 
         # RSI should be between 0 and 100
-        if 'rsi' in indicator_name.lower():
-            if min_val < 0 or max_val > 100:
-                validation['issues'].append(f'RSI values outside 0-100 range: {min_val:.2f} to {max_val:.2f}')
+        if 'rsi' in indicator_name.lower() and (min_val < 0 or max_val > 100):
+            validation['issues'].append(f'RSI values outside 0-100 range: {min_val:.2f} to {max_val:.2f}')
 
         # Williams %R should be between -100 and 0
-        if 'willr' in indicator_name.lower():
-            if min_val < -100 or max_val > 0:
-                validation['issues'].append(f'Williams %R values outside -100 to 0 range: {min_val:.2f} to {max_val:.2f}')
+        if 'willr' in indicator_name.lower() and (min_val < -100 or max_val > 0):
+            validation['issues'].append(f'Williams %R values outside -100 to 0 range: {min_val:.2f} to {max_val:.2f}')
 
         # ATR should be positive
-        if 'atr' in indicator_name.lower() and not indicator_name.lower().startswith('natr'):
-            if min_val < 0:
-                validation['issues'].append(f'ATR should be positive, got minimum: {min_val:.4f}')
+        if 'atr' in indicator_name.lower() and not indicator_name.lower().startswith('natr') and min_val < 0:
+            validation['issues'].append(f'ATR should be positive, got minimum: {min_val:.4f}')
 
         # Volume indicators should generally follow volume patterns
         if 'obv' in indicator_name.lower():

@@ -245,13 +245,13 @@ class TestOptionalDependenciesComputationErrors:
     patch('builtins.__import__', side_effect=ImportError(f"No module named '{missing_lib}'"))
 ):
                     # Mock a function that requires this specific library
-                    def dependency_requiring_function():
+                    def dependency_requiring_function(lib=missing_lib, desc=description):
                         try:
-                            __import__(missing_lib)
+                            __import__(lib)
                             return "success"
                         except ImportError as e:
                             raise ComputationError(
-                                f"Optional dependency '{missing_lib}' required for {description} "
+                                f"Optional dependency '{lib}' required for {desc} "
                                 f"but not available: {e}"
                             ) from e
 

@@ -116,41 +116,39 @@ def fix_signal_execution():
 
     # Find and fix the patch.object nested with pattern around line 238
     for i, line in enumerate(lines):
-        if "with patch.object(" in line and "SignalExecutor" in line:
-            # This should be around line 237-248
-            if i > 230:  # Make sure we're in the right area
-                indent = line[:len(line) - len(line.lstrip())]
+        if "with patch.object(" in line and "SignalExecutor" in line and i > 230:  # Make sure we're in the right area
+            indent = line[:len(line) - len(line.lstrip())]
 
-                # Find the end of the first patch.object
-                end_first_patch = i
-                while end_first_patch < len(lines) and not lines[end_first_patch].strip().endswith('):'):
-                    end_first_patch += 1
+            # Find the end of the first patch.object
+            end_first_patch = i
+            while end_first_patch < len(lines) and not lines[end_first_patch].strip().endswith('):'):
+                end_first_patch += 1
 
-                # Find the nested with patch.object
-                nested_start = end_first_patch + 1
-                while nested_start < len(lines) and "with patch.object(SignalExecutor, 'publish_to_redis'" not in lines[nested_start]:
-                    nested_start += 1
+            # Find the nested with patch.object
+            nested_start = end_first_patch + 1
+            while nested_start < len(lines) and "with patch.object(SignalExecutor, 'publish_to_redis'" not in lines[nested_start]:
+                nested_start += 1
 
-                if nested_start < len(lines):
-                    # Create merged version
-                    new_lines = [
-                        f"{indent}with (\n",
-                        f"{indent}    patch.object(\n",
-                        f"{indent}        SignalExecutor,\n",
-                        f"{indent}        'fetch_marketplace_script',\n",
-                        f"{indent}        return_value={{\n",
-                        f"{indent}            \"content\": sample_script,\n",
-                        f"{indent}            \"metadata\": {{}},\n",
-                        f"{indent}            \"product_id\": \"prod-123\"\n",
-                        f"{indent}        }}\n",
-                        f"{indent}    ),\n",
-                        f"{indent}    patch.object(SignalExecutor, 'publish_to_redis', return_value=True)\n",
-                        f"{indent}):\n"
-                    ]
+            if nested_start < len(lines):
+                # Create merged version
+                new_lines = [
+                    f"{indent}with (\n",
+                    f"{indent}    patch.object(\n",
+                    f"{indent}        SignalExecutor,\n",
+                    f"{indent}        'fetch_marketplace_script',\n",
+                    f"{indent}        return_value={{\n",
+                    f"{indent}            \"content\": sample_script,\n",
+                    f"{indent}            \"metadata\": {{}},\n",
+                    f"{indent}            \"product_id\": \"prod-123\"\n",
+                    f"{indent}        }}\n",
+                    f"{indent}    ),\n",
+                    f"{indent}    patch.object(SignalExecutor, 'publish_to_redis', return_value=True)\n",
+                    f"{indent}):\n"
+                ]
 
-                    # Replace the original lines
-                    lines[i:nested_start + 1] = new_lines
-                    break
+                # Replace the original lines
+                lines[i:nested_start + 1] = new_lines
+                break
 
     with open(file_path, 'w') as f:
         f.writelines(lines)

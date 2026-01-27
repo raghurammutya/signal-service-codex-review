@@ -354,7 +354,7 @@ class TestGatewayACLIntegration:
             task = asyncio.create_task(
                 asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: test_client.get("/test/protected", headers=config["headers"])
+                    lambda current_config=config: test_client.get("/test/protected", headers=current_config["headers"])
                 )
             )
             tasks.append((task, config["expected_codes"]))

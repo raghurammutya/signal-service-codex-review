@@ -43,12 +43,12 @@ def search_for_indicator(search_terms, all_functions):
         term_lower = term.lower()
         for func in all_functions:
             func_lower = func.lower()
-            if (term_lower in func_lower or
+            if ((term_lower in func_lower or
                 func_lower in term_lower or
                 # Check for abbreviation matches
-                any(t in func_lower for t in term_lower.split('_'))):
-                if func not in matches:
-                    matches.append(func)
+                any(t in func_lower for t in term_lower.split('_'))) and
+                func not in matches):
+                matches.append(func)
 
     return matches
 

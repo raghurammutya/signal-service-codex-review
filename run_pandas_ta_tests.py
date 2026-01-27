@@ -104,16 +104,15 @@ class PandasTATestRunner:
             if not attr.startswith('_') and not attr.startswith('__'):
                 try:
                     func = getattr(ta, attr)
-                    if callable(func) and hasattr(func, '__doc__'):
-                        # Filter out utility functions
-                        if not any(skip in attr.lower() for skip in [
+                    if (callable(func) and hasattr(func, '__doc__') and
+                        not any(skip in attr.lower() for skip in [
                             'category', 'camelcase', 'deprecated', 'utils', 'version',
                             'donchian', 'increasing', 'decreasing', 'cross', 'signals',
                             'above', 'below', 'long_run', 'short_run', 'hl2', 'hlc3',
                             'ohlc4', 'typical_price', 'weighted_close', 'cov', 'corr',
                             'log', 'true_range', 'cumulative', 'percent_return'
-                        ]):
-                            indicators.append(attr)
+                        ])):
+                        indicators.append(attr)
                 except Exception:
                     pass
 
