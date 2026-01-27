@@ -151,7 +151,7 @@ async def enrich_historical_batch(
         raise
     except Exception as e:
         log_exception(f"Error in historical enrichment: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/realtime/stream")
@@ -249,7 +249,7 @@ async def enrich_realtime_stream(
         raise
     except Exception as e:
         log_exception(f"Error in realtime enrichment: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/templates/create")
@@ -325,7 +325,7 @@ async def create_enrichment_template(
         raise
     except Exception as e:
         log_exception(f"Error creating enrichment template: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/templates")
@@ -403,7 +403,7 @@ async def list_enrichment_templates() -> dict[str, Any]:
 
     except Exception as e:
         log_exception(f"Error listing enrichment templates: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/capabilities")
@@ -445,7 +445,7 @@ async def get_enrichment_capabilities() -> dict[str, Any]:
 
     except Exception as e:
         log_exception(f"Error getting enrichment capabilities: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/validate")
@@ -520,4 +520,4 @@ async def validate_enrichment_request(
 
     except Exception as e:
         log_exception(f"Error validating enrichment request: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

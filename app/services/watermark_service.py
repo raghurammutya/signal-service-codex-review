@@ -63,7 +63,7 @@ class WatermarkService:
         except Exception as e:
             logger.error(f"Watermark application failed: {e}")
             # Fail-secure: raise exception rather than returning unwatermarked data
-            raise WatermarkValidationError(f"Watermarking failed: {e}")
+            raise WatermarkValidationError(f"Watermarking failed: {e}") from e
 
     def validate_watermark(self, data: dict[str, Any], expected_user_id: str) -> bool:
         """

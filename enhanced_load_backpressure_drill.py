@@ -179,7 +179,7 @@ class EnhancedLoadBackpressureDrill:
         except Exception as e:
             request_end = time.time()
             latency_ms = (request_end - request_start) * 1000
-            raise Exception(f"Request {request_id} failed after {latency_ms:.2f}ms: {e}")
+            raise Exception(f"Request {request_id} failed after {latency_ms:.2f}ms: {e}") from e
 
     async def simulate_metrics_export_load(self, duration_seconds: int = 20) -> LoadTestResult:
         """Simulate load on metrics export system."""

@@ -315,7 +315,7 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
             return True
 
         except (ValueError, TypeError) as e:
-            raise SchemaValidationError(f"Parameter {parameter_key} validation error: {str(e)}")
+            raise SchemaValidationError(f"Parameter {parameter_key} validation error: {str(e)}") from e
 
     def store_parameter_rollback(self, parameter_key: str, old_value: Any):
         """Store parameter value for potential rollback."""

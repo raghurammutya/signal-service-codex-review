@@ -72,12 +72,12 @@ class ConfigServiceClient:
         except httpx.RequestError as e:
             logger.error(f"Config service request failed for secret {key}: {e}")
             if required:
-                raise ConfigServiceError(f"Config service unreachable for secret {key}: {e}")
+                raise ConfigServiceError(f"Config service unreachable for secret {key}: {e}") from e
             return None
         except Exception as e:
             logger.error(f"Failed to retrieve secret {key}: {e}")
             if required:
-                raise ConfigServiceError(f"Config service error retrieving {key}: {e}")
+                raise ConfigServiceError(f"Config service error retrieving {key}: {e}") from e
             return None
 
     def get_config(self, key: str, required: bool = True) -> str | None:
@@ -112,12 +112,12 @@ class ConfigServiceClient:
         except httpx.RequestError as e:
             logger.error(f"Config service request failed for config {key}: {e}")
             if required:
-                raise ConfigServiceError(f"Config service unreachable for config {key}: {e}")
+                raise ConfigServiceError(f"Config service unreachable for config {key}: {e}") from e
             return None
         except Exception as e:
             logger.error(f"Failed to retrieve config {key}: {e}")
             if required:
-                raise ConfigServiceError(f"Config service error retrieving {key}: {e}")
+                raise ConfigServiceError(f"Config service error retrieving {key}: {e}") from e
             return None
 
     def get_service_url(self, service_name: str, host: str = None) -> str | None:
@@ -150,10 +150,10 @@ class ConfigServiceClient:
 
         except httpx.RequestError as e:
             logger.error(f"Config service unreachable for service discovery {service_name}: {e}")
-            raise ConfigServiceError(f"Service discovery failed for {service_name}: {e}")
+            raise ConfigServiceError(f"Service discovery failed for {service_name}: {e}") from e
         except Exception as e:
             logger.error(f"Failed to resolve service URL for {service_name}: {e}")
-            raise ConfigServiceError(f"Service discovery failed for {service_name}: {e}")
+            raise ConfigServiceError(f"Service discovery failed for {service_name}: {e}") from e
 
     def health_check(self) -> bool:
         """Check config service health with timeout."""

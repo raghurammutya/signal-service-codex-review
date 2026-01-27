@@ -107,7 +107,7 @@ class PandasTAExecutor:
         except Exception as e:
             error = TechnicalIndicatorError(f"Technical indicators execution failed: {str(e)}")
             log_exception(f"Error in technical indicators execution: {error}")
-            raise error
+            raise error from e
 
     async def prepare_dataframe(
         self,

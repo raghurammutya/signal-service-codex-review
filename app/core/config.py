@@ -187,7 +187,7 @@ def _get_service_url(service_name: str) -> str:
 
     except Exception as e:
         logger.warning(f"Failed to get service URL for {service_name}: {e}")
-        raise ConfigServiceError(f"Failed to get service URL for {service_name}: {e}")
+        raise ConfigServiceError(f"Failed to get service URL for {service_name}: {e}") from e
 
 
 def _bool(val: str | None, default: bool = False) -> bool:

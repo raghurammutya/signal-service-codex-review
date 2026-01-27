@@ -90,7 +90,7 @@ async def compute_batch_greeks(
 
     except Exception as e:
         logger.exception(f"Error in batch Greeks computation: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/indicators")
@@ -162,7 +162,7 @@ async def compute_batch_indicators(
         raise
     except Exception as e:
         logger.exception(f"Error in batch indicators computation: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/moneyness/greeks")
@@ -237,7 +237,7 @@ async def compute_batch_moneyness_greeks(
 
     except Exception as e:
         logger.exception(f"Error in batch moneyness Greeks: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/async/submit")
@@ -292,7 +292,7 @@ async def submit_async_batch_job(
 
     except Exception as e:
         logger.exception(f"Error submitting batch job: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/async/status/{job_id}")
@@ -333,7 +333,7 @@ async def get_batch_job_status(job_id: str) -> dict[str, Any]:
         raise
     except Exception as e:
         logger.exception(f"Error getting job status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def process_async_batch_job(
@@ -458,4 +458,4 @@ async def get_batch_performance_stats(
 
     except Exception as e:
         logger.exception(f"Error getting performance stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

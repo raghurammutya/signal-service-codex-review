@@ -459,7 +459,7 @@ def main():
                             self.delivery_count += 1
                             self.success_count += 1
                         return result
-                    raise DeliveryError(str(e))
+                    raise DeliveryError(str(e)) from e
 
         # Monkey patch
         import sys

@@ -250,7 +250,7 @@ class KiteBrokerClient(BaseBrokerClient):
                 raise Exception(f"Health check failed: {response.status}")
 
         except Exception as e:
-            raise Exception(f"Kite health check failed: {e}")
+            raise Exception(f"Kite health check failed: {e}") from e
 
     # =============================================================================
     # SESSION MANAGEMENT

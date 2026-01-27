@@ -89,7 +89,7 @@ def add_cors_middleware(app: FastAPI, environment: str = None):
 
     except Exception as e:
         logger.critical(f"Failed to configure CORS middleware: {e}")
-        raise ValueError(f"CORS configuration failed: {e}")
+        raise ValueError(f"CORS configuration failed: {e}") from e
 
 
 def validate_cors_configuration(environment: str) -> bool:

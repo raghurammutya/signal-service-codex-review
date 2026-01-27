@@ -153,4 +153,4 @@ async def force_historical_write():
         await app.state.historical_data_writer.force_write_current_minute()
         return {"status": "success", "message": "Forced write completed"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

@@ -43,8 +43,8 @@ def validate_indicator_parameters(self, indicator_name: str, parameters: dict) -
             # Validate datetime format
             try:
                 pd.to_datetime(parameters['anchor_datetime'])
-            except:
-                raise ValueError(f"Invalid anchor_datetime format: {parameters['anchor_datetime']}")
+            except Exception as e:
+                raise ValueError(f"Invalid anchor_datetime format: {parameters['anchor_datetime']}") from e
 
         # Special validation for swing indicators
         if indicator_name in ['swing_high', 'swing_low']:

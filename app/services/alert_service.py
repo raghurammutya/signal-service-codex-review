@@ -185,7 +185,7 @@ class AlertService:
             metadata = await self.instrument_client.get_instrument_metadata(instrument_key)
         except Exception as e:
             logger.error(f"Failed to get metadata for {instrument_key}: {e}")
-            raise ValueError(f"Invalid instrument: {instrument_key}")
+            raise ValueError(f"Invalid instrument: {instrument_key}") from e
 
         # Check metadata-based filters
         if condition.applies_to_sectors and metadata.sector not in condition.applies_to_sectors:

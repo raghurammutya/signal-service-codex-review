@@ -171,7 +171,7 @@ async def realtime_indicator(instrument_token: int, indicator: str, period: int 
         raise HTTPException(
             status_code=500,
             detail=f"Error calculating indicator: {str(e)}. Use POST /api/v2/indicators/calculate/dynamic/{indicator} for full control."
-        )
+        ) from e
 
 
 @router.get("/realtime/moneyness/{underlying}/greeks/{moneyness_level}")

@@ -148,7 +148,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             log_error(f"Redis rate limit check error: {e}")
             # On error, deny request to prevent bypassing rate limits
-            raise RuntimeError(f"Rate limiting check failed - Redis unavailable: {e}")
+            raise RuntimeError(f"Rate limiting check failed - Redis unavailable: {e}") from e
 
     def _get_user_id(self, request: Request) -> str | None:
         user_id = request.headers.get("X-User-ID")

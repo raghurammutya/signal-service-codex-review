@@ -582,7 +582,7 @@ class BulkComputationEngine:
                             raise ValueError(
                                 f"Unable to calculate technical indicators for {option.instrument_key}: {e}. "
                                 "No synthetic fallback values allowed."
-                            )
+                            ) from e
 
                     updated_options.append(updated_option)
 

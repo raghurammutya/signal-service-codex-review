@@ -71,7 +71,7 @@ class DashboardRegistrar:
                     raise ValueError("SERVICE_HOST and SERVICE_PORT not found in config_service")
 
             except Exception as e:
-                raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+                raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.") from e
 
             service_config = {
                 "service_name": service_name,

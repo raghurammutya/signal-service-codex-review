@@ -373,7 +373,7 @@ class SignalProcessingIntegration:
             )
 
         except Exception as e:
-            raise ValueError(f"Failed to compute indicators for {symbol}: {e}. No synthetic fallback data allowed.")
+            raise ValueError(f"Failed to compute indicators for {symbol}: {e}. No synthetic fallback data allowed.") from e
 
         for indicator in indicators:
             value = indicator_results.get(indicator)

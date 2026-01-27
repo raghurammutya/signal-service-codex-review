@@ -434,20 +434,20 @@ class CrashPrevention:
                 log_info(f"Execution {execution_id} completed successfully")
                 return result
 
-        except TimeoutError:
+        except TimeoutError as e:
             raise ExternalFunctionExecutionError(
                 f"Execution timed out after {limits.max_wall_time_seconds} seconds"
-            )
-        except MemoryError:
-            raise ExternalFunctionExecutionError("Memory limit exceeded - execution terminated")
-        except RecursionError:
-            raise ExternalFunctionExecutionError("Stack overflow - recursion limit exceeded")
-        except KeyboardInterrupt:
-            raise ExternalFunctionExecutionError("Execution interrupted")
+            ) from e
+        except MemoryError as e:
+            raise ExternalFunctionExecutionError("Memory limit exceeded - execution terminated") from e
+        except RecursionError as e:
+            raise ExternalFunctionExecutionError("Stack overflow - recursion limit exceeded") from e
+        except KeyboardInterrupt as e:
+            raise ExternalFunctionExecutionError("Execution interrupted") from e
         except Exception as e:
             if "limit exceeded" in str(e).lower():
-                raise ExternalFunctionExecutionError(f"Resource limit exceeded: {e}")
-            raise ExternalFunctionExecutionError(f"Execution failed: {e}")
+                raise ExternalFunctionExecutionError(f"Resource limit exceeded: {e}") from e
+            raise ExternalFunctionExecutionError(f"Execution failed: {e}") from e
 
     def get_execution_metrics(self) -> dict[str, Any]:
         """Get metrics about current executions"""

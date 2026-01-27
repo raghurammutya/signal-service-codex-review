@@ -81,7 +81,7 @@ class ProductionHistoricalDataManager:
             return ticker_url
 
         except Exception as e:
-            raise RuntimeError(f"Failed to get ticker service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+            raise RuntimeError(f"Failed to get ticker service URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.") from e
 
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""

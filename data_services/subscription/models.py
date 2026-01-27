@@ -175,7 +175,7 @@ class SubscriptionStorage:
             metadata = await self.instrument_client.get_instrument_metadata(instrument_key)
         except Exception as e:
             logger.error(f"Failed to validate instrument {instrument_key}: {e}")
-            raise ValueError(f"Invalid instrument: {instrument_key}")
+            raise ValueError(f"Invalid instrument: {instrument_key}") from e
 
         # Check user subscription limits
         user_subs = self._user_subscriptions.get(user_id, [])

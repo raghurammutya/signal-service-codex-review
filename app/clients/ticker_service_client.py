@@ -187,14 +187,14 @@ class TickerServiceClient:
             error_msg = f"Ticker service request failed for {underlying}: {e}"
             log_error(error_msg)
             await self._handle_failure(e)
-            raise DataAccessError(error_msg)
+            raise DataAccessError(error_msg) from e
         except DataAccessError:
             raise  # Re-raise DataAccessError as-is
         except Exception as e:
             error_msg = f"Failed to get historical moneyness data for {underlying}: {e}"
             log_error(error_msg)
             await self._handle_failure(e)
-            raise handle_data_access_error(e, "fetch", "ticker_service")
+            raise handle_data_access_error(e, "fetch", "ticker_service") from e
 
     async def get_historical_timeframe_data(
         self,
@@ -254,12 +254,12 @@ class TickerServiceClient:
             error_msg = f"Ticker service timeframe request failed for {instrument_key}: {e}"
             log_error(error_msg)
             await self._handle_failure(e)
-            raise DataAccessError(error_msg)
+            raise DataAccessError(error_msg) from e
         except Exception as e:
             error_msg = f"Failed to get timeframe data for {instrument_key}: {e}"
             log_error(error_msg)
             await self._handle_failure(e)
-            raise handle_data_access_error(e, "fetch", "ticker_service")
+            raise handle_data_access_error(e, "fetch", "ticker_service") from e
 
     async def get_current_market_data(
         self,
@@ -302,12 +302,12 @@ class TickerServiceClient:
             error_msg = f"Ticker service current data request failed for {instrument_key}: {e}"
             log_error(error_msg)
             await self._handle_failure(e)
-            raise DataAccessError(error_msg)
+            raise DataAccessError(error_msg) from e
         except Exception as e:
             error_msg = f"Failed to get current market data for {instrument_key}: {e}"
             log_error(error_msg)
             await self._handle_failure(e)
-            raise handle_data_access_error(e, "fetch", "ticker_service")
+            raise handle_data_access_error(e, "fetch", "ticker_service") from e
 
 
 # Global ticker service client instance

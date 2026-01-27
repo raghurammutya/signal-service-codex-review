@@ -699,7 +699,7 @@ class SignalProcessor:
         except Exception as e:
             error = handle_computation_error(e, "tick_processing", instrument_key)
             log_exception(f"Error processing tick for {instrument_key}: {error}")
-            raise error
+            raise error from e
 
     async def execute_configuration(self, config: SignalConfigData, context: TickProcessingContext) -> ComputationResult | None:
         """Execute a single configuration"""
@@ -832,14 +832,14 @@ class SignalProcessor:
                 config, context
             )
         except Exception as e:
-            raise handle_computation_error(e, "greeks", context.instrument_key)
+            raise handle_computation_error(e, "greeks", context.instrument_key) from e
 
     async def compute_technical_indicators(self, config: SignalConfigData, context: TickProcessingContext) -> dict:
         """Compute technical indicators"""
         try:
             return await self.pandas_ta_executor.execute_indicators(config, context)
         except Exception as e:
-            raise handle_computation_error(e, "technical_indicators", context.instrument_key)
+            raise handle_computation_error(e, "technical_indicators", context.instrument_key) from e
 
     async def compute_internal_functions(self, config: SignalConfigData, context: TickProcessingContext) -> dict:
         """Compute internal functions"""
@@ -852,14 +852,14 @@ class SignalProcessor:
                 results[func_config.name] = result
             return results
         except Exception as e:
-            raise handle_computation_error(e, "internal_functions", context.instrument_key)
+            raise handle_computation_error(e, "internal_functions", context.instrument_key) from e
 
     async def compute_external_functions(self, config: SignalConfigData, context: TickProcessingContext) -> dict:
         """Compute external functions"""
         try:
             return await self.external_function_executor.execute_functions(config, context)
         except Exception as e:
-            raise handle_computation_error(e, "external_functions", context.instrument_key)
+            raise handle_computation_error(e, "external_functions", context.instrument_key) from e
 
     async def execute_internal_function(self, func_config, context: TickProcessingContext) -> Any:
         """Execute a single internal function"""

@@ -126,7 +126,7 @@ async def refresh_configurations(
 
     except Exception as e:
         logger.error(f"Configuration refresh failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Configuration refresh failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Configuration refresh failed: {e}") from e
 
 
 @router.get("/validate", response_model=ConfigValidationResponse)
@@ -147,7 +147,7 @@ async def validate_configurations(token: str = Depends(verify_admin_token)):
 
     except Exception as e:
         logger.error(f"Configuration validation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Configuration validation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Configuration validation failed: {e}") from e
 
 
 @router.get("/budget", response_model=BudgetConfigResponse)
@@ -178,7 +178,7 @@ async def get_current_budget_config(token: str = Depends(verify_admin_token)):
 
     except Exception as e:
         logger.error(f"Failed to get budget configuration: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get budget configuration: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get budget configuration: {e}") from e
 
 
 @router.get("/pools/status")
@@ -195,7 +195,7 @@ async def get_pool_status(token: str = Depends(verify_admin_token)):
 
     except Exception as e:
         logger.error(f"Failed to get pool status: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get pool status: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get pool status: {e}") from e
 
 
 @router.post("/budget/test-backpressure")
@@ -244,7 +244,7 @@ async def test_backpressure_configuration(
 
     except Exception as e:
         logger.error(f"Failed to test backpressure: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to test backpressure: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to test backpressure: {e}") from e
 
 
 @router.get("/budget/metrics")
@@ -282,4 +282,4 @@ async def get_budget_metrics(token: str = Depends(verify_admin_token)):
 
     except Exception as e:
         logger.error(f"Failed to get budget metrics: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get budget metrics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get budget metrics: {e}") from e

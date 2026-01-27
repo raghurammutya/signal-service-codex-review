@@ -55,7 +55,7 @@ async def liveness_probe():
         }
     except Exception as e:
         logger.error(f"Liveness probe failed: {e}")
-        raise HTTPException(status_code=503, detail="Service not alive")
+        raise HTTPException(status_code=503, detail="Service not alive") from e
 
 @router.get("/ready")
 async def readiness_probe(checker: HealthChecker = Depends(get_health_checker)):
@@ -81,7 +81,7 @@ async def readiness_probe(checker: HealthChecker = Depends(get_health_checker)):
 
     except Exception as e:
         logger.error(f"Readiness probe failed: {e}")
-        raise HTTPException(status_code=503, detail="Service not ready")
+        raise HTTPException(status_code=503, detail="Service not ready") from e
 
 @router.get("/detailed")
 async def detailed_health_check(checker: HealthChecker = Depends(get_health_checker)):
@@ -106,7 +106,7 @@ async def detailed_health_check(checker: HealthChecker = Depends(get_health_chec
 
     except Exception as e:
         logger.error(f"Detailed health check failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {e}") from e
 
 @router.get("/cluster")
 async def cluster_health_check(dist_health: DistributedHealthManager = Depends(get_distributed_health)):
@@ -131,7 +131,7 @@ async def cluster_health_check(dist_health: DistributedHealthManager = Depends(g
 
     except Exception as e:
         logger.error(f"Cluster health check failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Cluster health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Cluster health check failed: {e}") from e
 
 @router.get("/dashboard")
 async def dashboard_health_summary(dist_health: DistributedHealthManager = Depends(get_distributed_health)):
@@ -162,7 +162,7 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
                 raise ValueError("SERVICE_PORT not found in config_service")
 
         except Exception as e:
-            raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+            raise RuntimeError(f"Failed to get service configuration from config_service: {e}. No hardcoded fallbacks allowed per architecture.") from e
 
         # Format according to dashboard expectations
         from app.core.config import settings
@@ -180,4 +180,4 @@ async def dashboard_health_summary(dist_health: DistributedHealthManager = Depen
 
     except Exception as e:
         logger.error(f"Dashboard health summary failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Dashboard health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Dashboard health check failed: {e}") from e

@@ -135,7 +135,7 @@ class RealTimeGreeksCalculator:
         except Exception as e:
             error = GreeksCalculationError(f"Real-time Greeks calculation failed: {str(e)}")
             log_exception(f"Error in real-time Greeks calculation: {error}")
-            raise error
+            raise error from e
 
     def extract_option_details(self, instrument_key: str) -> dict | None:
         """Extract option details from instrument key"""

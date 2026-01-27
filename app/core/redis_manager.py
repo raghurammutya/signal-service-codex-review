@@ -91,7 +91,7 @@ async def get_redis_client(redis_url: str | None = None) -> aioredis.Redis:
             logger.error(f"Failed to connect to Redis: {e}")
 
             # No silent fallbacks allowed per architecture - fail fast in all environments
-            raise RedisConnectionError(f"Redis connection failed and no fallbacks allowed per architecture: {e}")
+            raise RedisConnectionError(f"Redis connection failed and no fallbacks allowed per architecture: {e}") from e
 
 
 async def close_redis_client():

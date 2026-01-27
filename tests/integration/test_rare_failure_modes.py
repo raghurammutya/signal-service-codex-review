@@ -313,7 +313,7 @@ class TestLoggingSecurityRareFailures:
                     assert 'secret123' not in str(result)
             except Exception as e:
                 # Should not crash on malformed input
-                raise AssertionError(f"Filter crashed on input '{test_input}': {e}")
+                raise AssertionError(f"Filter crashed on input '{test_input}': {e}") from e
 
     def test_security_audit_logger_concurrent_access(self):
         """Test security audit logger under concurrent load."""

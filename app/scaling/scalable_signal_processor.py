@@ -326,20 +326,20 @@ class ScalableSignalProcessor:
         try:
             import psutil
             return psutil.cpu_percent(interval=0.1) / 100.0
-        except ImportError:
-            raise RuntimeError("psutil package required for CPU monitoring. Install with: pip install psutil")
+        except ImportError as e:
+            raise RuntimeError("psutil package required for CPU monitoring. Install with: pip install psutil") from e
         except Exception as e:
-            raise RuntimeError(f"Failed to get CPU usage: {e}. No default values allowed in production.")
+            raise RuntimeError(f"Failed to get CPU usage: {e}. No default values allowed in production.") from e
 
     async def _get_memory_usage(self) -> float:
         """Get current memory usage (0-1)"""
         try:
             import psutil
             return psutil.virtual_memory().percent / 100.0
-        except ImportError:
-            raise RuntimeError("psutil package required for memory monitoring. Install with: pip install psutil")
+        except ImportError as e:
+            raise RuntimeError("psutil package required for memory monitoring. Install with: pip install psutil") from e
         except Exception as e:
-            raise RuntimeError(f"Failed to get memory usage: {e}. No default values allowed in production.")
+            raise RuntimeError(f"Failed to get memory usage: {e}. No default values allowed in production.") from e
 
     async def _heartbeat_loop(self):
         """Send regular heartbeats and metrics"""
@@ -614,7 +614,7 @@ class ScalableSignalProcessor:
             log_exception(f"Moneyness Greeks failed for {underlying}: {e}")
             self.metrics['errors'] += 1
             # Fail fast - no synthetic fallback data allowed
-            raise ValueError(f"Failed to compute moneyness Greeks for {underlying} {moneyness_level}: {e}. No synthetic data allowed.")
+            raise ValueError(f"Failed to compute moneyness Greeks for {underlying} {moneyness_level}: {e}. No synthetic data allowed.") from e
 
     async def _publish_computation_result(self, instrument_key: str, computation_type: str, result: dict):
         """Publish computation result"""

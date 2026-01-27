@@ -678,7 +678,7 @@ class HealthChecker:
                 from app.core.config import settings
                 environment = settings.environment
             except Exception as e:
-                raise RuntimeError(f"Failed to get environment from config_service for health check: {e}. No environment fallbacks allowed per architecture.")
+                raise RuntimeError(f"Failed to get environment from config_service for health check: {e}. No environment fallbacks allowed per architecture.") from e
 
             client = ConfigServiceClient(
                 service_name="signal_service",

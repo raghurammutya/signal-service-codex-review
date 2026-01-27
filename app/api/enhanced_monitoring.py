@@ -1136,7 +1136,7 @@ async def get_enhanced_metrics():
         return await monitoring_service.collect_comprehensive_metrics()
     except Exception as e:
         logger.error(f"Error collecting enhanced metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/metrics/prometheus")
@@ -1151,7 +1151,7 @@ async def get_prometheus_metrics():
         return Response(content=metrics_data, media_type=CONTENT_TYPE_LATEST)
     except Exception as e:
         logger.error(f"Error generating Prometheus metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/performance-summary")
@@ -1177,7 +1177,7 @@ async def get_performance_summary():
         }
     except Exception as e:
         logger.error(f"Error generating performance summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/business-dashboard")
@@ -1205,7 +1205,7 @@ async def get_business_dashboard():
         }
     except Exception as e:
         logger.error(f"Error generating business dashboard: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/capacity-planning")
@@ -1227,7 +1227,7 @@ async def get_capacity_planning_data():
         }
     except Exception as e:
         logger.error(f"Error generating capacity planning data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def _get_active_alerts() -> list[dict[str, Any]]:

@@ -158,7 +158,7 @@ async def premium_analysis_expiry(request: PremiumAnalysisRequest):
 
     except Exception as e:
         log_exception(f"[AGENT-2] Premium analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Premium analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Premium analysis failed: {str(e)}") from e
 
 
 @router.get("/premium-analysis/strike-range/{symbol}")
@@ -242,7 +242,7 @@ async def premium_analysis_strike_range(
         raise
     except Exception as e:
         log_exception(f"[AGENT-2] Strike range analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Strike range analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Strike range analysis failed: {str(e)}") from e
 
 
 @router.post("/premium-analysis/term-structure")
@@ -298,7 +298,7 @@ async def premium_analysis_term_structure(request: TermStructureRequest):
 
     except Exception as e:
         log_exception(f"[AGENT-2] Term structure analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Term structure analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Term structure analysis failed: {str(e)}") from e
 
 
 @router.get("/premium-analysis/arbitrage-opportunities/{symbol}")
@@ -328,7 +328,7 @@ async def get_arbitrage_opportunities(
         return []
     except Exception as e:
         log_exception(f"[AGENT-2] Arbitrage opportunities scan failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Arbitrage scan failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Arbitrage scan failed: {str(e)}") from e
 
 
 @router.get("/premium-analysis/performance-metrics")
@@ -360,7 +360,7 @@ async def get_performance_metrics():
 
     except Exception as e:
         log_exception(f"[AGENT-2] Performance metrics failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Performance metrics failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Performance metrics failed: {str(e)}") from e
 
 
 # Helper functions

@@ -120,7 +120,7 @@ class GreeksCalculator:
 
         except Exception as e:
             logger.error(f"Greeks calculation failed: {e}")
-            raise GreeksCalculationError(f"Failed to calculate Greeks: {str(e)}")
+            raise GreeksCalculationError(f"Failed to calculate Greeks: {str(e)}") from e
 
     def _calculate_with_pyvollib(
         self, S: float, K: float, T: float, vol: float, r: float, q: float,

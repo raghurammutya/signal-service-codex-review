@@ -128,7 +128,7 @@ class StreamAbuseProtectionService:
             raise RuntimeError(
                 f"Failed to retrieve tier limits from marketplace for {tier}/{stream_type.value}: {e}. "
                 f"Stream access denied - marketplace service integration required."
-            )
+            ) from e
 
 
     async def check_connection_allowed(

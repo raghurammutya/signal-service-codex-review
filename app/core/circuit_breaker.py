@@ -156,13 +156,13 @@ class GreeksCircuitBreaker:
 
             return result
 
-        except TimeoutError:
+        except TimeoutError as e:
             execution_time = time.time() - start_time
             self._record_call_result(False, execution_time)
             raise GreeksCalculationError(
                 f"Function timeout after {execution_time:.2f}s (limit: {timeout}s)",
                 details={"timeout": timeout, "execution_time": execution_time}
-            )
+            ) from e
 
         except Exception:
             execution_time = time.time() - start_time if 'start_time' in locals() else 0

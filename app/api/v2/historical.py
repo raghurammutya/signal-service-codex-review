@@ -149,7 +149,7 @@ async def get_historical_greeks(
         raise
     except Exception as e:
         logger.error(f"Error getting historical Greeks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e from e
 
 
 @router.get("/indicators/{instrument_key}/{indicator}", response_model=HistoricalIndicatorResponse)
@@ -217,7 +217,7 @@ async def get_historical_indicator(
         raise
     except Exception as e:
         logger.error(f"Error getting historical indicator: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/moneyness/{underlying}/greeks/{moneyness_level}", response_model=HistoricalMoneynessResponse)
@@ -254,7 +254,7 @@ async def get_historical_moneyness_greeks(
         raise
     except Exception as e:
         logger.error(f"Error getting historical moneyness Greeks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/moneyness/{underlying}/atm-iv/history")
@@ -295,7 +295,7 @@ async def get_historical_atm_iv(
 
     except Exception as e:
         logger.error(f"Error getting historical ATM IV: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/available-timeframes/{instrument_key}")
@@ -330,7 +330,7 @@ async def get_available_timeframes(
 
     except Exception as e:
         logger.error(f"Error getting available timeframes: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/health")

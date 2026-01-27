@@ -248,7 +248,7 @@ class Week1DeploymentManager:
             subprocess.run(deployment_command, check=True, capture_output=True, timeout=60)
             logger.info(f"✅ Successfully deployed {percentage}% traffic")
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Deployment command failed: {e}")
+            raise RuntimeError(f"Deployment command failed: {e}") from e
 
     async def _continuous_sla_monitoring(self):
         """Continuous SLA monitoring during deployment"""

@@ -48,7 +48,7 @@ class ProductionTimescaleDB:
 
         except Exception as e:
             logger.error(f"Failed to connect to TimescaleDB: {e}")
-            raise DatabaseConnectionError(f"TimescaleDB connection failed: {e}")
+            raise DatabaseConnectionError(f"TimescaleDB connection failed: {e}") from e
 
     async def disconnect(self):
         """Close connection pool."""
@@ -68,7 +68,7 @@ class ProductionTimescaleDB:
                 yield conn
             except Exception as e:
                 logger.error(f"Database operation failed: {e}")
-                raise DatabaseConnectionError(f"Database operation failed: {e}")
+                raise DatabaseConnectionError(f"Database operation failed: {e}") from e
 
     async def execute_query(self, query: str, *args):
         """Execute query and return results."""
@@ -77,7 +77,7 @@ class ProductionTimescaleDB:
                 return await conn.fetch(query, *args)
             except Exception as e:
                 logger.error(f"Query execution failed: {e}")
-                raise DatabaseConnectionError(f"Query execution failed: {e}")
+                raise DatabaseConnectionError(f"Query execution failed: {e}") from e
 
     async def execute_command(self, command: str, *args):
         """Execute command (INSERT, UPDATE, DELETE)."""
@@ -88,7 +88,7 @@ class ProductionTimescaleDB:
                 return result
             except Exception as e:
                 logger.error(f"Command execution failed: {e}")
-                raise DatabaseConnectionError(f"Command execution failed: {e}")
+                raise DatabaseConnectionError(f"Command execution failed: {e}") from e
 
     async def health_check(self) -> dict[str, Any]:
         """Check database connection health."""
@@ -203,7 +203,7 @@ async def get_timescale_session(database_url: str):
         yield db
     except Exception as e:
         logger.error(f"TimescaleDB session error: {e}")
-        raise DatabaseConnectionError(f"Database session failed: {e}")
+        raise DatabaseConnectionError(f"Database session failed: {e}") from e
     finally:
         try:
             await db.disconnect()
@@ -222,7 +222,7 @@ async def create_timescale_pool(database_url: str, **kwargs):
         return pool
     except Exception as e:
         logger.error(f"Failed to create connection pool: {e}")
-        raise DatabaseConnectionError(f"Connection pool creation failed: {e}")
+        raise DatabaseConnectionError(f"Connection pool creation failed: {e}") from e
 
 
 def get_database_url():

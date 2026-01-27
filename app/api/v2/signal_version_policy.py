@@ -106,7 +106,7 @@ async def get_signal_version_policy(
         raise
     except Exception as e:
         log_error(f"Error getting signal version policy: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.put("/{signal_id}")
@@ -208,7 +208,7 @@ async def update_signal_version_policy(
         raise
     except Exception as e:
         log_error(f"Error updating signal version policy: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/{signal_id}/versions")
@@ -273,7 +273,7 @@ async def list_signal_versions(
         raise
     except Exception as e:
         log_error(f"Error listing signal versions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/{signal_id}/versions/{version}/publish")
@@ -335,7 +335,7 @@ async def publish_signal_version(
         raise
     except Exception as e:
         log_error(f"Error publishing signal version: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/recommendations/{signal_id}")
@@ -413,4 +413,4 @@ async def get_version_policy_recommendations(
         raise
     except Exception as e:
         log_error(f"Error getting policy recommendations: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
