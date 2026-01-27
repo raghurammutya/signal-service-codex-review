@@ -4,6 +4,7 @@ Enhanced with external config service integration for testing
 timeframe configuration hot reloading.
 """
 import asyncio
+from contextlib import suppress
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -234,11 +235,8 @@ async def test_continuous_aggregate_query():
         mock_result.fetchall.return_value = []
         mock_session.execute.return_value = mock_result
 
-        try:
-            await _get_from_timescaledb(mock_self, 'TEST@SYMBOL', '5minute', 20)
-        except Exception:
-            # Expected to fail without real data
-            pass
+        with suppress(Exception):
+            await _get_from_timescaledb(mock_self, 'TEST@SYMBOL', '5minute', 20)  # Expected to fail without real data
 
         # Verify continuous aggregate table was queried
         if mock_session.execute.call_args:

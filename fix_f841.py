@@ -52,14 +52,13 @@ def fix_f841_violation(file_path, line_number, var_name):
             stripped = target_line.strip()
 
             # Case 1: Assignment that can be removed entirely
-            if stripped.startswith(f'{var_name} = ') and not any(x in stripped for x in ['input(', 'open(', 'connect(']):
-                # Remove the entire line if it's just a simple assignment
-                if not any(keyword in stripped for keyword in ['print', 'log', 'write', 'send', 'call']):
-                    lines.pop(target_line_idx)
+            if (stripped.startswith(f'{var_name} = ') and not any(x in stripped for x in ['input(', 'open(', 'connect(']) and
+                not any(keyword in stripped for keyword in ['print', 'log', 'write', 'send', 'call'])):
+                lines.pop(target_line_idx)
 
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.writelines(lines)
-                    return True
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                return True
 
             # Case 2: Rename to underscore (for variables we want to keep for clarity)
             new_var_name = f'_{var_name}'

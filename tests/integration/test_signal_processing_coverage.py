@@ -5,6 +5,7 @@ Comprehensive tests to validate >=95% path coverage for signal processing
 including pandas_ta, pyvollib engines, and fail-fast behaviors.
 """
 import os
+from contextlib import suppress
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
@@ -284,15 +285,13 @@ class TestSignalProcessingInstrumentation:
             with patch.object(engine, '_execute_vectorized_calculation_internal') as mock_calc:
                 mock_calc.side_effect = Exception(f"Failure {i+1}")
 
-                try:
+                with suppress(GreeksCalculationError):
                     await engine.calculate_option_chain_greeks(
                         option_chain_data=[{'strike': 100, 'option_type': 'call'}],
                         underlying_price=100.0,
                         greeks_to_calculate=['delta'],
                         enable_fallback=False
-                    )
-                except GreeksCalculationError:
-                    pass  # Expected
+                    )  # Expected
 
         # Circuit breaker should now be open
         assert hasattr(engine, '_vectorized_breaker')

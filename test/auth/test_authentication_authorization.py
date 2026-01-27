@@ -3,7 +3,7 @@ Comprehensive authentication and authorization testing
 Tests gateway trust validation, token validation, and entitlement middleware
 """
 import asyncio
-import contextlib
+from contextlib import suppress
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -577,7 +577,7 @@ class TestSecurityAuditLogging:
                 "X-Forwarded-For": "192.168.1.1"
             }
 
-            with contextlib.suppress(AuthenticationError):
+            with suppress(AuthenticationError):
                 validator.validate_gateway_trust(headers)
 
             # Verify failed auth was logged
@@ -590,11 +590,9 @@ class TestSecurityAuditLogging:
         with patch('app.middleware.entitlement_middleware.log_warning') as mock_log:
             user_context = {"user_id": "user_123", "role": "basic"}
 
-            try:
+            with suppress(AuthorizationError):
                 # This should trigger an authorization failure
                 asyncio.run(middleware.check_premium_access(user_context, "/api/v2/premium/advanced"))
-            except AuthorizationError:
-                pass
 
             # Verify security event was audited
             mock_log.assert_called_with("Authorization denied: user_123 attempted to access premium endpoint without entitlement")

@@ -59,7 +59,7 @@ def is_availability_check_context(lines, line_idx):
         ]
 
         return any(pattern in context for pattern in patterns)
-    except:
+    except Exception:
         return False
 
 

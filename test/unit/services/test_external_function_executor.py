@@ -7,6 +7,7 @@ import asyncio
 import os
 import shutil
 import tempfile
+from contextlib import suppress
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -392,10 +393,8 @@ def calculate_signal(tick_data, parameters):
             'parameters': {}
         }
 
-        try:
-            executor._execute_in_subprocess(compiled_code, execution_context, config)
-        except Exception:
-            pass  # Expected to fail due to missing function in context
+        with suppress(Exception):
+            executor._execute_in_subprocess(compiled_code, execution_context, config)  # Expected to fail due to missing function in context
 
         # Verify resource limits were set
         expected_memory_limit = 64 * 1024 * 1024  # 64MB in bytes

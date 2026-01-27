@@ -7,6 +7,7 @@ import asyncio
 import os
 import shutil
 import tempfile
+from contextlib import suppress
 from datetime import UTC, datetime
 from unittest.mock import patch
 
@@ -409,12 +410,10 @@ def market_indicator(tick_data, parameters):
         with patch('app.services.external_function_executor.ExternalFunctionExecutor._audit_access_attempt') as mock_audit, patch('app.services.external_function_executor.ExternalFunctionExecutor._check_user_access') as mock_acl:
             mock_acl.return_value = False  # Access denied
 
-            try:
+            with suppress(SecurityError):
                 await self._execute_with_acl_check(
                     executor, unauthorized_config, sample_context, "basic_user_002"
-                )
-            except SecurityError:
-                pass  # Expected
+                )  # Expected
 
             # Verify audit was called
             mock_audit.assert_called_once()

@@ -7,6 +7,7 @@ and security compliance for different deployment environments.
 """
 import os
 import urllib.parse
+from contextlib import suppress
 from unittest.mock import patch
 
 import pytest
@@ -476,12 +477,9 @@ class TestCORSSecurityCompliance:
 
         # Test security audit with invalid configuration
         with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True):
-            try:
+            with suppress(ValueError):
                 audit = create_cors_security_audit("production")
-                # May fail at get_allowed_origins step due to wildcard validation
-            except ValueError:
-                # Expected - security validation working
-                pass
+                # May fail at get_allowed_origins step due to wildcard validation - Expected - security validation working
 
     def test_cors_penetration_testing_scenarios(self):
         """Test CORS configuration against penetration testing scenarios."""

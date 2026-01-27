@@ -9,6 +9,7 @@ TEST_SDK_001: Comprehensive validation of instrument_key-first SDK
 - Multi-broker compliance testing
 """
 
+from contextlib import suppress
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -421,10 +422,8 @@ class TestSDKContractCompliance:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            try:
-                client.accept_legacy_token("256265")
-            except ValueError:
-                pass  # Expected
+            with suppress(ValueError):
+                client.accept_legacy_token("256265")  # Expected
 
             # Verify deprecation warning was issued
             assert len(w) > 0
