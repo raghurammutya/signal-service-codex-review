@@ -7,6 +7,7 @@ Comprehensive integration tests for rare database failure scenarios to achieve
 transaction failures, and schema drift detection.
 """
 import asyncio
+import importlib.util
 import time
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,7 +15,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import asyncpg
 import pytest
 
-import importlib.util
 if importlib.util.find_spec('app.errors'):
     from app.errors import (
         DatabaseConnectionError,

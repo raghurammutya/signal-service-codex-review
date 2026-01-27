@@ -5,6 +5,7 @@ Tests gateway-only access control with HTTP client simulation proving
 Authorization header rejection and gateway header acceptance.
 """
 import asyncio
+import importlib.util
 import sys
 from unittest.mock import MagicMock
 
@@ -12,7 +13,6 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-import importlib.util
 if importlib.util.find_spec('app.api.v2.sdk_signals'):
     MIDDLEWARE_AVAILABLE = True
 else:

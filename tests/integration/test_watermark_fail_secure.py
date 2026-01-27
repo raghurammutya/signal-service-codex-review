@@ -5,13 +5,13 @@ Addresses critical integration gap: End-to-end watermark failure handling
 ensuring WatermarkError bubbles up and marketplace receives 403 responses.
 """
 import asyncio
+import importlib.util
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
 
-import importlib.util
 if importlib.util.find_spec('fastapi.testclient'):
     WATERMARK_SERVICE_AVAILABLE = True
 else:

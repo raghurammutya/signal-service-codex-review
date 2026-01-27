@@ -212,11 +212,10 @@ class TestOptionalDependenciesComputationErrors:
                         if importlib.util.find_spec('findpeaks'):
                             # Would normally use findpeaks here
                             return {"peaks": []}
-                        else:
-                            # Log the missing dependency gracefully
-                            from app.utils.logging_utils import log_warning
-                            log_warning("Optional dependency not available: findpeaks")
-                            raise ComputationError("findpeaks library required but not available")
+                        # Log the missing dependency gracefully
+                        from app.utils.logging_utils import log_warning
+                        log_warning("Optional dependency not available: findpeaks")
+                        raise ComputationError("findpeaks library required but not available")
 
                     df = pd.DataFrame({'close': [100, 105, 95, 110, 90]})
 

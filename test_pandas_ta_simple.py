@@ -4,6 +4,7 @@ Tests key indicators via direct API calls and validates results
 """
 
 import asyncio
+import importlib.util
 import sys
 from datetime import datetime
 from typing import Any
@@ -13,7 +14,6 @@ import pandas as pd
 
 from app.services.pandas_ta_executor import PandasTAExecutor
 
-import importlib.util
 if importlib.util.find_spec('pandas_ta'):
     PANDAS_TA_AVAILABLE = True
 else:

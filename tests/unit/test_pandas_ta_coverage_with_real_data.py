@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 try:
 
     from app.errors import TechnicalIndicatorError
+
     # Schema imports removed as unused
     from app.services.pandas_ta_executor import PandasTAExecutor
     PANDAS_TA_AVAILABLE = True

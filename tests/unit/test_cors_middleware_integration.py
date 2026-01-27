@@ -4,13 +4,13 @@ CORS Middleware Integration Tests
 Focused tests for CORS middleware setup, FastAPI integration, and runtime behavior.
 Tests the actual middleware configuration and request/response handling.
 """
+# FastAPI imports with fallbacks
+import importlib.util
 import os
 from unittest.mock import Mock, patch
 
 import pytest
 
-# FastAPI imports with fallbacks
-import importlib.util
 if importlib.util.find_spec('starlette.responses'):
     FASTAPI_AVAILABLE = True
 else:

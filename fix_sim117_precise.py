@@ -9,10 +9,10 @@ and replacement to avoid syntax errors.
 def fix_sdk_signal_listing():
     """Fix tests/test_sdk_signal_listing.py violations precisely"""
     file_path = "tests/test_sdk_signal_listing.py"
-    
-    with open(file_path, 'r') as f:
+
+    with open(file_path) as f:
         lines = f.readlines()
-    
+
     # Fix violation 1: Lines 86-90 (3 nested with statements)
     for i, line in enumerate(lines):
         if i == 85 and "with patch('app.core.auth.get_current_user_from_gateway'" in line:
@@ -27,7 +27,7 @@ def fix_sdk_signal_listing():
             ]
             lines[85:90] = new_lines
             break
-    
+
     # Fix violation 2: Lines around 206-208 (2 nested with statements)
     for i, line in enumerate(lines):
         if "async def test_marketplace_integration_failure" in line:
@@ -44,7 +44,7 @@ def fix_sdk_signal_listing():
                     lines[j:j+3] = new_lines
                     break
             break
-    
+
     # Fix violation 3: Lines around 235-237 (2 nested with statements)
     for i, line in enumerate(lines):
         if "async def test_personal_signals_integration_failure" in line:
@@ -61,7 +61,7 @@ def fix_sdk_signal_listing():
                     lines[j:j+3] = new_lines
                     break
             break
-    
+
     # Fix violation 4: Lines around 274-280 (verify_execution_token - multiline return_value)
     for i, line in enumerate(lines):
         if "async def test_validate_valid_token" in line:
@@ -84,7 +84,7 @@ def fix_sdk_signal_listing():
                     lines[j:end_idx] = new_lines
                     break
             break
-    
+
     # Fix violation 5: Lines around 309-311 (simple verify_execution_token)
     for i, line in enumerate(lines):
         if "async def test_validate_invalid_token" in line:
@@ -101,36 +101,36 @@ def fix_sdk_signal_listing():
                     lines[j:j+3] = new_lines
                     break
             break
-    
+
     with open(file_path, 'w') as f:
         f.writelines(lines)
-    
+
     print(f"Fixed {file_path}")
 
 def fix_signal_execution():
     """Fix tests/test_signal_execution.py violation"""
     file_path = "tests/test_signal_execution.py"
-    
-    with open(file_path, 'r') as f:
+
+    with open(file_path) as f:
         lines = f.readlines()
-    
+
     # Find and fix the patch.object nested with pattern around line 238
     for i, line in enumerate(lines):
         if "with patch.object(" in line and "SignalExecutor" in line:
             # This should be around line 237-248
             if i > 230:  # Make sure we're in the right area
                 indent = line[:len(line) - len(line.lstrip())]
-                
+
                 # Find the end of the first patch.object
                 end_first_patch = i
                 while end_first_patch < len(lines) and not lines[end_first_patch].strip().endswith('):'):
                     end_first_patch += 1
-                
+
                 # Find the nested with patch.object
                 nested_start = end_first_patch + 1
                 while nested_start < len(lines) and "with patch.object(SignalExecutor, 'publish_to_redis'" not in lines[nested_start]:
                     nested_start += 1
-                
+
                 if nested_start < len(lines):
                     # Create merged version
                     new_lines = [
@@ -147,23 +147,23 @@ def fix_signal_execution():
                         f"{indent}    patch.object(SignalExecutor, 'publish_to_redis', return_value=True)\n",
                         f"{indent}):\n"
                     ]
-                    
+
                     # Replace the original lines
                     lines[i:nested_start + 1] = new_lines
                     break
-    
+
     with open(file_path, 'w') as f:
         f.writelines(lines)
-    
+
     print(f"Fixed {file_path}")
 
 def main():
     """Run precise fixes"""
     print("Applying precise SIM117 fixes...")
-    
+
     fix_sdk_signal_listing()
     fix_signal_execution()
-    
+
     print("Precise fixes completed!")
 
 if __name__ == "__main__":
