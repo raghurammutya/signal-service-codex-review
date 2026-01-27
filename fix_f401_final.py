@@ -22,11 +22,10 @@ def get_f401_violations():
     i = 0
     while i < len(lines):
         line = lines[i]
-        if line.strip() and ':' in line and 'F401' in line:
+        if line.strip() and ':' in line and 'F401' in line and '[*]' in line:
             # Check if this is a fixable violation (has [*])
-            if '[*]' in line:
-                parts = line.split(':')
-                if len(parts) >= 3:
+            parts = line.split(':')
+            if len(parts) >= 3:
                     file_path = parts[0]
                     line_number = int(parts[1])
 
@@ -82,10 +81,9 @@ def fix_f401_violation(file_path, line_number, import_name):
 
         # Check if this is a special file that might need imports for type checking
         special_files = ['__init__.py', 'conftest.py', 'test_', 'fix_', 'script']
-        if any(special in file_path.lower() for special in special_files):
+        if any(special in file_path.lower() for special in special_files) and ('type:' in target_line.lower() or 'typing' in target_line.lower()):
             # Be more careful with special files
-            if 'type:' in target_line.lower() or 'typing' in target_line.lower():
-                return False
+            return False
 
         # Simple case: remove the entire line if it's a single import
         if target_line.strip().startswith(('import ', 'from ')) and import_name in target_line:

@@ -80,7 +80,7 @@ class TestSignalRepository:
             }
 
             # Should raise exception, not return None
-            with pytest.raises(Exception):  # Original exception should propagate
+            with pytest.raises(RuntimeError):  # Original exception should propagate
                 await repository.save_greeks(greeks_record)
 
     @pytest.mark.asyncio
@@ -310,9 +310,9 @@ class TestSignalRepository:
     async def test_connection_initialization_failure(self, repository):
         """Test repository initialization failure."""
         with patch('app.repositories.signal_repository.get_timescaledb_session') as mock_get_session:
-            mock_get_session.side_effect = Exception("Cannot connect to database")
+            mock_get_session.side_effect = ConnectionError("Cannot connect to database")
 
-            with pytest.raises(Exception):
+            with pytest.raises(ConnectionError):
                 await repository.initialize()
 
     @pytest.mark.asyncio

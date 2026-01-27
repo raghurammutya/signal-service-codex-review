@@ -148,7 +148,7 @@ class TestSignalProcessingProductionPaths:
         # Test 2: Invalid indicator (should raise error)
         invalid_config = {'invalid_indicator': {'param': 1}}
 
-        with pytest.raises(Exception):  # Should fail-fast for invalid indicators
+        with pytest.raises(ValueError):  # Should fail-fast for invalid indicators
             await pandas_ta_executor.calculate_indicators(
                 price_data=price_data,
                 indicators_config=invalid_config

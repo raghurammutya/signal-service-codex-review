@@ -49,10 +49,10 @@ class TestServiceIntegration:
 
         # Test with mock config service unavailable
         with patch('app.core.config._get_config_client') as mock_get_client:
-            mock_get_client.side_effect = Exception("Config service unavailable")
+            mock_get_client.side_effect = ConnectionError("Config service unavailable")
 
             # Should raise exception when config service unavailable
-            with pytest.raises(Exception):
+            with pytest.raises(ConnectionError):
                 await _get_config_client()
 
     @pytest.mark.integration
@@ -340,10 +340,10 @@ class TestServiceIntegration:
 
         # Simulate temporary database unavailability
         with patch('app.repositories.signal_repository.get_timescaledb_session') as mock_session:
-            mock_session.side_effect = Exception("Temporary database unavailability")
+            mock_session.side_effect = ConnectionError("Temporary database unavailability")
 
             # Should raise proper exception, not fail silently
-            with pytest.raises(Exception):
+            with pytest.raises(ConnectionError):
                 await repo.initialize()
 
     @pytest.mark.integration
