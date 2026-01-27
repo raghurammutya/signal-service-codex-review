@@ -1,0 +1,28 @@
+{
+  "historical_storage": {
+    "type": "postgresql",
+    "host": "${HIST_DB_HOST:-localhost}",
+    "port": 5432,
+    "database": "market_data_historical",
+    "table": "historical_prices",
+    "instrument_key_column": "instrument_key",
+    "timestamp_column": "timestamp",
+    "connection_string": "postgresql://${HIST_DB_USER}:${HIST_DB_PASS}@${HIST_DB_HOST}:5432/market_data_historical"
+  },
+  "legacy_storage": {
+    "type": "postgresql", 
+    "host": "${LEGACY_DB_HOST:-localhost}",
+    "port": 5432,
+    "database": "market_data_legacy",
+    "table": "legacy_prices",
+    "token_column": "token",
+    "timestamp_column": "timestamp",
+    "connection_string": "postgresql://${LEGACY_DB_USER}:${LEGACY_DB_PASS}@${LEGACY_DB_HOST}:5432/market_data_legacy"
+  },
+  "validation_mode": {
+    "require_real_data": true,
+    "fallback_to_stubs": false,
+    "max_query_timeout_ms": 5000,
+    "data_consistency_threshold": 0.99
+  }
+}

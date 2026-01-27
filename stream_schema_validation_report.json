@@ -1,0 +1,156 @@
+{
+  "validation_type": "schema_and_performance",
+  "schema_validation": {
+    "validation_timestamp": "2026-01-27T04:19:10.806640",
+    "samples_file": "test_data/stream_samples.json",
+    "schema_version": "v2_instrument_key_first",
+    "validation_summary": {
+      "total_messages": 5,
+      "valid_messages": 4,
+      "invalid_messages": 1,
+      "validation_rate": 80.0,
+      "avg_metadata_score": 86.66666666666666
+    },
+    "detailed_results": [
+      {
+        "message_id": "quote_aapl_001",
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "metadata_score": 100.0
+      },
+      {
+        "message_id": "quote_googl_002",
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "metadata_score": 100.0
+      },
+      {
+        "message_id": "trade_msft_003",
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "metadata_score": 100.0
+      },
+      {
+        "message_id": "invalid_sample_004",
+        "valid": false,
+        "errors": [
+          "Missing required field: instrument_key",
+          "instrument_key is required and cannot be empty",
+          "Missing or invalid metadata field: sector",
+          "Missing or invalid metadata field: instrument_type",
+          "Missing or invalid metadata field: lot_size",
+          "Missing or invalid metadata field: tick_size",
+          "Missing data field: timestamp"
+        ],
+        "warnings": [],
+        "metadata_score": 33.33333333333333
+      },
+      {
+        "message_id": "quote_reliance_005",
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "metadata_score": 100.0
+      }
+    ],
+    "schema_compliance": {
+      "overall_compliance_rate": 80.0,
+      "instrument_key_compliance": 100.0,
+      "metadata_enrichment_avg": 86.66666666666666,
+      "schema_v2_ready": false,
+      "common_errors": [
+        [
+          "Missing required field: instrument_key",
+          1
+        ],
+        [
+          "instrument_key is required and cannot be empty",
+          1
+        ],
+        [
+          "Missing or invalid metadata field: sector",
+          1
+        ],
+        [
+          "Missing or invalid metadata field: instrument_type",
+          1
+        ],
+        [
+          "Missing or invalid metadata field: lot_size",
+          1
+        ]
+      ],
+      "recommendations": [
+        "FIX_SCHEMA_ERRORS: 1 messages have schema violations",
+        "IMPROVE_METADATA_ENRICHMENT: Average completeness 86.7%"
+      ]
+    },
+    "consumer_compatibility": {
+      "mock_consumers_tested": 3,
+      "compatibility_rate": 0.10000000000000853,
+      "enrichment_validation": true,
+      "circuit_breaker_behavior": true,
+      "error_handling": true,
+      "performance_acceptable": true
+    }
+  },
+  "performance_validation": {
+    "performance_timestamp": "2026-01-27T04:19:11.962583",
+    "test_configuration": {
+      "message_count": 1000,
+      "synthetic_data": true,
+      "performance_targets": {
+        "max_latency_ms": 50,
+        "p95_latency_ms": 40,
+        "min_throughput_msgs_per_sec": 1000,
+        "max_concurrent_consumers": 10000
+      }
+    },
+    "validation_performance": {
+      "avg_latency_ms": 0.004987239837646484,
+      "p95_latency_ms": 0.0054836273193359375,
+      "p99_latency_ms": 0.013113021850585938,
+      "throughput_msgs_per_sec": 200511.71240080314,
+      "sla_compliant": true
+    },
+    "consumer_performance": {
+      "avg_processing_ms": 1.1343660354614258,
+      "p95_processing_ms": 1.2056827545166016,
+      "p99_processing_ms": 1.255035400390625,
+      "throughput_msgs_per_sec": 881.5496662796593,
+      "sla_compliant": true
+    },
+    "load_testing": {
+      "concurrent_consumers": 100,
+      "total_messages_processed": 100,
+      "total_time_ms": 3.4012794494628906,
+      "avg_latency_ms": 2.0339584350585938,
+      "p95_latency_ms": 2.1698474884033203,
+      "p99_latency_ms": 2.2230148315429688,
+      "throughput_msgs_per_sec": 491.6521315103434,
+      "load_test_passed": true,
+      "ready_for_10k_consumers": true
+    },
+    "performance_compliance": {
+      "validation_under_50ms": true,
+      "consumer_under_50ms": true,
+      "throughput_target_met": true,
+      "ready_for_10k_load": true
+    }
+  },
+  "validation_metadata": {
+    "validator_version": "1.0.0",
+    "schema_version_target": "v2_instrument_key_first",
+    "validation_timestamp": "2026-01-27T04:19:11.967782",
+    "performance_targets": {
+      "max_latency_ms": 50,
+      "p95_latency_ms": 40,
+      "min_throughput_msgs_per_sec": 1000,
+      "max_concurrent_consumers": 10000
+    },
+    "day_2_ready": false
+  }
+}

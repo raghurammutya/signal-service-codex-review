@@ -1,0 +1,157 @@
+[
+  {
+    "aggregation_id": "ohlc_aapl_001",
+    "old_token_aggregation": {
+      "function": "ohlc",
+      "input_data": {
+        "token": "12345",
+        "data_type": "price_series"
+      },
+      "time_window": {
+        "window_size": "5m",
+        "start": "2026-01-27T09:30:00Z",
+        "end": "2026-01-27T09:35:00Z"
+      }
+    },
+    "new_instrument_key_aggregation": {
+      "function": "ohlc",
+      "input_data": {
+        "instrument_key": "AAPL_NASDAQ_EQUITY"
+      },
+      "time_window": {
+        "window_size": "5m",
+        "start": "2026-01-27T09:30:00Z",
+        "end": "2026-01-27T09:35:00Z"
+      }
+    },
+    "aggregation_mapping": {
+      "token": "12345",
+      "symbol": "AAPL",
+      "expected_instrument_key": "AAPL_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "aggregation_id": "vwap_googl_002",
+    "old_token_aggregation": {
+      "function": "vwap",
+      "input_data": {
+        "token": "67890",
+        "data_type": "trade_series"
+      },
+      "time_window": {
+        "window_size": "15m",
+        "start": "2026-01-27T10:00:00Z",
+        "end": "2026-01-27T10:15:00Z"
+      }
+    },
+    "new_instrument_key_aggregation": {
+      "function": "vwap",
+      "input_data": {
+        "instrument_key": "GOOGL_NASDAQ_EQUITY"
+      },
+      "time_window": {
+        "window_size": "15m",
+        "start": "2026-01-27T10:00:00Z",
+        "end": "2026-01-27T10:15:00Z"
+      }
+    },
+    "aggregation_mapping": {
+      "token": "67890",
+      "symbol": "GOOGL",
+      "expected_instrument_key": "GOOGL_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "aggregation_id": "volume_msft_003",
+    "old_token_aggregation": {
+      "function": "volume",
+      "input_data": {
+        "token": "11111",
+        "data_type": "volume_series"
+      },
+      "time_window": {
+        "window_size": "1h",
+        "start": "2026-01-27T09:00:00Z",
+        "end": "2026-01-27T10:00:00Z"
+      }
+    },
+    "new_instrument_key_aggregation": {
+      "function": "volume",
+      "input_data": {
+        "instrument_key": "MSFT_NASDAQ_EQUITY"
+      },
+      "time_window": {
+        "window_size": "1h",
+        "start": "2026-01-27T09:00:00Z",
+        "end": "2026-01-27T10:00:00Z"
+      }
+    },
+    "aggregation_mapping": {
+      "token": "11111",
+      "symbol": "MSFT",
+      "expected_instrument_key": "MSFT_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "aggregation_id": "volatility_reliance_004",
+    "old_token_aggregation": {
+      "function": "volatility",
+      "input_data": {
+        "token": "22222",
+        "data_type": "price_series"
+      },
+      "time_window": {
+        "window_size": "1d",
+        "start": "2026-01-26T09:15:00Z",
+        "end": "2026-01-26T15:30:00Z"
+      }
+    },
+    "new_instrument_key_aggregation": {
+      "function": "volatility",
+      "input_data": {
+        "instrument_key": "RELIANCE_NSE_EQUITY"
+      },
+      "time_window": {
+        "window_size": "1d",
+        "start": "2026-01-26T09:15:00Z",
+        "end": "2026-01-26T15:30:00Z"
+      }
+    },
+    "aggregation_mapping": {
+      "token": "22222",
+      "symbol": "RELIANCE",
+      "expected_instrument_key": "RELIANCE_NSE_EQUITY"
+    }
+  },
+  {
+    "aggregation_id": "price_avg_tsla_005",
+    "old_token_aggregation": {
+      "function": "price_avg",
+      "input_data": {
+        "token": "33333",
+        "data_type": "price_series"
+      },
+      "time_window": {
+        "window_size": "30m",
+        "start": "2026-01-27T11:00:00Z",
+        "end": "2026-01-27T11:30:00Z"
+      }
+    },
+    "new_instrument_key_aggregation": {
+      "function": "price_avg",
+      "input_data": {
+        "instrument_key": "TSLA_NASDAQ_EQUITY"
+      },
+      "time_window": {
+        "window_size": "30m",
+        "start": "2026-01-27T11:00:00Z",
+        "end": "2026-01-27T11:30:00Z"
+      }
+    },
+    "aggregation_mapping": {
+      "token": "33333",
+      "symbol": "TSLA",
+      "expected_instrument_key": "TSLA_NASDAQ_EQUITY"
+    }
+  }
+]

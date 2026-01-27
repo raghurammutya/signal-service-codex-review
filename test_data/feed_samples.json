@@ -1,0 +1,203 @@
+[
+  {
+    "feed_id": "price_feed_aapl_001",
+    "old_token_feed": {
+      "feed_type": "price_feed",
+      "routing": {
+        "token": "12345",
+        "subscription_key": "price_12345"
+      },
+      "data_schema": {
+        "price": 150.25,
+        "timestamp": "2026-01-27T10:30:00Z",
+        "volume": 1000
+      }
+    },
+    "new_instrument_key_feed": {
+      "feed_type": "price_feed",
+      "routing": {
+        "instrument_key": "AAPL_NASDAQ_EQUITY",
+        "subscription_key": "price_AAPL_NASDAQ_EQUITY"
+      },
+      "data_schema": {
+        "price": 150.25,
+        "timestamp": "2026-01-27T10:30:00Z",
+        "volume": 1000,
+        "instrument_metadata": {
+          "symbol": "AAPL",
+          "exchange": "NASDAQ",
+          "type": "EQUITY"
+        }
+      }
+    },
+    "feed_mapping": {
+      "token": "12345",
+      "symbol": "AAPL",
+      "expected_instrument_key": "AAPL_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "feed_id": "quote_feed_googl_002",
+    "old_token_feed": {
+      "feed_type": "quote_feed",
+      "routing": {
+        "token": "67890",
+        "subscription_key": "quote_67890"
+      },
+      "data_schema": {
+        "bid": 2750.50,
+        "ask": 2751.25,
+        "bid_size": 100,
+        "ask_size": 150,
+        "timestamp": "2026-01-27T10:32:00Z"
+      }
+    },
+    "new_instrument_key_feed": {
+      "feed_type": "quote_feed",
+      "routing": {
+        "instrument_key": "GOOGL_NASDAQ_EQUITY",
+        "subscription_key": "quote_GOOGL_NASDAQ_EQUITY"
+      },
+      "data_schema": {
+        "bid": 2750.50,
+        "ask": 2751.25,
+        "bid_size": 100,
+        "ask_size": 150,
+        "timestamp": "2026-01-27T10:32:00Z",
+        "instrument_metadata": {
+          "symbol": "GOOGL",
+          "exchange": "NASDAQ",
+          "type": "EQUITY"
+        }
+      }
+    },
+    "feed_mapping": {
+      "token": "67890",
+      "symbol": "GOOGL",
+      "expected_instrument_key": "GOOGL_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "feed_id": "trade_feed_msft_003",
+    "old_token_feed": {
+      "feed_type": "trade_feed",
+      "routing": {
+        "token": "11111",
+        "subscription_key": "trade_11111"
+      },
+      "data_schema": {
+        "price": 415.75,
+        "volume": 500,
+        "trade_id": "TXN_202601271033001",
+        "timestamp": "2026-01-27T10:33:00Z"
+      }
+    },
+    "new_instrument_key_feed": {
+      "feed_type": "trade_feed",
+      "routing": {
+        "instrument_key": "MSFT_NASDAQ_EQUITY",
+        "subscription_key": "trade_MSFT_NASDAQ_EQUITY"
+      },
+      "data_schema": {
+        "price": 415.75,
+        "volume": 500,
+        "trade_id": "TXN_202601271033001",
+        "timestamp": "2026-01-27T10:33:00Z",
+        "instrument_metadata": {
+          "symbol": "MSFT",
+          "exchange": "NASDAQ",
+          "type": "EQUITY"
+        }
+      }
+    },
+    "feed_mapping": {
+      "token": "11111",
+      "symbol": "MSFT",
+      "expected_instrument_key": "MSFT_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "feed_id": "depth_feed_reliance_004",
+    "old_token_feed": {
+      "feed_type": "depth_feed",
+      "routing": {
+        "token": "22222",
+        "subscription_key": "depth_22222"
+      },
+      "data_schema": {
+        "depth_levels": [
+          {"level": 1, "bid": 2850.25, "ask": 2851.75, "bid_qty": 200, "ask_qty": 180},
+          {"level": 2, "bid": 2849.50, "ask": 2852.50, "bid_qty": 150, "ask_qty": 220},
+          {"level": 3, "bid": 2848.75, "ask": 2853.25, "bid_qty": 100, "ask_qty": 300}
+        ],
+        "timestamp": "2026-01-27T10:34:00Z"
+      }
+    },
+    "new_instrument_key_feed": {
+      "feed_type": "depth_feed",
+      "routing": {
+        "instrument_key": "RELIANCE_NSE_EQUITY",
+        "subscription_key": "depth_RELIANCE_NSE_EQUITY"
+      },
+      "data_schema": {
+        "depth_levels": [
+          {"level": 1, "bid": 2850.25, "ask": 2851.75, "bid_qty": 200, "ask_qty": 180},
+          {"level": 2, "bid": 2849.50, "ask": 2852.50, "bid_qty": 150, "ask_qty": 220},
+          {"level": 3, "bid": 2848.75, "ask": 2853.25, "bid_qty": 100, "ask_qty": 300}
+        ],
+        "timestamp": "2026-01-27T10:34:00Z",
+        "instrument_metadata": {
+          "symbol": "RELIANCE",
+          "exchange": "NSE",
+          "type": "EQUITY"
+        }
+      }
+    },
+    "feed_mapping": {
+      "token": "22222",
+      "symbol": "RELIANCE",
+      "expected_instrument_key": "RELIANCE_NSE_EQUITY"
+    }
+  },
+  {
+    "feed_id": "news_feed_tsla_005",
+    "old_token_feed": {
+      "feed_type": "news_feed",
+      "routing": {
+        "token": "33333",
+        "subscription_key": "news_33333"
+      },
+      "data_schema": {
+        "headline": "Tesla Reports Strong Q4 Delivery Numbers",
+        "summary": "Tesla delivers record number of vehicles in Q4 2025",
+        "source": "Reuters",
+        "timestamp": "2026-01-27T10:35:00Z",
+        "sentiment": "positive"
+      }
+    },
+    "new_instrument_key_feed": {
+      "feed_type": "news_feed",
+      "routing": {
+        "instrument_key": "TSLA_NASDAQ_EQUITY",
+        "subscription_key": "news_TSLA_NASDAQ_EQUITY"
+      },
+      "data_schema": {
+        "headline": "Tesla Reports Strong Q4 Delivery Numbers",
+        "summary": "Tesla delivers record number of vehicles in Q4 2025",
+        "source": "Reuters",
+        "timestamp": "2026-01-27T10:35:00Z",
+        "sentiment": "positive",
+        "instrument_metadata": {
+          "symbol": "TSLA",
+          "exchange": "NASDAQ",
+          "type": "EQUITY"
+        }
+      }
+    },
+    "feed_mapping": {
+      "token": "33333",
+      "symbol": "TSLA",
+      "expected_instrument_key": "TSLA_NASDAQ_EQUITY"
+    }
+  }
+]

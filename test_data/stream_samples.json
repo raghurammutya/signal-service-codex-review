@@ -1,0 +1,107 @@
+[
+  {
+    "message_id": "quote_aapl_001",
+    "instrument_key": "AAPL_NASDAQ_EQUITY",
+    "timestamp": "2026-01-27T10:30:15.123Z",
+    "message_type": "quote",
+    "instrument_metadata": {
+      "symbol": "AAPL",
+      "exchange": "NASDAQ",
+      "sector": "Technology", 
+      "instrument_type": "EQUITY",
+      "lot_size": 1,
+      "tick_size": 0.01
+    },
+    "data": {
+      "ltp": 150.25,
+      "volume": 1250000,
+      "bid": 150.20,
+      "ask": 150.30,
+      "timestamp": 1743422215.123
+    }
+  },
+  {
+    "message_id": "quote_googl_002", 
+    "instrument_key": "GOOGL_NASDAQ_EQUITY",
+    "timestamp": "2026-01-27T10:30:16.456Z",
+    "message_type": "quote",
+    "instrument_metadata": {
+      "symbol": "GOOGL",
+      "exchange": "NASDAQ",
+      "sector": "Technology",
+      "instrument_type": "EQUITY", 
+      "lot_size": 1,
+      "tick_size": 0.01
+    },
+    "data": {
+      "ltp": 2845.75,
+      "volume": 890000,
+      "bid": 2845.50,
+      "ask": 2846.00,
+      "timestamp": 1743422216.456
+    }
+  },
+  {
+    "message_id": "trade_msft_003",
+    "instrument_key": "MSFT_NASDAQ_EQUITY", 
+    "timestamp": "2026-01-27T10:30:17.789Z",
+    "message_type": "trade",
+    "instrument_metadata": {
+      "symbol": "MSFT",
+      "exchange": "NASDAQ",
+      "sector": "Technology",
+      "instrument_type": "EQUITY",
+      "lot_size": 1,
+      "tick_size": 0.01
+    },
+    "data": {
+      "ltp": 425.50,
+      "volume": 2100000,
+      "trade_price": 425.50,
+      "trade_volume": 500,
+      "timestamp": 1743422217.789
+    }
+  },
+  {
+    "message_id": "quote_tsla_004",
+    "instrument_key": "TSLA_NASDAQ_EQUITY",
+    "timestamp": "2026-01-27T10:30:18.012Z",
+    "message_type": "quote",
+    "instrument_metadata": {
+      "symbol": "TSLA",
+      "exchange": "NASDAQ",
+      "sector": "Consumer Discretionary",
+      "instrument_type": "EQUITY",
+      "lot_size": 1,
+      "tick_size": 0.01
+    },
+    "data": {
+      "ltp": 245.80,
+      "volume": 1850000,
+      "bid": 245.75,
+      "ask": 245.85,
+      "timestamp": 1743422218.012
+    }
+  },
+  {
+    "message_id": "quote_reliance_005",
+    "instrument_key": "RELIANCE_NSE_EQUITY",
+    "timestamp": "2026-01-27T10:30:19.345Z", 
+    "message_type": "quote",
+    "instrument_metadata": {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "sector": "Energy",
+      "instrument_type": "EQUITY",
+      "lot_size": 1,
+      "tick_size": 0.05
+    },
+    "data": {
+      "ltp": 2456.75,
+      "volume": 3200000,
+      "bid": 2456.50,
+      "ask": 2457.00,
+      "timestamp": 1743422219.345
+    }
+  }
+]

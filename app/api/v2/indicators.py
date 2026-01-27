@@ -38,7 +38,7 @@ class IndicatorCalculator:
 
     async def get_historical_data(
         self,
-        instrument_token: int,
+        instrument_key: str,
         timeframe: str,
         periods: int,
         end_date: Optional[datetime] = None
@@ -47,7 +47,7 @@ class IndicatorCalculator:
         Fetch historical data from ticker_service API.
 
         Args:
-            instrument_token: Kite instrument token (e.g., 256265)
+            instrument_key: Instrument identifier (e.g., AAPL_NASDAQ_EQUITY)
             timeframe: Timeframe like "5minute", "1minute", "day"
             periods: Number of candles to fetch
             end_date: End date for data (default: now)
@@ -61,6 +61,19 @@ class IndicatorCalculator:
         # Ensure we're initialized
         if not self._initialized:
             await self.initialize()
+
+        # Resolve instrument_key to token for ticker_service compatibility
+        try:
+            # Import here to avoid circular dependencies
+            from app.clients.instrument_registry_client import create_registry_client
+            registry = create_registry_client()
+            instrument_token = await registry.get_broker_token(instrument_key, "kite")
+        except Exception as e:
+            log_error(f"Failed to resolve instrument_key {instrument_key} to token: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid instrument_key: {instrument_key}"
+            )
 
         # Map timeframe to ticker_service interval format
         timeframe_map = {
@@ -100,7 +113,7 @@ class IndicatorCalculator:
             }
 
             log_info(f"Fetching historical data from ticker_service: {url}")
-            log_info(f"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}")
+            log_info(f"Params: instrument_key={instrument_key}, instrument_token={instrument_token}, interval={interval}, periods={periods}")
 
             response = await self._http_client.get(url, params=params)
             response.raise_for_status()
@@ -109,10 +122,10 @@ class IndicatorCalculator:
             candles = data.get("candles", [])
 
             if not candles:
-                log_info(f"No historical data found for instrument_token={instrument_token}")
+                log_info(f"No historical data found for instrument_key={instrument_key}")
                 raise HTTPException(
                     status_code=404,
-                    detail=f"No historical data found for instrument_token={instrument_token}"
+                    detail=f"No historical data found for instrument_key={instrument_key}"
                 )
 
             # Convert to DataFrame
@@ -135,7 +148,7 @@ class IndicatorCalculator:
             if len(df) > periods:
                 df = df.tail(periods)
 
-            log_info(f"Fetched {len(df)} candles for instrument_token={instrument_token}")
+            log_info(f"Fetched {len(df)} candles for instrument_key={instrument_key}")
             return df
 
         except httpx.HTTPStatusError as e:
@@ -406,7 +419,7 @@ async def calculate_sma_endpoint(
             # Define the calculation function
             async def calculate():
                 df = await indicator_calculator.get_historical_data(
-                    symbol, timeframe, period
+                    symbol, timeframe, period  # symbol is actually instrument_key format
                 )
                 sma_series = indicator_calculator.calculate_sma(df, period)
                 return {
@@ -445,7 +458,7 @@ async def calculate_sma_endpoint(
         
         # Get historical data
         df = await indicator_calculator.get_historical_data(
-            symbol, timeframe, required_periods
+            symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
         
         # Calculate SMA
@@ -504,7 +517,7 @@ async def calculate_ema_endpoint(
         required_periods = period * 2 + data_points
         
         df = await indicator_calculator.get_historical_data(
-            symbol, timeframe, required_periods
+            symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
         
         ema_series = indicator_calculator.calculate_ema(df, period)
@@ -548,7 +561,7 @@ async def calculate_rsi_endpoint(
         required_periods = period + data_points + 10  # Extra for RSI calculation
         
         df = await indicator_calculator.get_historical_data(
-            symbol, timeframe, required_periods
+            symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
         
         rsi_series = indicator_calculator.calculate_rsi(df, period)
@@ -594,7 +607,7 @@ async def calculate_macd_endpoint(
         required_periods = slow_period * 2 + data_points
         
         df = await indicator_calculator.get_historical_data(
-            symbol, timeframe, required_periods
+            symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
         
         macd_result = indicator_calculator.calculate_macd(
@@ -645,7 +658,7 @@ async def calculate_bollinger_bands_endpoint(
         required_periods = period + data_points - 1
         
         df = await indicator_calculator.get_historical_data(
-            symbol, timeframe, required_periods
+            symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
         
         bb_result = indicator_calculator.calculate_bollinger_bands(
@@ -946,7 +959,7 @@ async def calculate_dynamic_indicator(
         required_periods = params.get('length', params.get('period', 50)) * 2 + data_points + 50
         
         df = await indicator_calculator.get_historical_data(
-            symbol, timeframe, required_periods
+            symbol, timeframe, required_periods  # symbol is actually instrument_key format
         )
         
         result_df = await indicator_calculator.calculate_dynamic_indicator(

@@ -1,0 +1,166 @@
+[
+  {
+    "event_id": "event_trade_aapl_001",
+    "old_token_routing": {
+      "token": "12345",
+      "route_key": "trade_12345",
+      "processor": "legacy_trade_processor"
+    },
+    "new_instrument_key_routing": {
+      "instrument_key": "AAPL_NASDAQ_EQUITY",
+      "route_key": "trade_AAPL_NASDAQ_EQUITY",
+      "processor": "instrument_trade_processor"
+    },
+    "routing_table_entry": {
+      "token": "12345",
+      "symbol": "AAPL",
+      "expected_instrument_key": "AAPL_NASDAQ_EQUITY"
+    },
+    "event_data": {
+      "event_type": "trade",
+      "timestamp": "2026-01-27T10:30:15.123Z",
+      "sequence_number": 1001,
+      "payload": {
+        "instrument_key": "AAPL_NASDAQ_EQUITY",
+        "token": "12345",
+        "price": 150.25,
+        "volume": 1000,
+        "trade_id": "T_12345_001"
+      },
+      "source": "market_data_feed"
+    }
+  },
+  {
+    "event_id": "event_quote_googl_002",
+    "old_token_routing": {
+      "token": "67890", 
+      "route_key": "quote_67890",
+      "processor": "legacy_quote_processor"
+    },
+    "new_instrument_key_routing": {
+      "instrument_key": "GOOGL_NASDAQ_EQUITY",
+      "route_key": "quote_GOOGL_NASDAQ_EQUITY",
+      "processor": "instrument_quote_processor"
+    },
+    "routing_table_entry": {
+      "token": "67890",
+      "symbol": "GOOGL",
+      "expected_instrument_key": "GOOGL_NASDAQ_EQUITY"
+    },
+    "event_data": {
+      "event_type": "quote",
+      "timestamp": "2026-01-27T10:30:16.456Z",
+      "sequence_number": 1002,
+      "payload": {
+        "instrument_key": "GOOGL_NASDAQ_EQUITY",
+        "token": "67890",
+        "bid": 2845.50,
+        "ask": 2846.00,
+        "bid_size": 100,
+        "ask_size": 150
+      },
+      "source": "market_data_feed"
+    }
+  },
+  {
+    "event_id": "event_depth_msft_003",
+    "old_token_routing": {
+      "token": "11111",
+      "route_key": "depth_11111", 
+      "processor": "legacy_depth_processor"
+    },
+    "new_instrument_key_routing": {
+      "instrument_key": "MSFT_NASDAQ_EQUITY",
+      "route_key": "depth_MSFT_NASDAQ_EQUITY",
+      "processor": "instrument_depth_processor"
+    },
+    "routing_table_entry": {
+      "token": "11111",
+      "symbol": "MSFT",
+      "expected_instrument_key": "MSFT_NASDAQ_EQUITY"
+    },
+    "event_data": {
+      "event_type": "depth_update",
+      "timestamp": "2026-01-27T10:30:17.789Z",
+      "sequence_number": 1003,
+      "payload": {
+        "instrument_key": "MSFT_NASDAQ_EQUITY",
+        "token": "11111",
+        "depth": {
+          "bids": [
+            {"price": 425.45, "size": 100},
+            {"price": 425.40, "size": 200}
+          ],
+          "asks": [
+            {"price": 425.55, "size": 150},
+            {"price": 425.60, "size": 250}
+          ]
+        }
+      },
+      "source": "market_data_feed"
+    }
+  },
+  {
+    "event_id": "event_trade_reliance_004",
+    "old_token_routing": {
+      "token": "22222",
+      "route_key": "trade_22222",
+      "processor": "legacy_trade_processor"
+    },
+    "new_instrument_key_routing": {
+      "instrument_key": "RELIANCE_NSE_EQUITY",
+      "route_key": "trade_RELIANCE_NSE_EQUITY", 
+      "processor": "instrument_trade_processor"
+    },
+    "routing_table_entry": {
+      "token": "22222",
+      "symbol": "RELIANCE",
+      "expected_instrument_key": "RELIANCE_NSE_EQUITY"
+    },
+    "event_data": {
+      "event_type": "trade",
+      "timestamp": "2026-01-27T10:30:19.345Z",
+      "sequence_number": 1004,
+      "payload": {
+        "instrument_key": "RELIANCE_NSE_EQUITY",
+        "token": "22222",
+        "price": 2456.75,
+        "volume": 500,
+        "trade_id": "T_22222_001"
+      },
+      "source": "market_data_feed"
+    }
+  },
+  {
+    "event_id": "event_quote_tsla_005",
+    "old_token_routing": {
+      "token": "33333",
+      "route_key": "quote_33333",
+      "processor": "legacy_quote_processor"
+    },
+    "new_instrument_key_routing": {
+      "instrument_key": "TSLA_NASDAQ_EQUITY",
+      "route_key": "quote_TSLA_NASDAQ_EQUITY",
+      "processor": "instrument_quote_processor"
+    },
+    "routing_table_entry": {
+      "token": "33333",
+      "symbol": "TSLA",
+      "expected_instrument_key": "TSLA_NASDAQ_EQUITY"
+    },
+    "event_data": {
+      "event_type": "quote",
+      "timestamp": "2026-01-27T10:30:18.012Z",
+      "sequence_number": 1005,
+      "payload": {
+        "instrument_key": "TSLA_NASDAQ_EQUITY",
+        "token": "33333",
+        "bid": 245.75,
+        "ask": 245.85,
+        "bid_size": 200,
+        "ask_size": 300
+      },
+      "source": "market_data_feed"
+    }
+  }
+]

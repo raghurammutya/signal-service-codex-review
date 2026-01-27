@@ -1,0 +1,712 @@
+{
+  "phase": "Phase 0: Token Usage Audit & Contract Enforcement",
+  "duration": "1 week",
+  "generated_at": "2026-01-26T17:20:34.960463",
+  "inventory_summary": {
+    "scan_timestamp": "2026-01-26T17:19:54.224689",
+    "total_findings": 53,
+    "critical_issues": 5,
+    "services_affected": 1,
+    "top_priority_services": [
+      "unknown"
+    ]
+  },
+  "task_sections": {
+    "audit_tasks": [
+      {
+        "task_id": "AUDIT_001",
+        "title": "Execute Automated Token Usage Scan",
+        "description": "Run comprehensive token usage scanner across entire codebase",
+        "service": "infrastructure",
+        "priority": "critical",
+        "estimated_hours": 2,
+        "dependencies": [],
+        "acceptance_criteria": [
+          "Token usage scanner executed successfully",
+          "Inventory report generated with all findings",
+          "Migration priorities calculated and validated"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "AUDIT_002",
+        "title": "Database Schema Token Analysis",
+        "description": "Analyze all database schemas for token column usage and dependencies",
+        "service": "infrastructure",
+        "priority": "high",
+        "estimated_hours": 4,
+        "dependencies": [
+          "AUDIT_001"
+        ],
+        "acceptance_criteria": [
+          "All token columns identified and catalogued",
+          "Foreign key dependencies mapped",
+          "Index usage analysis completed",
+          "Data migration requirements documented"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "AUDIT_003",
+        "title": "API Endpoint Token Parameter Analysis",
+        "description": "Audit all API endpoints for token parameter usage",
+        "service": "infrastructure",
+        "priority": "high",
+        "estimated_hours": 3,
+        "dependencies": [
+          "AUDIT_001"
+        ],
+        "acceptance_criteria": [
+          "All API endpoints accepting tokens documented",
+          "Token response patterns catalogued",
+          "Backward compatibility requirements defined"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "AUDIT_UNKNOWN_001",
+        "title": "Deep Audit: unknown Token Usage",
+        "description": "Detailed analysis of token usage in unknown service",
+        "service": "unknown",
+        "priority": "medium",
+        "estimated_hours": 84,
+        "dependencies": [
+          "AUDIT_001"
+        ],
+        "acceptance_criteria": [
+          "All 53 token usages analyzed",
+          "Migration effort estimated for each usage",
+          "Breaking change impact assessed",
+          "Service-specific migration plan drafted"
+        ],
+        "assignee": "",
+        "status": "pending"
+      }
+    ],
+    "contract_definition_tasks": [
+      {
+        "task_id": "CONTRACT_001",
+        "title": "Define instrument_key Primary Contract",
+        "description": "Establish instrument_key as mandatory primary identifier for all APIs",
+        "service": "architecture",
+        "priority": "critical",
+        "estimated_hours": 4,
+        "dependencies": [
+          "AUDIT_002",
+          "AUDIT_003"
+        ],
+        "acceptance_criteria": [
+          "API contract standards documented",
+          "instrument_key parameter requirements defined",
+          "Token derivation patterns specified",
+          "Compliance validation rules established"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "CONTRACT_002",
+        "title": "Implement Contract Validation Framework",
+        "description": "Create automated validation for API contract compliance",
+        "service": "infrastructure",
+        "priority": "high",
+        "estimated_hours": 6,
+        "dependencies": [
+          "CONTRACT_001"
+        ],
+        "acceptance_criteria": [
+          "Contract validation decorators implemented",
+          "Automated compliance checking tools created",
+          "Violation detection and reporting active",
+          "Integration with CI/CD pipeline complete"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "CONTRACT_003",
+        "title": "Design Migration Compatibility Layer",
+        "description": "Create backward compatibility framework for gradual migration",
+        "service": "architecture",
+        "priority": "high",
+        "estimated_hours": 5,
+        "dependencies": [
+          "CONTRACT_001"
+        ],
+        "acceptance_criteria": [
+          "Backward compatibility patterns defined",
+          "Legacy token acceptance framework designed",
+          "Migration timeline compatibility ensured",
+          "Deprecation warnings implemented"
+        ],
+        "assignee": "",
+        "status": "pending"
+      }
+    ],
+    "documentation_tasks": [
+      {
+        "task_id": "DOC_001",
+        "title": "Update INSTRUMENT_DATA_ARCHITECTURE.md",
+        "description": "Codify instrument_key primacy in data architecture documentation",
+        "service": "documentation",
+        "priority": "high",
+        "estimated_hours": 3,
+        "dependencies": [
+          "CONTRACT_001"
+        ],
+        "acceptance_criteria": [
+          "instrument_key established as primary identifier",
+          "Token usage restrictions clearly documented",
+          "Registry-first lookup patterns specified",
+          "Code examples updated with correct patterns"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "DOC_002",
+        "title": "Update INSTRUMENT_SUBSCRIPTION_ARCHITECTURE.md",
+        "description": "Define key-based subscription patterns and architecture",
+        "service": "documentation",
+        "priority": "high",
+        "estimated_hours": 3,
+        "dependencies": [
+          "CONTRACT_001"
+        ],
+        "acceptance_criteria": [
+          "Key-based subscription patterns documented",
+          "Internal token resolution flows specified",
+          "Subscription state management by key defined",
+          "Multi-broker token support documented"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "DOC_003",
+        "title": "Create API Contract Standards Documentation",
+        "description": "Document mandatory API standards for instrument_key usage",
+        "service": "documentation",
+        "priority": "medium",
+        "estimated_hours": 4,
+        "dependencies": [
+          "CONTRACT_002"
+        ],
+        "acceptance_criteria": [
+          "API design standards documented",
+          "Compliance requirements specified",
+          "Review checklist created",
+          "Examples and anti-patterns provided"
+        ],
+        "assignee": "",
+        "status": "pending"
+      }
+    ],
+    "testing_framework_tasks": [
+      {
+        "task_id": "TEST_001",
+        "title": "Create Contract Compliance Test Suite",
+        "description": "Implement automated testing for API contract compliance",
+        "service": "testing",
+        "priority": "high",
+        "estimated_hours": 8,
+        "dependencies": [
+          "CONTRACT_002"
+        ],
+        "acceptance_criteria": [
+          "Contract violation tests implemented",
+          "Token derivation validation tests created",
+          "Registry lookup performance tests added",
+          "Backward compatibility tests validated"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "TEST_002",
+        "title": "Performance Impact Testing Framework",
+        "description": "Create testing for registry lookup performance impact",
+        "service": "testing",
+        "priority": "medium",
+        "estimated_hours": 6,
+        "dependencies": [
+          "CONTRACT_001"
+        ],
+        "acceptance_criteria": [
+          "Registry lookup latency tests implemented",
+          "Cache effectiveness validation created",
+          "Performance baseline measurements established",
+          "SLA compliance testing automated"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "TEST_003",
+        "title": "Data Consistency Validation Tests",
+        "description": "Implement testing for token-key mapping consistency",
+        "service": "testing",
+        "priority": "high",
+        "estimated_hours": 5,
+        "dependencies": [
+          "AUDIT_002"
+        ],
+        "acceptance_criteria": [
+          "Token-key consistency validation implemented",
+          "Database integrity tests created",
+          "Cross-service data validation tests added",
+          "Migration data validation scripts ready"
+        ],
+        "assignee": "",
+        "status": "pending"
+      }
+    ],
+    "governance_tasks": [
+      {
+        "task_id": "GOV_001",
+        "title": "Implement Code Review Compliance Checking",
+        "description": "Add automated compliance checking to code review process",
+        "service": "governance",
+        "priority": "medium",
+        "estimated_hours": 4,
+        "dependencies": [
+          "CONTRACT_002"
+        ],
+        "acceptance_criteria": [
+          "Automated compliance checker integrated",
+          "Code review checklist updated",
+          "Violation reporting implemented",
+          "Developer training materials created"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "GOV_002",
+        "title": "Create Deployment Gate Integration",
+        "description": "Integrate contract compliance into deployment gates",
+        "service": "governance",
+        "priority": "high",
+        "estimated_hours": 5,
+        "dependencies": [
+          "TEST_001"
+        ],
+        "acceptance_criteria": [
+          "Deployment gate compliance checks active",
+          "Service validation automated",
+          "Compliance reporting integrated",
+          "Rollback triggers for violations implemented"
+        ],
+        "assignee": "",
+        "status": "pending"
+      },
+      {
+        "task_id": "GOV_003",
+        "title": "Establish Violation Monitoring",
+        "description": "Implement real-time monitoring for contract violations",
+        "service": "governance",
+        "priority": "medium",
+        "estimated_hours": 6,
+        "dependencies": [
+          "CONTRACT_002"
+        ],
+        "acceptance_criteria": [
+          "Real-time violation detection active",
+          "Alerting for compliance breaches implemented",
+          "Violation trend analysis dashboard created",
+          "Automated reporting for compliance team"
+        ],
+        "assignee": "",
+        "status": "pending"
+      }
+    ]
+  },
+  "all_tasks": [
+    {
+      "task_id": "AUDIT_001",
+      "title": "Execute Automated Token Usage Scan",
+      "description": "Run comprehensive token usage scanner across entire codebase",
+      "service": "infrastructure",
+      "priority": "critical",
+      "estimated_hours": 2,
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Token usage scanner executed successfully",
+        "Inventory report generated with all findings",
+        "Migration priorities calculated and validated"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "AUDIT_002",
+      "title": "Database Schema Token Analysis",
+      "description": "Analyze all database schemas for token column usage and dependencies",
+      "service": "infrastructure",
+      "priority": "high",
+      "estimated_hours": 4,
+      "dependencies": [
+        "AUDIT_001"
+      ],
+      "acceptance_criteria": [
+        "All token columns identified and catalogued",
+        "Foreign key dependencies mapped",
+        "Index usage analysis completed",
+        "Data migration requirements documented"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "AUDIT_003",
+      "title": "API Endpoint Token Parameter Analysis",
+      "description": "Audit all API endpoints for token parameter usage",
+      "service": "infrastructure",
+      "priority": "high",
+      "estimated_hours": 3,
+      "dependencies": [
+        "AUDIT_001"
+      ],
+      "acceptance_criteria": [
+        "All API endpoints accepting tokens documented",
+        "Token response patterns catalogued",
+        "Backward compatibility requirements defined"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "AUDIT_UNKNOWN_001",
+      "title": "Deep Audit: unknown Token Usage",
+      "description": "Detailed analysis of token usage in unknown service",
+      "service": "unknown",
+      "priority": "medium",
+      "estimated_hours": 84,
+      "dependencies": [
+        "AUDIT_001"
+      ],
+      "acceptance_criteria": [
+        "All 53 token usages analyzed",
+        "Migration effort estimated for each usage",
+        "Breaking change impact assessed",
+        "Service-specific migration plan drafted"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "CONTRACT_001",
+      "title": "Define instrument_key Primary Contract",
+      "description": "Establish instrument_key as mandatory primary identifier for all APIs",
+      "service": "architecture",
+      "priority": "critical",
+      "estimated_hours": 4,
+      "dependencies": [
+        "AUDIT_002",
+        "AUDIT_003"
+      ],
+      "acceptance_criteria": [
+        "API contract standards documented",
+        "instrument_key parameter requirements defined",
+        "Token derivation patterns specified",
+        "Compliance validation rules established"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "CONTRACT_002",
+      "title": "Implement Contract Validation Framework",
+      "description": "Create automated validation for API contract compliance",
+      "service": "infrastructure",
+      "priority": "high",
+      "estimated_hours": 6,
+      "dependencies": [
+        "CONTRACT_001"
+      ],
+      "acceptance_criteria": [
+        "Contract validation decorators implemented",
+        "Automated compliance checking tools created",
+        "Violation detection and reporting active",
+        "Integration with CI/CD pipeline complete"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "CONTRACT_003",
+      "title": "Design Migration Compatibility Layer",
+      "description": "Create backward compatibility framework for gradual migration",
+      "service": "architecture",
+      "priority": "high",
+      "estimated_hours": 5,
+      "dependencies": [
+        "CONTRACT_001"
+      ],
+      "acceptance_criteria": [
+        "Backward compatibility patterns defined",
+        "Legacy token acceptance framework designed",
+        "Migration timeline compatibility ensured",
+        "Deprecation warnings implemented"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "DOC_001",
+      "title": "Update INSTRUMENT_DATA_ARCHITECTURE.md",
+      "description": "Codify instrument_key primacy in data architecture documentation",
+      "service": "documentation",
+      "priority": "high",
+      "estimated_hours": 3,
+      "dependencies": [
+        "CONTRACT_001"
+      ],
+      "acceptance_criteria": [
+        "instrument_key established as primary identifier",
+        "Token usage restrictions clearly documented",
+        "Registry-first lookup patterns specified",
+        "Code examples updated with correct patterns"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "DOC_002",
+      "title": "Update INSTRUMENT_SUBSCRIPTION_ARCHITECTURE.md",
+      "description": "Define key-based subscription patterns and architecture",
+      "service": "documentation",
+      "priority": "high",
+      "estimated_hours": 3,
+      "dependencies": [
+        "CONTRACT_001"
+      ],
+      "acceptance_criteria": [
+        "Key-based subscription patterns documented",
+        "Internal token resolution flows specified",
+        "Subscription state management by key defined",
+        "Multi-broker token support documented"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "DOC_003",
+      "title": "Create API Contract Standards Documentation",
+      "description": "Document mandatory API standards for instrument_key usage",
+      "service": "documentation",
+      "priority": "medium",
+      "estimated_hours": 4,
+      "dependencies": [
+        "CONTRACT_002"
+      ],
+      "acceptance_criteria": [
+        "API design standards documented",
+        "Compliance requirements specified",
+        "Review checklist created",
+        "Examples and anti-patterns provided"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "TEST_001",
+      "title": "Create Contract Compliance Test Suite",
+      "description": "Implement automated testing for API contract compliance",
+      "service": "testing",
+      "priority": "high",
+      "estimated_hours": 8,
+      "dependencies": [
+        "CONTRACT_002"
+      ],
+      "acceptance_criteria": [
+        "Contract violation tests implemented",
+        "Token derivation validation tests created",
+        "Registry lookup performance tests added",
+        "Backward compatibility tests validated"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "TEST_002",
+      "title": "Performance Impact Testing Framework",
+      "description": "Create testing for registry lookup performance impact",
+      "service": "testing",
+      "priority": "medium",
+      "estimated_hours": 6,
+      "dependencies": [
+        "CONTRACT_001"
+      ],
+      "acceptance_criteria": [
+        "Registry lookup latency tests implemented",
+        "Cache effectiveness validation created",
+        "Performance baseline measurements established",
+        "SLA compliance testing automated"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "TEST_003",
+      "title": "Data Consistency Validation Tests",
+      "description": "Implement testing for token-key mapping consistency",
+      "service": "testing",
+      "priority": "high",
+      "estimated_hours": 5,
+      "dependencies": [
+        "AUDIT_002"
+      ],
+      "acceptance_criteria": [
+        "Token-key consistency validation implemented",
+        "Database integrity tests created",
+        "Cross-service data validation tests added",
+        "Migration data validation scripts ready"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "GOV_001",
+      "title": "Implement Code Review Compliance Checking",
+      "description": "Add automated compliance checking to code review process",
+      "service": "governance",
+      "priority": "medium",
+      "estimated_hours": 4,
+      "dependencies": [
+        "CONTRACT_002"
+      ],
+      "acceptance_criteria": [
+        "Automated compliance checker integrated",
+        "Code review checklist updated",
+        "Violation reporting implemented",
+        "Developer training materials created"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "GOV_002",
+      "title": "Create Deployment Gate Integration",
+      "description": "Integrate contract compliance into deployment gates",
+      "service": "governance",
+      "priority": "high",
+      "estimated_hours": 5,
+      "dependencies": [
+        "TEST_001"
+      ],
+      "acceptance_criteria": [
+        "Deployment gate compliance checks active",
+        "Service validation automated",
+        "Compliance reporting integrated",
+        "Rollback triggers for violations implemented"
+      ],
+      "assignee": "",
+      "status": "pending"
+    },
+    {
+      "task_id": "GOV_003",
+      "title": "Establish Violation Monitoring",
+      "description": "Implement real-time monitoring for contract violations",
+      "service": "governance",
+      "priority": "medium",
+      "estimated_hours": 6,
+      "dependencies": [
+        "CONTRACT_002"
+      ],
+      "acceptance_criteria": [
+        "Real-time violation detection active",
+        "Alerting for compliance breaches implemented",
+        "Violation trend analysis dashboard created",
+        "Automated reporting for compliance team"
+      ],
+      "assignee": "",
+      "status": "pending"
+    }
+  ],
+  "timeline": {
+    "week_overview": "Phase 0: Token Usage Audit & Contract Enforcement",
+    "total_estimated_hours": 152,
+    "daily_schedule": {
+      "day_1": {
+        "date": "2026-01-26",
+        "focus": "Automated scanning and inventory generation",
+        "key_tasks": [
+          "AUDIT_001: Execute Automated Token Usage Scan"
+        ],
+        "deliverables": [
+          "Complete token usage inventory report",
+          "Migration priority matrix",
+          "Service-specific audit initiation"
+        ]
+      },
+      "day_2": {
+        "date": "2026-01-27",
+        "focus": "Database and API analysis",
+        "key_tasks": [
+          "AUDIT_002: Database Schema Token Analysis",
+          "AUDIT_003: API Endpoint Token Parameter Analysis"
+        ],
+        "deliverables": [
+          "Database schema token analysis",
+          "API endpoint token inventory",
+          "Data migration requirements"
+        ]
+      },
+      "day_3": {
+        "date": "2026-01-28",
+        "focus": "Contract definition and validation framework",
+        "key_tasks": [
+          "CONTRACT_001: Define instrument_key Primary Contract",
+          "CONTRACT_002: Implement Contract Validation Framework"
+        ],
+        "deliverables": [
+          "API contract standards defined",
+          "Contract validation framework implemented",
+          "Backward compatibility design"
+        ]
+      },
+      "day_4": {
+        "date": "2026-01-29",
+        "focus": "Documentation updates and testing framework",
+        "key_tasks": [
+          "DOC_001: Update INSTRUMENT_DATA_ARCHITECTURE.md",
+          "DOC_002: Update INSTRUMENT_SUBSCRIPTION_ARCHITECTURE.md",
+          "TEST_001: Create Contract Compliance Test Suite"
+        ],
+        "deliverables": [
+          "Updated architecture documentation",
+          "Contract compliance test suite",
+          "Performance testing framework"
+        ]
+      },
+      "day_5": {
+        "date": "2026-01-30",
+        "focus": "Governance implementation and validation",
+        "key_tasks": [
+          "TEST_003: Data Consistency Validation Tests",
+          "GOV_001: Implement Code Review Compliance Checking",
+          "GOV_002: Create Deployment Gate Integration"
+        ],
+        "deliverables": [
+          "Governance procedures implemented",
+          "Deployment gate integration",
+          "Phase 0 completion validation"
+        ]
+      }
+    }
+  },
+  "success_criteria": [
+    "Complete token usage inventory across all services with 100% code coverage",
+    "API contracts defined with instrument_key as mandatory primary identifier",
+    "Contract validation framework implemented and integrated with CI/CD",
+    "All architecture documentation updated with new standards",
+    "Automated compliance testing suite operational",
+    "Governance procedures established and enforced",
+    "Migration priority plan approved with resource allocation",
+    "Zero critical contract violations in new code submissions"
+  ]
+}

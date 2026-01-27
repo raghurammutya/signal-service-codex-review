@@ -1,0 +1,157 @@
+[
+  {
+    "query_id": "price_history_aapl_001",
+    "old_token_query": {
+      "filters": {
+        "token": "12345",
+        "data_type": "price"
+      },
+      "query_type": "price_history",
+      "time_range": {
+        "start_time": "2026-01-26T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 1000
+    },
+    "new_instrument_key_query": {
+      "filters": {
+        "instrument_key": "AAPL_NASDAQ_EQUITY"
+      },
+      "query_type": "price_history",
+      "time_range": {
+        "start_time": "2026-01-26T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 1000
+    },
+    "query_mapping": {
+      "token": "12345",
+      "symbol": "AAPL",
+      "expected_instrument_key": "AAPL_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "query_id": "ohlc_data_googl_002",
+    "old_token_query": {
+      "filters": {
+        "token": "67890",
+        "data_type": "ohlc"
+      },
+      "query_type": "ohlc_data",
+      "time_range": {
+        "start_time": "2026-01-25T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 500
+    },
+    "new_instrument_key_query": {
+      "filters": {
+        "instrument_key": "GOOGL_NASDAQ_EQUITY"
+      },
+      "query_type": "ohlc_data", 
+      "time_range": {
+        "start_time": "2026-01-25T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 500
+    },
+    "query_mapping": {
+      "token": "67890",
+      "symbol": "GOOGL",
+      "expected_instrument_key": "GOOGL_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "query_id": "volume_history_msft_003",
+    "old_token_query": {
+      "filters": {
+        "token": "11111",
+        "data_type": "volume"
+      },
+      "query_type": "volume_history",
+      "time_range": {
+        "start_time": "2026-01-24T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 2000
+    },
+    "new_instrument_key_query": {
+      "filters": {
+        "instrument_key": "MSFT_NASDAQ_EQUITY"
+      },
+      "query_type": "volume_history",
+      "time_range": {
+        "start_time": "2026-01-24T00:00:00Z", 
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 2000
+    },
+    "query_mapping": {
+      "token": "11111",
+      "symbol": "MSFT",
+      "expected_instrument_key": "MSFT_NASDAQ_EQUITY"
+    }
+  },
+  {
+    "query_id": "trade_history_reliance_004",
+    "old_token_query": {
+      "filters": {
+        "token": "22222",
+        "data_type": "trades"
+      },
+      "query_type": "trade_history",
+      "time_range": {
+        "start_time": "2026-01-26T09:00:00Z",
+        "end_time": "2026-01-26T15:30:00Z"
+      },
+      "limit": 5000
+    },
+    "new_instrument_key_query": {
+      "filters": {
+        "instrument_key": "RELIANCE_NSE_EQUITY"
+      },
+      "query_type": "trade_history",
+      "time_range": {
+        "start_time": "2026-01-26T09:00:00Z",
+        "end_time": "2026-01-26T15:30:00Z"
+      },
+      "limit": 5000
+    },
+    "query_mapping": {
+      "token": "22222",
+      "symbol": "RELIANCE", 
+      "expected_instrument_key": "RELIANCE_NSE_EQUITY"
+    }
+  },
+  {
+    "query_id": "price_history_tsla_005",
+    "old_token_query": {
+      "filters": {
+        "token": "33333",
+        "data_type": "price"
+      },
+      "query_type": "price_history",
+      "time_range": {
+        "start_time": "2026-01-20T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 10000
+    },
+    "new_instrument_key_query": {
+      "filters": {
+        "instrument_key": "TSLA_NASDAQ_EQUITY"
+      },
+      "query_type": "price_history",
+      "time_range": {
+        "start_time": "2026-01-20T00:00:00Z",
+        "end_time": "2026-01-27T00:00:00Z"
+      },
+      "limit": 10000
+    },
+    "query_mapping": {
+      "token": "33333",
+      "symbol": "TSLA",
+      "expected_instrument_key": "TSLA_NASDAQ_EQUITY"
+    }
+  }
+]

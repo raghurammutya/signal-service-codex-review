@@ -1,0 +1,2054 @@
+{
+  "scan_timestamp": "2026-01-27T02:33:27.305647",
+  "summary_statistics": {
+    "total_findings": 224,
+    "files_affected": 13,
+    "critical_issues": 26,
+    "high_priority_issues": 63,
+    "services_requiring_migration": 1
+  },
+  "findings_by_severity": {
+    "medium": 81,
+    "low": 80,
+    "critical": 26,
+    "high": 37
+  },
+  "findings_by_usage_type": {
+    "broker_integration": 81,
+    "direct_token_usage": 72,
+    "api_parameters": 26,
+    "database_operations": 37,
+    "cache_operations": 8
+  },
+  "findings_by_service": {
+    "unknown": 224
+  },
+  "migration_priorities": [
+    {
+      "service": "unknown",
+      "total_findings": 224,
+      "critical_findings": 26,
+      "high_findings": 37,
+      "estimated_effort_weeks": 44.8000000000001,
+      "migration_priority": 14.93
+    }
+  ],
+  "detailed_findings": [
+    {
+      "file_path": "app/api/v2/admin.py",
+      "line_number": 51,
+      "usage_type": "broker_integration",
+      "code_snippet": "expected_token = config_client.get_secret(\"ADMIN_TOKEN\")",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "            timeout=5\n        )\n        expected_token = config_client.get_secret(\"ADMIN_TOKEN\")\n        if not expected_token:\n            raise ValueError(\"ADMIN_TOKEN not found in config_service\")"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 41,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "instrument_token: int,",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "    async def get_historical_data(\n        self,\n        instrument_token: int,\n        timeframe: str,\n        periods: int,"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 50,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "instrument_token: Kite instrument token (e.g., 256265)",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n        Args:\n            instrument_token: Kite instrument token (e.g., 256265)\n            timeframe: Timeframe like \"5minute\", \"1minute\", \"day\"\n            periods: Number of candles to fetch"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 103,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "log_info(f\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\")",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n            log_info(f\"Fetching historical data from ticker_service: {url}\")\n            log_info(f\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\")\n\n            response = await self._http_client.get(url, params=params)"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 112,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "log_info(f\"No historical data found for instrument_token={instrument_token}\")",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n            if not candles:\n                log_info(f\"No historical data found for instrument_token={instrument_token}\")\n                raise HTTPException(\n                    status_code=404,"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 115,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "detail=f\"No historical data found for instrument_token={instrument_token}\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "                raise HTTPException(\n                    status_code=404,\n                    detail=f\"No historical data found for instrument_token={instrument_token}\"\n                )\n"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 138,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "log_info(f\"Fetched {len(df)} candles for instrument_token={instrument_token}\")",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "                df = df.tail(periods)\n\n            log_info(f\"Fetched {len(df)} candles for instrument_token={instrument_token}\")\n            return df\n"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 39,
+      "usage_type": "api_parameters",
+      "code_snippet": "async def get_historical_data(",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "            self._initialized = True\n\n    async def get_historical_data(\n        self,\n        instrument_token: int,"
+    },
+    {
+      "file_path": "app/api/v2/indicators.py",
+      "line_number": 90,
+      "usage_type": "broker_integration",
+      "code_snippet": "# Call ticker_service API using instrument_token",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        from_ts = end_date - timedelta(minutes=periods * minutes * 2)  # 2x buffer for market gaps\n\n        # Call ticker_service API using instrument_token\n        try:\n            url = f\"{settings.TICKER_SERVICE_URL}/api/v2/historical/ohlcv\""
+    },
+    {
+      "file_path": "app/api/v2/sdk_signals.py",
+      "line_number": 716,
+      "usage_type": "broker_integration",
+      "code_snippet": "validation_result = await marketplace_client.verify_execution_token(",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        marketplace_client = create_marketplace_client()\n        \n        validation_result = await marketplace_client.verify_execution_token(\n            token=execution_token,\n            product_id=product_id,"
+    },
+    {
+      "file_path": "app/services/signal_stream_contract.py",
+      "line_number": 355,
+      "usage_type": "broker_integration",
+      "code_snippet": "response = await self.marketplace_client.verify_execution_token(",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        try:\n            # Call marketplace service to verify token and subscription\n            response = await self.marketplace_client.verify_execution_token(\n                token=execution_token,\n                product_id=product_id,"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 149,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "def accept_legacy_token(self, instrument_token: str) -> str:",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "        \n    @deprecated(\"Use instrument_key parameter\")\n    def accept_legacy_token(self, instrument_token: str) -> str:\n        \"\"\"Convert legacy token to instrument_key\"\"\"\n        return self.registry_client.resolve_key_from_token(instrument_token)"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 188,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "def create_order(instrument_token: str, quantity: int) -> Order:",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n# \u274c INCORRECT: instrument_token as input parameter  \ndef create_order(instrument_token: str, quantity: int) -> Order:\n    return broker_client.place_order(instrument_token, quantity)\n```"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 215,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "instrument_token=\"12345\",  # Not allowed",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "# \u274c INCORRECT: Token-based subscription\nsubscription_manager.subscribe_to_instrument(\n    instrument_token=\"12345\",  # Not allowed\n    data_types=[\"quotes\", \"trades\"]\n)"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 243,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "order_service.create_order(instrument_token=\"12345\", quantity=100)",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "        \"\"\"Test that APIs require instrument_key parameter\"\"\"\n        with pytest.raises(APIContractViolation):\n            order_service.create_order(instrument_token=\"12345\", quantity=100)\n    \n    def test_no_direct_token_persistence(self):"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 31,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "r'\\.token\\b',",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "        self.token_patterns = [\n            r'instrument_token',\n            r'\\.token\\b',\n            r'token_id',\n            r'broker_token',"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 149,
+      "usage_type": "api_parameters",
+      "code_snippet": "def accept_legacy_token(self, instrument_token: str) -> str:",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "        \n    @deprecated(\"Use instrument_key parameter\")\n    def accept_legacy_token(self, instrument_token: str) -> str:\n        \"\"\"Convert legacy token to instrument_key\"\"\"\n        return self.registry_client.resolve_key_from_token(instrument_token)"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 188,
+      "usage_type": "api_parameters",
+      "code_snippet": "def create_order(instrument_token: str, quantity: int) -> Order:",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "\n# \u274c INCORRECT: instrument_token as input parameter  \ndef create_order(instrument_token: str, quantity: int) -> Order:\n    return broker_client.place_order(instrument_token, quantity)\n```"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 185,
+      "usage_type": "broker_integration",
+      "code_snippet": "return broker_client.place_order(token, quantity)",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "    # Get token internally when needed for broker\n    token = registry.get_broker_token(instrument_key, broker_id)\n    return broker_client.place_order(token, quantity)\n\n# \u274c INCORRECT: instrument_token as input parameter  "
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 189,
+      "usage_type": "broker_integration",
+      "code_snippet": "return broker_client.place_order(instrument_token, quantity)",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "# \u274c INCORRECT: instrument_token as input parameter  \ndef create_order(instrument_token: str, quantity: int) -> Order:\n    return broker_client.place_order(instrument_token, quantity)\n```\n"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 151,
+      "usage_type": "broker_integration",
+      "code_snippet": "return self.registry_client.resolve_key_from_token(instrument_token)",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "    def accept_legacy_token(self, instrument_token: str) -> str:\n        \"\"\"Convert legacy token to instrument_key\"\"\"\n        return self.registry_client.resolve_key_from_token(instrument_token)\n    \n    def validate_contract_compliance(self, api_call: Dict) -> bool:"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 185,
+      "usage_type": "broker_integration",
+      "code_snippet": "return broker_client.place_order(token, quantity)",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "    # Get token internally when needed for broker\n    token = registry.get_broker_token(instrument_key, broker_id)\n    return broker_client.place_order(token, quantity)\n\n# \u274c INCORRECT: instrument_token as input parameter  "
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 189,
+      "usage_type": "broker_integration",
+      "code_snippet": "return broker_client.place_order(instrument_token, quantity)",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "# \u274c INCORRECT: instrument_token as input parameter  \ndef create_order(instrument_token: str, quantity: int) -> Order:\n    return broker_client.place_order(instrument_token, quantity)\n```\n"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 255,
+      "usage_type": "broker_integration",
+      "code_snippet": "@patch('registry_client.get_broker_token')",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        assert not hasattr(order, 'instrument_token')\n    \n    @patch('registry_client.get_broker_token')\n    def test_token_derivation_from_registry(self, mock_registry):\n        \"\"\"Test that tokens are derived from registry only\"\"\""
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 281,
+      "usage_type": "broker_integration",
+      "code_snippet": "token = registry_client.get_broker_token(\"AAPL_NASDAQ_EQUITY\")",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        \"\"\"Test registry lookup stays under 50ms\"\"\"\n        start_time = time.time()\n        token = registry_client.get_broker_token(\"AAPL_NASDAQ_EQUITY\")\n        end_time = time.time()\n        "
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 290,
+      "usage_type": "broker_integration",
+      "code_snippet": "token1 = registry_client.get_broker_token(\"AAPL_NASDAQ_EQUITY\")",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        \"\"\"Test that registry lookups are properly cached\"\"\"\n        # First lookup - should hit registry\n        token1 = registry_client.get_broker_token(\"AAPL_NASDAQ_EQUITY\")\n        \n        # Second lookup - should hit cache"
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 294,
+      "usage_type": "broker_integration",
+      "code_snippet": "token2 = registry_client.get_broker_token(\"AAPL_NASDAQ_EQUITY\")",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        # Second lookup - should hit cache\n        start_time = time.time()\n        token2 = registry_client.get_broker_token(\"AAPL_NASDAQ_EQUITY\")\n        end_time = time.time()\n        "
+    },
+    {
+      "file_path": "docs/PHASE_0_AUDIT_FRAMEWORK.md",
+      "line_number": 34,
+      "usage_type": "broker_integration",
+      "code_snippet": "r'ticker_token'",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "            r'token_id',\n            r'broker_token',\n            r'ticker_token'\n        ]\n        "
+    },
+    {
+      "file_path": "scripts/automated_security_validation.py",
+      "line_number": 40,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "            ],\n            \"tokens\": [\n                \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token\",\n                \"bearer_token_12345_secret_value\",\n                \"session_token_abcd1234efgh5678\""
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 42,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "r'\\.token\\b(?!\\w)',",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "            'direct_token_usage': [\n                r'instrument_token\\s*[=:]\\s*',\n                r'\\.token\\b(?!\\w)',\n                r'token_id\\s*[=:]',\n                r'broker_token\\s*[=:]',"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 54,
+      "usage_type": "database_operations",
+      "code_snippet": "r'SELECT.*instrument_token',",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "            ],\n            'database_operations': [\n                r'SELECT.*instrument_token',\n                r'INSERT.*instrument_token',\n                r'UPDATE.*instrument_token',"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 55,
+      "usage_type": "database_operations",
+      "code_snippet": "r'INSERT.*instrument_token',",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "            'database_operations': [\n                r'SELECT.*instrument_token',\n                r'INSERT.*instrument_token',\n                r'UPDATE.*instrument_token',\n                r'WHERE.*instrument_token',"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 56,
+      "usage_type": "database_operations",
+      "code_snippet": "r'UPDATE.*instrument_token',",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "                r'SELECT.*instrument_token',\n                r'INSERT.*instrument_token',\n                r'UPDATE.*instrument_token',\n                r'WHERE.*instrument_token',\n                r'ORDER BY.*instrument_token',"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 57,
+      "usage_type": "database_operations",
+      "code_snippet": "r'WHERE.*instrument_token',",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "                r'INSERT.*instrument_token',\n                r'UPDATE.*instrument_token',\n                r'WHERE.*instrument_token',\n                r'ORDER BY.*instrument_token',\n                r'GROUP BY.*instrument_token'"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 58,
+      "usage_type": "database_operations",
+      "code_snippet": "r'ORDER BY.*instrument_token',",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "                r'UPDATE.*instrument_token',\n                r'WHERE.*instrument_token',\n                r'ORDER BY.*instrument_token',\n                r'GROUP BY.*instrument_token'\n            ],"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 59,
+      "usage_type": "database_operations",
+      "code_snippet": "r'GROUP BY.*instrument_token'",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "                r'WHERE.*instrument_token',\n                r'ORDER BY.*instrument_token',\n                r'GROUP BY.*instrument_token'\n            ],\n            'cache_operations': ["
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 64,
+      "usage_type": "cache_operations",
+      "code_snippet": "r'cache_key.*token',",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "                r'cache\\.get\\([\\'\"].*token',\n                r'redis\\.get\\([\\'\"].*token',\n                r'cache_key.*token',\n                r'key_prefix.*token'\n            ],"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 65,
+      "usage_type": "cache_operations",
+      "code_snippet": "r'key_prefix.*token'",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "                r'redis\\.get\\([\\'\"].*token',\n                r'cache_key.*token',\n                r'key_prefix.*token'\n            ],\n            'broker_integration': ["
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 68,
+      "usage_type": "broker_integration",
+      "code_snippet": "r'broker.*\\..*token',",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "            ],\n            'broker_integration': [\n                r'broker.*\\..*token',\n                r'client\\..*token',\n                r'api_call.*token',"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 70,
+      "usage_type": "broker_integration",
+      "code_snippet": "r'api_call.*token',",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "                r'broker.*\\..*token',\n                r'client\\..*token',\n                r'api_call.*token',\n                r'ticker.*token'\n            ]"
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 45,
+      "usage_type": "broker_integration",
+      "code_snippet": "r'ticker_token\\s*[=:]'",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "                r'token_id\\s*[=:]',\n                r'broker_token\\s*[=:]',\n                r'ticker_token\\s*[=:]'\n            ],\n            'api_parameters': ["
+    },
+    {
+      "file_path": "scripts/phase0_token_usage_scanner.py",
+      "line_number": 71,
+      "usage_type": "broker_integration",
+      "code_snippet": "r'ticker.*token'",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "                r'client\\..*token',\n                r'api_call.*token',\n                r'ticker.*token'\n            ]\n        }"
+    },
+    {
+      "file_path": "test/auth/test_authentication_authorization.py",
+      "line_number": 205,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"not.a.jwt.token\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "        \"\"\"Test validation of malformed JWT token\"\"\"\n        malformed_tokens = [\n            \"not.a.jwt.token\",\n            \"invalid_token\",\n            \"\","
+    },
+    {
+      "file_path": "test/conftest.py",
+      "line_number": 181,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "def _mock_historical_data(instrument_token: int, **kwargs):",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "def mock_ticker_service():\n    \"\"\"Mock ticker service responses.\"\"\"\n    def _mock_historical_data(instrument_token: int, **kwargs):\n        # Generate sample historical data\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')"
+    },
+    {
+      "file_path": "test/conftest.py",
+      "line_number": 181,
+      "usage_type": "api_parameters",
+      "code_snippet": "def _mock_historical_data(instrument_token: int, **kwargs):",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "def mock_ticker_service():\n    \"\"\"Mock ticker service responses.\"\"\"\n    def _mock_historical_data(instrument_token: int, **kwargs):\n        # Generate sample historical data\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')"
+    },
+    {
+      "file_path": "test/integration/test_service_integration.py",
+      "line_number": 230,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "instrument_token=256265,",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "            try:\n                df = await calculator.get_historical_data(\n                    instrument_token=256265,\n                    timeframe=\"5minute\",\n                    periods=50"
+    },
+    {
+      "file_path": "tests/router_test_fallback.py",
+      "line_number": 114,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n@router.get(\"/realtime/indicators/{instrument_token}/{indicator}\")\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\n    \"\"\"\n    Real-time indicator calculation endpoint."
+    },
+    {
+      "file_path": "tests/router_test_fallback.py",
+      "line_number": 123,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "instrument_token: Kite instrument token (e.g., 256265) - LEGACY FORMAT",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n    Args:\n        instrument_token: Kite instrument token (e.g., 256265) - LEGACY FORMAT\n        indicator: Indicator name (e.g., rsi, sma, ema)\n        period: Period for indicator calculation"
+    },
+    {
+      "file_path": "tests/router_test_fallback.py",
+      "line_number": 137,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "instrument_token=instrument_token,",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "        # TODO: This should be updated to use instrument_key when endpoint is modernized\n        df = await indicator_calculator.get_historical_data(\n            instrument_token=instrument_token,\n            timeframe=timeframe,\n            periods=max(period * 2 + 50, 100)  # Ensure enough data"
+    },
+    {
+      "file_path": "tests/router_test_fallback.py",
+      "line_number": 143,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "raise HTTPException(status_code=404, detail=f\"No data found for instrument_token={instrument_token} (LEGACY)\")",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "\n        if df.empty:\n            raise HTTPException(status_code=404, detail=f\"No data found for instrument_token={instrument_token} (LEGACY)\")\n\n        # Calculate indicator"
+    },
+    {
+      "file_path": "tests/router_test_fallback.py",
+      "line_number": 114,
+      "usage_type": "api_parameters",
+      "code_snippet": "async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "\n@router.get(\"/realtime/indicators/{instrument_token}/{indicator}\")\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\n    \"\"\"\n    Real-time indicator calculation endpoint."
+    },
+    {
+      "file_path": "tests/test_sdk_signal_listing.py",
+      "line_number": 261,
+      "usage_type": "broker_integration",
+      "code_snippet": "with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        \"\"\"Test validating a valid execution token.\"\"\"\n        with patch('app.core.auth.get_current_user_from_gateway', return_value={\"user_id\": \"user-123\"}):\n            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\n                      return_value={\n                          \"is_valid\": True,"
+    },
+    {
+      "file_path": "tests/test_sdk_signal_listing.py",
+      "line_number": 292,
+      "usage_type": "broker_integration",
+      "code_snippet": "with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "        \"\"\"Test validating an invalid execution token.\"\"\"\n        with patch('app.core.auth.get_current_user_from_gateway', return_value={\"user_id\": \"user-123\"}):\n            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\n                      return_value={\"is_valid\": False}):\n                "
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 50,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"instrument_token: int,\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 41,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"instrument_token: int,\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 53,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"    async def get_historical_data(\\n        self,\\n        instrument_token: int,\\n        timeframe: str,\\n        periods: int,\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    async def get_historical_data(\\n        self,\\n        instrument_token: int,\\n        timeframe: str,\\n        periods: int,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 59,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"instrument_token: Kite instrument token (e.g., 256265)\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 50,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"instrument_token: Kite instrument token (e.g., 256265)\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 62,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n        Args:\\n            instrument_token: Kite instrument token (e.g., 256265)\\n            timeframe: Timeframe like \\\"5minute\\\", \\\"1minute\\\", \\\"day\\\"\\n            periods: Number of candles to fetch\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n        Args:\\n            instrument_token: Kite instrument token (e.g., 256265)\\n            timeframe: Timeframe like \\\"5minute\\\", \\\"1minute\\\", \\\"day\\\"\\n            periods: Number of candles to fetch\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 68,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"log_info(f\\\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\\\")\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 103,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"log_info(f\\\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\\\")\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 71,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n            log_info(f\\\"Fetching historical data from ticker_service: {url}\\\")\\n            log_info(f\\\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\\\")\\n\\n            response = await self._http_client.get(url, params=params)\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n            log_info(f\\\"Fetching historical data from ticker_service: {url}\\\")\\n            log_info(f\\\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\\\")\\n\\n            response = await self._http_client.get(url, params=params)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 77,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"log_info(f\\\"No historical data found for instrument_token={instrument_token}\\\")\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 112,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"log_info(f\\\"No historical data found for instrument_token={instrument_token}\\\")\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 80,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n            if not candles:\\n                log_info(f\\\"No historical data found for instrument_token={instrument_token}\\\")\\n                raise HTTPException(\\n                    status_code=404,\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n            if not candles:\\n                log_info(f\\\"No historical data found for instrument_token={instrument_token}\\\")\\n                raise HTTPException(\\n                    status_code=404,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 86,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"detail=f\\\"No historical data found for instrument_token={instrument_token}\\\"\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 115,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"detail=f\\\"No historical data found for instrument_token={instrument_token}\\\"\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 89,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"                raise HTTPException(\\n                    status_code=404,\\n                    detail=f\\\"No historical data found for instrument_token={instrument_token}\\\"\\n                )\\n\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                raise HTTPException(\\n                    status_code=404,\\n                    detail=f\\\"No historical data found for instrument_token={instrument_token}\\\"\\n                )\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 95,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"log_info(f\\\"Fetched {len(df)} candles for instrument_token={instrument_token}\\\")\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 138,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"log_info(f\\\"Fetched {len(df)} candles for instrument_token={instrument_token}\\\")\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 98,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"                df = df.tail(periods)\\n\\n            log_info(f\\\"Fetched {len(df)} candles for instrument_token={instrument_token}\\\")\\n            return df\\n\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                df = df.tail(periods)\\n\\n            log_info(f\\\"Fetched {len(df)} candles for instrument_token={instrument_token}\\\")\\n            return df\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 107,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"            self._initialized = True\\n\\n    async def get_historical_data(\\n        self,\\n        instrument_token: int,\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            self._initialized = True\\n\\n    async def get_historical_data(\\n        self,\\n        instrument_token: int,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 140,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 149,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 143,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 149,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 188,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 152,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 158,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"instrument_token=\\\"12345\\\",  # Not allowed\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 215,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"instrument_token=\\\"12345\\\",  # Not allowed\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 161,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: Token-based subscription\\nsubscription_manager.subscribe_to_instrument(\\n    instrument_token=\\\"12345\\\",  # Not allowed\\n    data_types=[\\\"quotes\\\", \\\"trades\\\"]\\n)\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: Token-based subscription\\nsubscription_manager.subscribe_to_instrument(\\n    instrument_token=\\\"12345\\\",  # Not allowed\\n    data_types=[\\\"quotes\\\", \\\"trades\\\"]\\n)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 167,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"order_service.create_order(instrument_token=\\\"12345\\\", quantity=100)\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 243,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"order_service.create_order(instrument_token=\\\"12345\\\", quantity=100)\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 170,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"        \\\"\\\"\\\"Test that APIs require instrument_key parameter\\\"\\\"\\\"\\n        with pytest.raises(APIContractViolation):\\n            order_service.create_order(instrument_token=\\\"12345\\\", quantity=100)\\n    \\n    def test_no_direct_token_persistence(self):\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\\"\\\"\\\"Test that APIs require instrument_key parameter\\\"\\\"\\\"\\n        with pytest.raises(APIContractViolation):\\n            order_service.create_order(instrument_token=\\\"12345\\\", quantity=100)\\n    \\n    def test_no_direct_token_persistence(self):\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 185,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 149,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 188,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 194,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 188,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 197,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 215,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 224,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\\n    \\n    def validate_contract_compliance(self, api_call: Dict) -> bool:\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\\n    \\n    def validate_contract_compliance(self, api_call: Dict) -> bool:\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 242,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 428,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 181,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 431,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 437,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 181,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 440,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 446,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"instrument_token=256265,\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 230,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"instrument_token=256265,\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 449,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"            try:\\n                df = await calculator.get_historical_data(\\n                    instrument_token=256265,\\n                    timeframe=\\\"5minute\\\",\\n                    periods=50\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            try:\\n                df = await calculator.get_historical_data(\\n                    instrument_token=256265,\\n                    timeframe=\\\"5minute\\\",\\n                    periods=50\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 455,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 114,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 458,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 464,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"instrument_token: Kite instrument token (e.g., 256265) - LEGACY FORMAT\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 123,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"instrument_token: Kite instrument token (e.g., 256265) - LEGACY FORMAT\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 467,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n    Args:\\n        instrument_token: Kite instrument token (e.g., 256265) - LEGACY FORMAT\\n        indicator: Indicator name (e.g., rsi, sma, ema)\\n        period: Period for indicator calculation\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n    Args:\\n        instrument_token: Kite instrument token (e.g., 256265) - LEGACY FORMAT\\n        indicator: Indicator name (e.g., rsi, sma, ema)\\n        period: Period for indicator calculation\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 473,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"instrument_token=instrument_token,\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 137,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"instrument_token=instrument_token,\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 476,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"        # TODO: This should be updated to use instrument_key when endpoint is modernized\\n        df = await indicator_calculator.get_historical_data(\\n            instrument_token=instrument_token,\\n            timeframe=timeframe,\\n            periods=max(period * 2 + 50, 100)  # Ensure enough data\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        # TODO: This should be updated to use instrument_key when endpoint is modernized\\n        df = await indicator_calculator.get_historical_data(\\n            instrument_token=instrument_token,\\n            timeframe=timeframe,\\n            periods=max(period * 2 + 50, 100)  # Ensure enough data\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 482,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"raise HTTPException(status_code=404, detail=f\\\"No data found for instrument_token={instrument_token} (LEGACY)\\\")\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 143,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"raise HTTPException(status_code=404, detail=f\\\"No data found for instrument_token={instrument_token} (LEGACY)\\\")\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 485,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n        if df.empty:\\n            raise HTTPException(status_code=404, detail=f\\\"No data found for instrument_token={instrument_token} (LEGACY)\\\")\\n\\n        # Calculate indicator\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n        if df.empty:\\n            raise HTTPException(status_code=404, detail=f\\\"No data found for instrument_token={instrument_token} (LEGACY)\\\")\\n\\n        # Calculate indicator\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 491,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 114,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 494,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 176,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"r'\\\\.token\\\\b',\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 31,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"r'\\\\.token\\\\b',\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 179,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"        self.token_patterns = [\\n            r'instrument_token',\\n            r'\\\\.token\\\\b',\\n            r'token_id',\\n            r'broker_token',\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        self.token_patterns = [\\n            r'instrument_token',\\n            r'\\\\.token\\\\b',\\n            r'token_id',\\n            r'broker_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 293,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"\\\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token\\\",\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 40,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"\\\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token\\\",\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 296,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"            ],\\n            \\\"tokens\\\": [\\n                \\\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token\\\",\\n                \\\"bearer_token_12345_secret_value\\\",\\n                \\\"session_token_abcd1234efgh5678\\\"\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            ],\\n            \\\"tokens\\\": [\\n                \\\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token\\\",\\n                \\\"bearer_token_12345_secret_value\\\",\\n                \\\"session_token_abcd1234efgh5678\\\"\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 302,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"r'\\\\.token\\\\b(?!\\\\w)',\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 42,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"r'\\\\.token\\\\b(?!\\\\w)',\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 305,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"            'direct_token_usage': [\\n                r'instrument_token\\\\s*[=:]\\\\s*',\\n                r'\\\\.token\\\\b(?!\\\\w)',\\n                r'token_id\\\\s*[=:]',\\n                r'broker_token\\\\s*[=:]',\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            'direct_token_usage': [\\n                r'instrument_token\\\\s*[=:]\\\\s*',\\n                r'\\\\.token\\\\b(?!\\\\w)',\\n                r'token_id\\\\s*[=:]',\\n                r'broker_token\\\\s*[=:]',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 419,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"code_snippet\": \"\\\"not.a.jwt.token\\\",\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 205,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"\\\"not.a.jwt.token\\\",\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 422,
+      "usage_type": "direct_token_usage",
+      "code_snippet": "\"context\": \"        \\\"\\\"\\\"Test validation of malformed JWT token\\\"\\\"\\\"\\n        malformed_tokens = [\\n            \\\"not.a.jwt.token\\\",\\n            \\\"invalid_token\\\",\\n            \\\"\\\",\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\\"\\\"\\\"Test validation of malformed JWT token\\\"\\\"\\\"\\n        malformed_tokens = [\\n            \\\"not.a.jwt.token\\\",\\n            \\\"invalid_token\\\",\\n            \\\"\\\",\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 53,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"    async def get_historical_data(\\n        self,\\n        instrument_token: int,\\n        timeframe: str,\\n        periods: int,\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    async def get_historical_data(\\n        self,\\n        instrument_token: int,\\n        timeframe: str,\\n        periods: int,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 104,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"async def get_historical_data(\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 39,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"async def get_historical_data(\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 140,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 149,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 143,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 149,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 188,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 152,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 185,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 149,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"def accept_legacy_token(self, instrument_token: str) -> str:\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 188,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 194,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 188,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"def create_order(instrument_token: str, quantity: int) -> Order:\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 197,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 215,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 224,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\\n    \\n    def validate_contract_compliance(self, api_call: Dict) -> bool:\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\\n    \\n    def validate_contract_compliance(self, api_call: Dict) -> bool:\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 242,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 428,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 181,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 431,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 437,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 181,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"def _mock_historical_data(instrument_token: int, **kwargs):\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 440,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 455,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 114,\n      \"usage_type\": \"direct_token_usage\",\n      \"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 458,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 491,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 114,\n      \"usage_type\": \"api_parameters\",\n      \"code_snippet\": \"async def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\",\n      \"severity\": \"critical\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 494,
+      "usage_type": "api_parameters",
+      "code_snippet": "\"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"",
+      "severity": "critical",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n@router.get(\\\"/realtime/indicators/{instrument_token}/{indicator}\\\")\\nasync def realtime_indicator(instrument_token: int, indicator: str, period: int = Query(14, ge=1, le=200)) -> Dict[str, Any]:\\n    \\\"\\\"\\\"\\n    Real-time indicator calculation endpoint.\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 311,
+      "usage_type": "database_operations",
+      "code_snippet": "\"code_snippet\": \"r'SELECT.*instrument_token',\",",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 54,\n      \"usage_type\": \"database_operations\",\n      \"code_snippet\": \"r'SELECT.*instrument_token',\",\n      \"severity\": \"high\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 314,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            ],\\n            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            ],\\n            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 323,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 332,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 314,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            ],\\n            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            ],\\n            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 320,
+      "usage_type": "database_operations",
+      "code_snippet": "\"code_snippet\": \"r'INSERT.*instrument_token',\",",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 55,\n      \"usage_type\": \"database_operations\",\n      \"code_snippet\": \"r'INSERT.*instrument_token',\",\n      \"severity\": \"high\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 323,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 332,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 341,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 314,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            ],\\n            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            ],\\n            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 323,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 329,
+      "usage_type": "database_operations",
+      "code_snippet": "\"code_snippet\": \"r'UPDATE.*instrument_token',\",",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 56,\n      \"usage_type\": \"database_operations\",\n      \"code_snippet\": \"r'UPDATE.*instrument_token',\",\n      \"severity\": \"high\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 332,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 341,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 350,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 476,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"        # TODO: This should be updated to use instrument_key when endpoint is modernized\\n        df = await indicator_calculator.get_historical_data(\\n            instrument_token=instrument_token,\\n            timeframe=timeframe,\\n            periods=max(period * 2 + 50, 100)  # Ensure enough data\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        # TODO: This should be updated to use instrument_key when endpoint is modernized\\n        df = await indicator_calculator.get_historical_data(\\n            instrument_token=instrument_token,\\n            timeframe=timeframe,\\n            periods=max(period * 2 + 50, 100)  # Ensure enough data\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 323,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            'database_operations': [\\n                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 332,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 338,
+      "usage_type": "database_operations",
+      "code_snippet": "\"code_snippet\": \"r'WHERE.*instrument_token',\",",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 57,\n      \"usage_type\": \"database_operations\",\n      \"code_snippet\": \"r'WHERE.*instrument_token',\",\n      \"severity\": \"high\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 341,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 350,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 359,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\\n            'cache_operations': [\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\\n            'cache_operations': [\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 332,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'SELECT.*instrument_token',\\n                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 341,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 347,
+      "usage_type": "database_operations",
+      "code_snippet": "\"code_snippet\": \"r'ORDER BY.*instrument_token',\",",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 58,\n      \"usage_type\": \"database_operations\",\n      \"code_snippet\": \"r'ORDER BY.*instrument_token',\",\n      \"severity\": \"high\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 350,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 359,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\\n            'cache_operations': [\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\\n            'cache_operations': [\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 341,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'INSERT.*instrument_token',\\n                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 350,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'UPDATE.*instrument_token',\\n                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 356,
+      "usage_type": "database_operations",
+      "code_snippet": "\"code_snippet\": \"r'GROUP BY.*instrument_token'\",",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 59,\n      \"usage_type\": \"database_operations\",\n      \"code_snippet\": \"r'GROUP BY.*instrument_token'\",\n      \"severity\": \"high\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 359,
+      "usage_type": "database_operations",
+      "code_snippet": "\"context\": \"                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\\n            'cache_operations': [\"",
+      "severity": "high",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"high\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'WHERE.*instrument_token',\\n                r'ORDER BY.*instrument_token',\\n                r'GROUP BY.*instrument_token'\\n            ],\\n            'cache_operations': [\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 365,
+      "usage_type": "cache_operations",
+      "code_snippet": "\"code_snippet\": \"r'cache_key.*token',\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 64,\n      \"usage_type\": \"cache_operations\",\n      \"code_snippet\": \"r'cache_key.*token',\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 368,
+      "usage_type": "cache_operations",
+      "code_snippet": "\"context\": \"                r'cache\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'cache\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 377,
+      "usage_type": "cache_operations",
+      "code_snippet": "\"context\": \"                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\\n            'broker_integration': [\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\\n            'broker_integration': [\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 368,
+      "usage_type": "cache_operations",
+      "code_snippet": "\"context\": \"                r'cache\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'cache\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 374,
+      "usage_type": "cache_operations",
+      "code_snippet": "\"code_snippet\": \"r'key_prefix.*token'\",",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 65,\n      \"usage_type\": \"cache_operations\",\n      \"code_snippet\": \"r'key_prefix.*token'\",\n      \"severity\": \"low\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 377,
+      "usage_type": "cache_operations",
+      "code_snippet": "\"context\": \"                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\\n            'broker_integration': [\"",
+      "severity": "low",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'redis\\\\.get\\\\([\\\\'\\\"].*token',\\n                r'cache_key.*token',\\n                r'key_prefix.*token'\\n            ],\\n            'broker_integration': [\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 152,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 197,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 203,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 185,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 206,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 212,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 189,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 215,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 230,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 185,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 233,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 239,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 189,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 242,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 383,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"r'broker.*\\\\..*token',\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 68,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"r'broker.*\\\\..*token',\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 386,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"            ],\\n            'broker_integration': [\\n                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            ],\\n            'broker_integration': [\\n                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 395,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 41,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"expected_token = config_client.get_secret(\\\"ADMIN_TOKEN\\\")\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 51,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"expected_token = config_client.get_secret(\\\"ADMIN_TOKEN\\\")\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 44,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"            timeout=5\\n        )\\n        expected_token = config_client.get_secret(\\\"ADMIN_TOKEN\\\")\\n        if not expected_token:\\n            raise ValueError(\\\"ADMIN_TOKEN not found in config_service\\\")\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            timeout=5\\n        )\\n        expected_token = config_client.get_secret(\\\"ADMIN_TOKEN\\\")\\n        if not expected_token:\\n            raise ValueError(\\\"ADMIN_TOKEN not found in config_service\\\")\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 122,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"validation_result = await marketplace_client.verify_execution_token(\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 716,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"validation_result = await marketplace_client.verify_execution_token(\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 125,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        marketplace_client = create_marketplace_client()\\n        \\n        validation_result = await marketplace_client.verify_execution_token(\\n            token=execution_token,\\n            product_id=product_id,\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        marketplace_client = create_marketplace_client()\\n        \\n        validation_result = await marketplace_client.verify_execution_token(\\n            token=execution_token,\\n            product_id=product_id,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 131,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"response = await self.marketplace_client.verify_execution_token(\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 355,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"response = await self.marketplace_client.verify_execution_token(\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 134,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        try:\\n            # Call marketplace service to verify token and subscription\\n            response = await self.marketplace_client.verify_execution_token(\\n                token=execution_token,\\n                product_id=product_id,\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        try:\\n            # Call marketplace service to verify token and subscription\\n            response = await self.marketplace_client.verify_execution_token(\\n                token=execution_token,\\n                product_id=product_id,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 143,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 152,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 188,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\n    @deprecated(\\\"Use instrument_key parameter\\\")\\n    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 197,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 203,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 185,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 206,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 212,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 189,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 215,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 221,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return self.registry_client.resolve_key_from_token(instrument_token)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 151,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return self.registry_client.resolve_key_from_token(instrument_token)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 224,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\\n    \\n    def validate_contract_compliance(self, api_call: Dict) -> bool:\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    def accept_legacy_token(self, instrument_token: str) -> str:\\n        \\\"\\\"\\\"Convert legacy token to instrument_key\\\"\\\"\\\"\\n        return self.registry_client.resolve_key_from_token(instrument_token)\\n    \\n    def validate_contract_compliance(self, api_call: Dict) -> bool:\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 230,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 185,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 233,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"    # Get token internally when needed for broker\\n    token = registry.get_broker_token(instrument_key, broker_id)\\n    return broker_client.place_order(token, quantity)\\n\\n# \\u274c INCORRECT: instrument_token as input parameter  \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 239,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 189,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"return broker_client.place_order(instrument_token, quantity)\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 242,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"# \\u274c INCORRECT: instrument_token as input parameter  \\ndef create_order(instrument_token: str, quantity: int) -> Order:\\n    return broker_client.place_order(instrument_token, quantity)\\n```\\n\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 248,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"@patch('registry_client.get_broker_token')\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 255,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"@patch('registry_client.get_broker_token')\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 251,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        assert not hasattr(order, 'instrument_token')\\n    \\n    @patch('registry_client.get_broker_token')\\n    def test_token_derivation_from_registry(self, mock_registry):\\n        \\\"\\\"\\\"Test that tokens are derived from registry only\\\"\\\"\\\"\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        assert not hasattr(order, 'instrument_token')\\n    \\n    @patch('registry_client.get_broker_token')\\n    def test_token_derivation_from_registry(self, mock_registry):\\n        \\\"\\\"\\\"Test that tokens are derived from registry only\\\"\\\"\\\"\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 257,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"token = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 281,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"token = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 260,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        \\\"\\\"\\\"Test registry lookup stays under 50ms\\\"\\\"\\\"\\n        start_time = time.time()\\n        token = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\\n        end_time = time.time()\\n        \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\\"\\\"\\\"Test registry lookup stays under 50ms\\\"\\\"\\\"\\n        start_time = time.time()\\n        token = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\\n        end_time = time.time()\\n        \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 266,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"token1 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 290,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"token1 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 269,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        \\\"\\\"\\\"Test that registry lookups are properly cached\\\"\\\"\\\"\\n        # First lookup - should hit registry\\n        token1 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\\n        \\n        # Second lookup - should hit cache\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\\"\\\"\\\"Test that registry lookups are properly cached\\\"\\\"\\\"\\n        # First lookup - should hit registry\\n        token1 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\\n        \\n        # Second lookup - should hit cache\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 275,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"token2 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 294,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"token2 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 278,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        # Second lookup - should hit cache\\n        start_time = time.time()\\n        token2 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\\n        end_time = time.time()\\n        \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        # Second lookup - should hit cache\\n        start_time = time.time()\\n        token2 = registry_client.get_broker_token(\\\"AAPL_NASDAQ_EQUITY\\\")\\n        end_time = time.time()\\n        \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 500,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 261,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 503,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        \\\"\\\"\\\"Test validating a valid execution token.\\\"\\\"\\\"\\n        with patch('app.core.auth.get_current_user_from_gateway', return_value={\\\"user_id\\\": \\\"user-123\\\"}):\\n            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\\n                      return_value={\\n                          \\\"is_valid\\\": True,\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\\"\\\"\\\"Test validating a valid execution token.\\\"\\\"\\\"\\n        with patch('app.core.auth.get_current_user_from_gateway', return_value={\\\"user_id\\\": \\\"user-123\\\"}):\\n            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\\n                      return_value={\\n                          \\\"is_valid\\\": True,\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 509,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 292,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 512,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        \\\"\\\"\\\"Test validating an invalid execution token.\\\"\\\"\\\"\\n        with patch('app.core.auth.get_current_user_from_gateway', return_value={\\\"user_id\\\": \\\"user-123\\\"}):\\n            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\\n                      return_value={\\\"is_valid\\\": False}):\\n                \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        \\\"\\\"\\\"Test validating an invalid execution token.\\\"\\\"\\\"\\n        with patch('app.core.auth.get_current_user_from_gateway', return_value={\\\"user_id\\\": \\\"user-123\\\"}):\\n            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',\\n                      return_value={\\\"is_valid\\\": False}):\\n                \"\n    }\n  ]"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 386,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"            ],\\n            'broker_integration': [\\n                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            ],\\n            'broker_integration': [\\n                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 392,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"r'api_call.*token',\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 70,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"r'api_call.*token',\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 395,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 413,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\\n        }\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\\n        }\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 71,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"\\n            log_info(f\\\"Fetching historical data from ticker_service: {url}\\\")\\n            log_info(f\\\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\\\")\\n\\n            response = await self._http_client.get(url, params=params)\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"\\n            log_info(f\\\"Fetching historical data from ticker_service: {url}\\\")\\n            log_info(f\\\"Params: instrument_token={instrument_token}, interval={interval}, periods={periods}\\\")\\n\\n            response = await self._http_client.get(url, params=params)\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 113,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"# Call ticker_service API using instrument_token\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 90,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"# Call ticker_service API using instrument_token\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 116,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"        from_ts = end_date - timedelta(minutes=periods * minutes * 2)  # 2x buffer for market gaps\\n\\n        # Call ticker_service API using instrument_token\\n        try:\\n            url = f\\\"{settings.TICKER_SERVICE_URL}/api/v2/historical/ohlcv\\\"\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"        from_ts = end_date - timedelta(minutes=periods * minutes * 2)  # 2x buffer for market gaps\\n\\n        # Call ticker_service API using instrument_token\\n        try:\\n            url = f\\\"{settings.TICKER_SERVICE_URL}/api/v2/historical/ohlcv\\\"\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 284,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"r'ticker_token'\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 34,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"r'ticker_token'\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 287,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"            r'token_id',\\n            r'broker_token',\\n            r'ticker_token'\\n        ]\\n        \"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"            r'token_id',\\n            r'broker_token',\\n            r'ticker_token'\\n        ]\\n        \"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 395,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'broker.*\\\\..*token',\\n                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 401,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"r'ticker_token\\\\s*[=:]'\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 45,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"r'ticker_token\\\\s*[=:]'\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 404,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"                r'token_id\\\\s*[=:]',\\n                r'broker_token\\\\s*[=:]',\\n                r'ticker_token\\\\s*[=:]'\\n            ],\\n            'api_parameters': [\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'token_id\\\\s*[=:]',\\n                r'broker_token\\\\s*[=:]',\\n                r'ticker_token\\\\s*[=:]'\\n            ],\\n            'api_parameters': [\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 410,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"code_snippet\": \"r'ticker.*token'\",",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"line_number\": 71,\n      \"usage_type\": \"broker_integration\",\n      \"code_snippet\": \"r'ticker.*token'\",\n      \"severity\": \"medium\",\n      \"migration_effort\": \"2\","
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 413,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\\n        }\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"medium\",\n      \"migration_effort\": \"2\",\n      \"context\": \"                r'client\\\\..*token',\\n                r'api_call.*token',\\n                r'ticker.*token'\\n            ]\\n        }\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 431,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"low\",\n      \"migration_effort\": \"2\",\n      \"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"\n    },\n    {"
+    },
+    {
+      "file_path": "token_usage_inventory_20260126_171954.json",
+      "line_number": 440,
+      "usage_type": "broker_integration",
+      "code_snippet": "\"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"",
+      "severity": "medium",
+      "migration_effort": "2",
+      "context": "      \"severity\": \"critical\",\n      \"migration_effort\": \"2\",\n      \"context\": \"def mock_ticker_service():\\n    \\\"\\\"\\\"Mock ticker service responses.\\\"\\\"\\\"\\n    def _mock_historical_data(instrument_token: int, **kwargs):\\n        # Generate sample historical data\\n        dates = pd.date_range('2024-01-01', periods=50, freq='5T')\"\n    },\n    {"
+    }
+  ]
+}

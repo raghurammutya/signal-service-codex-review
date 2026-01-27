@@ -1,0 +1,117 @@
+[
+  {
+    "entry_id": "cache_aapl_001",
+    "old_token_key": "token_12345_quote",
+    "new_instrument_key": "AAPL_NASDAQ_EQUITY",
+    "key_mapping": {
+      "token": "12345",
+      "symbol": "AAPL",
+      "expected_instrument_key": "AAPL_NASDAQ_EQUITY"
+    },
+    "cache_data": {
+      "last_price": 150.25,
+      "volume": 1250000,
+      "timestamp": 1769487999.123,
+      "bid": 150.20,
+      "ask": 150.30,
+      "metadata": {
+        "symbol": "AAPL",
+        "exchange": "NASDAQ",
+        "sector": "Technology",
+        "instrument_type": "EQUITY"
+      }
+    }
+  },
+  {
+    "entry_id": "cache_googl_002", 
+    "old_token_key": "token_67890_trade",
+    "new_instrument_key": "GOOGL_NASDAQ_EQUITY",
+    "key_mapping": {
+      "token": "67890",
+      "symbol": "GOOGL",
+      "expected_instrument_key": "GOOGL_NASDAQ_EQUITY"
+    },
+    "cache_data": {
+      "last_price": 2845.75,
+      "volume": 890000,
+      "timestamp": 1769488000.456,
+      "bid": 2845.50,
+      "ask": 2846.00,
+      "metadata": {
+        "symbol": "GOOGL",
+        "exchange": "NASDAQ", 
+        "sector": "Technology",
+        "instrument_type": "EQUITY"
+      }
+    }
+  },
+  {
+    "entry_id": "cache_msft_003",
+    "old_token_key": "token_11111_quote",
+    "new_instrument_key": "MSFT_NASDAQ_EQUITY",
+    "key_mapping": {
+      "token": "11111",
+      "symbol": "MSFT",
+      "expected_instrument_key": "MSFT_NASDAQ_EQUITY"
+    },
+    "cache_data": {
+      "last_price": 425.50,
+      "volume": 2100000,
+      "timestamp": 1769488001.789,
+      "bid": 425.45,
+      "ask": 425.55,
+      "metadata": {
+        "symbol": "MSFT",
+        "exchange": "NASDAQ",
+        "sector": "Technology", 
+        "instrument_type": "EQUITY"
+      }
+    }
+  },
+  {
+    "entry_id": "cache_reliance_004",
+    "old_token_key": "token_22222_quote",
+    "new_instrument_key": "RELIANCE_NSE_EQUITY", 
+    "key_mapping": {
+      "token": "22222",
+      "symbol": "RELIANCE",
+      "expected_instrument_key": "RELIANCE_NSE_EQUITY"
+    },
+    "cache_data": {
+      "last_price": 2456.75,
+      "volume": 3200000,
+      "timestamp": 1769488002.345,
+      "bid": 2456.50,
+      "ask": 2457.00,
+      "metadata": {
+        "symbol": "RELIANCE",
+        "exchange": "NSE",
+        "sector": "Energy",
+        "instrument_type": "EQUITY"
+      }
+    }
+  },
+  {
+    "entry_id": "cache_tsla_005",
+    "old_token_key": "token_33333_trade", 
+    "new_instrument_key": "TSLA_NASDAQ_EQUITY",
+    "key_mapping": {
+      "token": "33333",
+      "symbol": "TSLA",
+      "expected_instrument_key": "TSLA_NASDAQ_EQUITY"
+    },
+    "cache_data": {
+      "last_price": 245.80,
+      "volume": 1850000,
+      "timestamp": 1769488003.012,
+      "bid": 245.75,
+      "ask": 245.85,
+      "metadata": {
+        "symbol": "TSLA",
+        "exchange": "NASDAQ",
+        "sector": "Consumer Discretionary",
+        "instrument_type": "EQUITY"
+      }
+    }
+  }
+]

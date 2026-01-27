@@ -1,0 +1,251 @@
+{
+  "phase": "Phase 1: SDK & Strategy Layer Migration",
+  "duration": "2 weeks",
+  "building_on": ["Phase 0 token audit automation", "Phase 3 registry infrastructure"],
+  "guardrails": ["98% SLA monitoring", "Phase 3 rollback procedures", "Registry performance <50ms"],
+  "generated_at": "2026-01-27T02:45:00Z",
+  
+  "week_1_tasks": [
+    {
+      "task_id": "SDK_001",
+      "title": "Update PythonSDK instrument_key Requirements",
+      "description": "Migrate all public SDK methods to require instrument_key parameter",
+      "priority": "critical",
+      "estimated_hours": 12,
+      "owner": "SDK Team",
+      "days": [1, 2],
+      "dependencies": [],
+      "acceptance_criteria": [
+        "All public SDK methods require instrument_key parameter",
+        "Remove all instrument_token input parameters from public APIs", 
+        "Deprecation warnings implemented for legacy token methods",
+        "Backward compatibility layer preserves existing integrations"
+      ]
+    },
+    {
+      "task_id": "SDK_002", 
+      "title": "Implement Internal Token Resolution",
+      "description": "Integrate registry client for internal broker token derivation",
+      "priority": "critical",
+      "estimated_hours": 10,
+      "owner": "SDK Team", 
+      "days": [1, 2],
+      "dependencies": ["SDK_001"],
+      "acceptance_criteria": [
+        "Registry client integrated for broker token lookups",
+        "Token derivation occurs internally before broker calls",
+        "Cache layer implemented for registry lookups (sub-50ms)",
+        "Error handling for missing instrument mappings"
+      ]
+    },
+    {
+      "task_id": "SDK_003",
+      "title": "Remove Direct Token Inputs", 
+      "description": "Eliminate all public token parameters from SDK APIs",
+      "priority": "high",
+      "estimated_hours": 8,
+      "owner": "SDK Team",
+      "days": [2, 3],
+      "dependencies": ["SDK_002"],
+      "acceptance_criteria": [
+        "No public methods accept raw instrument tokens",
+        "All token handling moved to internal resolution layer", 
+        "Documentation updated with instrument_key examples",
+        "Migration guide created for SDK consumers"
+      ]
+    },
+    {
+      "task_id": "CLIENT_001",
+      "title": "Update HTTP Client Contracts",
+      "description": "Migrate HTTP clients to send instrument_key in requests",
+      "priority": "critical", 
+      "estimated_hours": 8,
+      "owner": "Integration Team",
+      "days": [3, 4],
+      "dependencies": ["SDK_002"],
+      "acceptance_criteria": [
+        "All API clients send instrument_key in requests",
+        "HTTP client middleware derives tokens internally",
+        "Request/response logging excludes sensitive tokens",
+        "Client-side validation ensures instrument_key presence"
+      ]
+    },
+    {
+      "task_id": "CLIENT_002",
+      "title": "Broker Integration Wrapper",
+      "description": "Wrap broker clients with registry-based token resolution", 
+      "priority": "high",
+      "estimated_hours": 10,
+      "owner": "Integration Team",
+      "days": [3, 4],
+      "dependencies": ["CLIENT_001"],
+      "acceptance_criteria": [
+        "Kite, Zerodha, IBKR clients wrapped with token resolution",
+        "Multi-broker token support via registry lookup", 
+        "Broker-specific token formats handled internally",
+        "Connection pooling and rate limiting preserved"
+      ]
+    },
+    {
+      "task_id": "TEST_SDK_001",
+      "title": "SDK Contract Compliance Tests",
+      "description": "Create comprehensive test suite for SDK migration",
+      "priority": "high",
+      "estimated_hours": 6, 
+      "owner": "QA Team",
+      "days": [5],
+      "dependencies": ["SDK_003", "CLIENT_002"],
+      "acceptance_criteria": [
+        "Unit tests cover all instrument_key-based methods",
+        "Integration tests validate registry token resolution",
+        "Performance tests ensure <50ms lookup latency", 
+        "Backward compatibility tests pass with deprecation warnings"
+      ]
+    }
+  ],
+  
+  "week_2_tasks": [
+    {
+      "task_id": "STRATEGY_001",
+      "title": "Update Strategy Host APIs",
+      "description": "Migrate strategy execution APIs to instrument_key contracts",
+      "priority": "critical",
+      "estimated_hours": 10,
+      "owner": "Strategy Team",
+      "days": [6, 7], 
+      "dependencies": ["TEST_SDK_001"],
+      "acceptance_criteria": [
+        "All strategy APIs require instrument_key parameters",
+        "Strategy execution uses registry-derived tokens",
+        "Position tracking by instrument_key, not token",
+        "Historical performance data keyed by instrument_key"
+      ]
+    },
+    {
+      "task_id": "STRATEGY_002",
+      "title": "Risk Engine Contract Updates", 
+      "description": "Update risk calculations to use instrument metadata",
+      "priority": "critical",
+      "estimated_hours": 8,
+      "owner": "Risk Team",
+      "days": [6, 7],
+      "dependencies": ["STRATEGY_001"],
+      "acceptance_criteria": [
+        "Risk calculations based on instrument metadata from registry",
+        "Position limits enforced by instrument_key",
+        "Risk monitoring alerts use instrument symbols, not tokens",
+        "Portfolio analytics aggregated by instrument_key"
+      ]
+    },
+    {
+      "task_id": "TRAILING_001",
+      "title": "Trailing Stop Service Migration",
+      "description": "Update trailing stops to use instrument_key references",
+      "priority": "high", 
+      "estimated_hours": 8,
+      "owner": "Trading Team",
+      "days": [8, 9],
+      "dependencies": ["STRATEGY_002"],
+      "acceptance_criteria": [
+        "Trailing stops created with instrument_key reference",
+        "Price monitoring uses registry-enriched metadata",
+        "Stop execution derives broker tokens internally", 
+        "Order state tracking by instrument_key"
+      ]
+    },
+    {
+      "task_id": "TRAILING_002",
+      "title": "Alert Service Integration",
+      "description": "Migrate alert system to instrument_key-based references",
+      "priority": "medium",
+      "estimated_hours": 6,
+      "owner": "Alerts Team",
+      "days": [8, 9],
+      "dependencies": ["TRAILING_001"], 
+      "acceptance_criteria": [
+        "Price alerts reference instrument_key",
+        "Alert notifications include instrument symbols from registry",
+        "Alert history keyed by instrument metadata",
+        "User preferences stored by instrument_key"
+      ]
+    },
+    {
+      "task_id": "META_001",
+      "title": "Registry Metadata Enrichment",
+      "description": "Implement automatic metadata enrichment in API responses",
+      "priority": "high",
+      "estimated_hours": 8,
+      "owner": "Data Team",
+      "days": [10], 
+      "dependencies": ["TRAILING_002"],
+      "acceptance_criteria": [
+        "All API responses include instrument metadata from registry",
+        "Symbol, exchange, sector information automatically populated",
+        "Market data enriched with registry-sourced attributes",
+        "Response schemas updated to include metadata fields"
+      ]
+    },
+    {
+      "task_id": "TEST_STRATEGY_001", 
+      "title": "End-to-End Integration Tests",
+      "description": "Comprehensive testing of complete migration",
+      "priority": "critical",
+      "estimated_hours": 10,
+      "owner": "QA Team",
+      "days": [10],
+      "dependencies": ["META_001"],
+      "acceptance_criteria": [
+        "Complete order flow tests using instrument_key", 
+        "Strategy execution tests validate metadata enrichment",
+        "Multi-broker compatibility tests pass",
+        "Performance tests maintain 98% SLA from Phase 3"
+      ]
+    }
+  ],
+  
+  "success_criteria": [
+    "PythonSDK requires instrument_key for all public methods",
+    "Internal token resolution via Phase 3 registry operational", 
+    "Zero direct token inputs in public SDK APIs",
+    "Strategy services migrated to instrument_key contracts",
+    "Registry metadata enrichment active in all responses",
+    "API responses contain tokens only as internal metadata",
+    "98% SLA maintained throughout 2-week migration",
+    "Zero production incidents related to migration"
+  ],
+  
+  "guardrails": {
+    "sla_monitoring": {
+      "uptime_requirement": "98%",
+      "coordination_latency": "<107ms", 
+      "registry_lookup": "<50ms cached, <200ms uncached"
+    },
+    "rollback_procedures": {
+      "feature_flags": "10% → 25% → 50% → 100% gradual rollout",
+      "circuit_breakers": "Registry failures with token fallback",
+      "monitoring_alerts": "SLA degradation triggers automatic rollback"
+    },
+    "production_safety": {
+      "deployments": "Blue-green for all service updates",
+      "releases": "Canary releases with client-side feature flags",
+      "health_checks": "Registry connectivity before traffic routing"
+    }
+  },
+  
+  "timeline_summary": {
+    "week_1_focus": "PythonSDK & Client Migration", 
+    "week_1_deliverables": [
+      "instrument_key-required SDK APIs",
+      "Internal token resolution operational",
+      "Broker integration wrappers deployed",
+      "Comprehensive test coverage"
+    ],
+    "week_2_focus": "Strategy Services Contract Migration",
+    "week_2_deliverables": [
+      "Strategy APIs migrated to new contracts",
+      "Registry metadata enrichment active", 
+      "End-to-end integration validated",
+      "Phase 2 preparation complete"
+    ]
+  }
+}
