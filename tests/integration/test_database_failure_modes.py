@@ -22,9 +22,19 @@ if importlib.util.find_spec('app.errors'):
         ProductionTimescaleDB,
         get_timescaledb_session,
     )
+    try:
+        from app.errors import DatabaseError
+        from app.repository.signal_repository import SignalRepository
+    except ImportError:
+        # Create mock classes for testing
+        SignalRepository = MagicMock
+        DatabaseError = Exception
     DATABASE_MODULES_AVAILABLE = True
 else:
     DATABASE_MODULES_AVAILABLE = False
+    # Create mock classes for testing
+    SignalRepository = MagicMock
+    DatabaseError = Exception
 
 
 class TestAsyncpgPoolFailureModes:

@@ -186,7 +186,7 @@ class TestOptionalDependenciesComputationErrors:
                             import scipy.stats
                             # This should fail due to our patch
                             return scipy.stats.linregress(range(len(df)), df['close'].values)
-                        except ImportError:
+                        except ImportError as e:
                             # Should raise ComputationError, NOT return synthetic data
                             raise ComputationError("scipy dependency required but not available") from e
 

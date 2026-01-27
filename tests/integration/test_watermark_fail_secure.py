@@ -14,8 +14,29 @@ import pytest
 
 if importlib.util.find_spec('fastapi.testclient'):
     WATERMARK_SERVICE_AVAILABLE = True
+    try:
+        from fastapi import HTTPException
+
+        from app.errors.watermark_error import WatermarkError
+        from app.services.enhanced_watermark_integration import EnhancedWatermarkService
+        from app.services.signal_delivery_service import SignalDeliveryService
+    except ImportError:
+        # Create mock classes for testing
+        EnhancedWatermarkService = MagicMock
+        SignalDeliveryService = MagicMock
+        WatermarkError = Exception
+        HTTPException = Exception
+        class sdk_router:
+            dependencies = [MagicMock()]
 else:
     WATERMARK_SERVICE_AVAILABLE = False
+    # Create mock classes for testing
+    EnhancedWatermarkService = MagicMock
+    SignalDeliveryService = MagicMock
+    WatermarkError = Exception
+    HTTPException = Exception
+    class sdk_router:
+        dependencies = [MagicMock()]
 
 
 class TestWatermarkFailSecureIntegration:

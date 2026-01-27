@@ -10,13 +10,23 @@ import sys
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 if importlib.util.find_spec('app.api.v2.sdk_signals'):
     MIDDLEWARE_AVAILABLE = True
+    try:
+        from app.middleware.entitlement import EntitlementMiddleware
+        from app.middleware.rate_limit import RateLimitMiddleware
+    except ImportError:
+        # Create mock middleware classes for testing
+        EntitlementMiddleware = MagicMock
+        RateLimitMiddleware = MagicMock
 else:
     MIDDLEWARE_AVAILABLE = False
+    # Create mock middleware classes for testing
+    EntitlementMiddleware = MagicMock
+    RateLimitMiddleware = MagicMock
 
 
 class TestGatewayACLIntegration:

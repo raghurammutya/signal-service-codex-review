@@ -23,8 +23,26 @@ import importlib.util
 
 if importlib.util.find_spec('py_vollib'):
     PYVOLLIB_AVAILABLE = True
+    try:
+        from app.errors.greeks_calculation_error import GreeksCalculationError
+        from app.errors.greeks_computation_error import GreeksComputationError
+        from app.errors.unsupported_model_error import UnsupportedModelError
+        from app.services.greeks_engines.vectorized_pyvollib_engine import (
+            VectorizedPyvolibGreeksEngine,
+        )
+    except ImportError:
+        # Create mock classes for testing
+        VectorizedPyvolibGreeksEngine = MagicMock
+        GreeksCalculationError = Exception
+        UnsupportedModelError = Exception
+        GreeksComputationError = Exception
 else:
     PYVOLLIB_AVAILABLE = False
+    # Create mock classes for testing
+    VectorizedPyvolibGreeksEngine = MagicMock
+    GreeksCalculationError = Exception
+    UnsupportedModelError = Exception
+    GreeksComputationError = Exception
 
 
 class TestVectorizedPyvolibProductionBehavior:

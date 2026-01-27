@@ -411,11 +411,8 @@ class EnhancedWatermarkIntegration:
             return True
 
         # Marketplace signals always require watermarking
-        if "marketplace" in stream_type.lower() or "premium" in stream_type.lower():
-            return True
-
         # Basic users on basic streams may not require watermarking
-        return False
+        return "marketplace" in stream_type.lower() or "premium" in stream_type.lower()
 
     async def close(self):
         """Clean up resources."""
