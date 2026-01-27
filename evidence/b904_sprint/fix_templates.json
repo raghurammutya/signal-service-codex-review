@@ -1,0 +1,47 @@
+{
+  "fix_patterns": {
+    "basic_reraise": {
+      "description": "Basic exception re-raising with context",
+      "before": "try:\n    risky_operation()\nexcept Exception as e:\n    raise ValueError(f\"Operation failed: {e}\")",
+      "after": "try:\n    risky_operation()\nexcept Exception as e:\n    raise ValueError(f\"Operation failed: {e}\") from e",
+      "explanation": "Add 'from e' to preserve exception chain"
+    },
+    "conditional_reraise": {
+      "description": "Conditional re-raising with different exceptions",
+      "before": "try:\n    api_call()\nexcept httpx.HTTPStatusError as e:\n    if e.response.status_code == 404:\n        raise ValueError(\"Resource not found\")\n    raise APIError(\"Request failed\")",
+      "after": "try:\n    api_call()\nexcept httpx.HTTPStatusError as e:\n    if e.response.status_code == 404:\n        raise ValueError(\"Resource not found\") from e\n    raise APIError(\"Request failed\") from e",
+      "explanation": "Add 'from e' to both exception paths"
+    },
+    "suppress_chain": {
+      "description": "Suppress exception chain when original error isn't relevant",
+      "before": "try:\n    fallback_operation()\nexcept Exception as e:\n    raise CustomError(\"Fallback failed\")",
+      "after": "try:\n    fallback_operation()\nexcept Exception as e:\n    raise CustomError(\"Fallback failed\") from None",
+      "explanation": "Use 'from None' when original exception should be suppressed"
+    }
+  },
+  "example_fixes": [
+    {
+      "file": "/home/stocksadmin/signal-service-codex-review/app/adapters/ticker_adapter.py",
+      "line": 212,
+      "issue": "Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling",
+      "fix_approach": "Add 'from e' or 'from None' to preserve/suppress exception chain"
+    }
+  ],
+  "checklist": {
+    "before_fix": [
+      "\ud83d\udd0d Identify the original exception variable (usually 'e')",
+      "\ud83e\udd14 Determine if original exception context is helpful",
+      "\ud83d\udccb Check if this is a re-raise or new exception"
+    ],
+    "during_fix": [
+      "\u270f\ufe0f Add 'from e' to preserve exception chain",
+      "\ud83d\udeab Use 'from None' to suppress irrelevant original exceptions",
+      "\ud83d\udd17 Ensure exception message is still informative"
+    ],
+    "after_fix": [
+      "\u2705 Verify exception chain makes sense in logs",
+      "\ud83e\uddea Test error handling still works correctly",
+      "\ud83d\udcdd Run 'ruff check --select B904' to confirm fix"
+    ]
+  }
+}
