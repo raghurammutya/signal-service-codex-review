@@ -138,7 +138,7 @@ class TestMetricsCollectorPositiveCoverage:
 
     async def test_health_score_calculation_positive_path(self, metrics_collector):
         """Test health score calculation with positive metrics."""
-        # Set up positive metrics scenario
+        # set up positive metrics scenario
         for _i in range(20):
             metrics_collector.record_request(
                 endpoint="/api/v1/signals/greeks",
@@ -193,7 +193,7 @@ class TestMetricsCollectorPositiveCoverage:
 
     async def test_metrics_export_to_redis_positive_path(self, metrics_collector):
         """Test metrics export to Redis for monitoring systems."""
-        # Set up sample metrics
+        # set up sample metrics
         metrics_collector.record_request("/health", 50.0, 200)
         metrics_collector.record_processing_time("health_check", 30.0, True)
 
@@ -252,44 +252,39 @@ class TestHealthCheckerPositiveCoverage:
     async def test_overall_health_check_positive_path(self, health_checker):
         """Test overall health check with all components healthy."""
         # Mock positive responses from all components
-        with patch.object(health_checker, '_check_redis_health') as mock_redis:
-            with patch.object(health_checker, '_check_database_health') as mock_db:
-                with patch.object(health_checker, '_check_signal_processing_health') as mock_signal:
-                    with patch.object(health_checker, '_check_system_resources') as mock_system:
+        with patch.object(health_checker, '_check_redis_health') as mock_redis, patch.object(health_checker, '_check_database_health') as mock_db, patch.object(health_checker, '_check_signal_processing_health') as mock_signal, patch.object(health_checker, '_check_system_resources') as mock_system:
+                    mock_redis.return_value = {
+                        'status': ComponentStatus.UP.value,
+                        'response_time_ms': 15.0,
+                        'connection_pool_size': 10
+                    }
 
-                        # Set up positive responses
-                        mock_redis.return_value = {
-                            'status': ComponentStatus.UP.value,
-                            'response_time_ms': 15.0,
-                            'connection_pool_size': 10
-                        }
+                    mock_db.return_value = {
+                        'status': ComponentStatus.UP.value,
+                        'response_time_ms': 25.0,
+                        'connection_count': 5
+                    }
 
-                        mock_db.return_value = {
-                            'status': ComponentStatus.UP.value,
-                            'response_time_ms': 25.0,
-                            'connection_count': 5
-                        }
+                    mock_signal.return_value = {
+                        'status': ComponentStatus.UP.value,
+                        'greeks_success_rate': 0.98,
+                        'average_processing_time_ms': 120.0
+                    }
 
-                        mock_signal.return_value = {
-                            'status': ComponentStatus.UP.value,
-                            'greeks_success_rate': 0.98,
-                            'average_processing_time_ms': 120.0
-                        }
+                    mock_system.return_value = {
+                        'status': ComponentStatus.UP.value,
+                        'cpu_percent': 45.0,
+                        'memory_percent': 60.0
+                    }
 
-                        mock_system.return_value = {
-                            'status': ComponentStatus.UP.value,
-                            'cpu_percent': 45.0,
-                            'memory_percent': 60.0
-                        }
+                    # Run health check
+                    result = await health_checker.check_overall_health()
 
-                        # Run health check
-                        result = await health_checker.check_overall_health()
-
-                        # Verify positive overall health
-                        assert result['status'] == ComponentStatus.UP.value
-                        assert result['overall_health_score'] >= 80
-                        assert result['details']['redis']['status'] == ComponentStatus.UP.value
-                        assert result['details']['database']['status'] == ComponentStatus.UP.value
+                    # Verify positive overall health
+                    assert result['status'] == ComponentStatus.UP.value
+                    assert result['overall_health_score'] >= 80
+                    assert result['details']['redis']['status'] == ComponentStatus.UP.value
+                    assert result['details']['database']['status'] == ComponentStatus.UP.value
 
     async def test_redis_health_check_positive_response_time(self, health_checker):
         """Test Redis health check with positive response times."""
@@ -375,26 +370,22 @@ class TestHealthCheckerPositiveCoverage:
     async def test_system_resources_positive_utilization(self, health_checker):
         """Test system resources check with healthy utilization."""
         # Mock healthy system metrics
-        with patch('psutil.Process') as mock_process:
-            with patch('psutil.virtual_memory') as mock_memory:
-                with patch('psutil.cpu_percent') as mock_cpu:
+        with patch('psutil.Process') as mock_process, patch('psutil.virtual_memory') as mock_memory, patch('psutil.cpu_percent') as mock_cpu:
+                mock_process_instance = mock_process.return_value
+                mock_process_instance.memory_percent.return_value = 45.0  # 45% memory
+                mock_process_instance.cpu_percent.return_value = 35.0     # 35% CPU
+                mock_process_instance.memory_info.return_value.rss = 100 * 1024 * 1024  # 100MB
 
-                    # Setup healthy resource usage
-                    mock_process_instance = mock_process.return_value
-                    mock_process_instance.memory_percent.return_value = 45.0  # 45% memory
-                    mock_process_instance.cpu_percent.return_value = 35.0     # 35% CPU
-                    mock_process_instance.memory_info.return_value.rss = 100 * 1024 * 1024  # 100MB
+                mock_memory.return_value.percent = 55.0  # 55% system memory
+                mock_cpu.return_value = 40.0             # 40% system CPU
 
-                    mock_memory.return_value.percent = 55.0  # 55% system memory
-                    mock_cpu.return_value = 40.0             # 40% system CPU
+                result = await health_checker._check_system_resources()
 
-                    result = await health_checker._check_system_resources()
-
-                    # Verify healthy resource status
-                    assert result['status'] == ComponentStatus.UP.value
-                    assert result['process_memory_percent'] == 45.0
-                    assert result['process_cpu_percent'] == 35.0
-                    assert result['system_memory_percent'] == 55.0
+                # Verify healthy resource status
+                assert result['status'] == ComponentStatus.UP.value
+                assert result['process_memory_percent'] == 45.0
+                assert result['process_cpu_percent'] == 35.0
+                assert result['system_memory_percent'] == 55.0
 
 
 class TestDistributedHealthManagerPositiveCoverage:
@@ -481,7 +472,7 @@ class TestMetricsIntegrationPositiveCoverage:
             )
 
         # Record successful processing
-        for i in range(5):
+        for _i in range(5):
             metrics_collector.record_processing_time(
                 operation="greeks_vectorized",
                 duration_ms=80.0,
@@ -489,9 +480,9 @@ class TestMetricsIntegrationPositiveCoverage:
             )
 
         # Record cache hits
-        for i in range(8):
+        for _i in range(8):
             metrics_collector.record_cache_operation("greeks_cache", hit=True)
-        for i in range(2):
+        for _i in range(2):
             metrics_collector.record_cache_operation("greeks_cache", hit=False)
 
         # Get comprehensive metrics

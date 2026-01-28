@@ -140,8 +140,7 @@ class CacheKeyManager:
                     self.cache_patterns["user_data"]["subscriptions"].format(user_id=request.user_id)
                 ]
 
-        elif request.invalidation_type == InvalidationType.EXPIRY_ROLLOVER:
-            if request.underlying and request.expiry_date:
+        elif request.invalidation_type == InvalidationType.EXPIRY_ROLLOVER and request.underlying and request.expiry_date:
                 # Invalidate expiry-specific caches
                 patterns["chain_data"] = [
                     f"chain:{request.underlying}:{request.expiry_date}:*",
@@ -333,7 +332,7 @@ class EnhancedCacheInvalidationService:
                     try:
                         await self.redis_client.delete(key)
                         total_deleted += 1
-                    except:
+                    except Exception:
                         continue
 
         return total_deleted

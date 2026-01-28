@@ -786,7 +786,7 @@ class Session5CShadowModeValidator:
                     "success": result.get("coordination_success", False),
                     "latency_ms": operation_latency
                 })
-            except:
+            except Exception:
                 operation_latency = (time.time() - operation_start) * 1000
                 recovery_operations.append({
                     "success": False,

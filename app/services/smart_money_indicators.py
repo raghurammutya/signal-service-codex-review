@@ -290,7 +290,7 @@ def previous_high_low(
         period: Period for calculation ("1D", "1W", "1M")
 
     Returns:
-        Dict with 'previous_high' and 'previous_low' values
+        dict with 'previous_high' and 'previous_low' values
     """
     try:
         if not SMC_AVAILABLE or len(df) < 2:
@@ -614,9 +614,8 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
 
             # Bullish FVG: Gap up pattern
             # Candle 1 high < Candle 3 low (gap between them)
-            if candle1['high'] < candle3['low']:
+            if candle1['high'] < candle3['low'] and candle3['close'] > candle1['close'] * 1.005:
                 # Confirm it's a strong bullish move
-                if candle3['close'] > candle1['close'] * 1.005:  # At least 0.5% move
                     gap_top = candle3['low']
                     gap_bottom = candle1['high']
 
@@ -632,21 +631,19 @@ def _real_fvg(df: pd.DataFrame) -> pd.DataFrame:
 
             # Bearish FVG: Gap down pattern
             # Candle 1 low > Candle 3 high (gap between them)
-            elif candle1['low'] > candle3['high']:
-                # Confirm it's a strong bearish move
-                if candle3['close'] < candle1['close'] * 0.995:  # At least 0.5% move
-                    gap_top = candle1['low']
-                    gap_bottom = candle3['high']
+            if candle1['low'] > candle3['high'] and candle3['close'] < candle1['close'] * 0.995:  # At least 0.5% move:
+                gap_top = candle1['low']
+                gap_bottom = candle3['high']
 
-                    # Check if gap is significant (> 0.1% of price)
-                    if (gap_top - gap_bottom) / candle1['close'] > 0.001:
-                        fvg_list.append({
-                            'top': float(gap_top),
-                            'bottom': float(gap_bottom),
-                            'type': 'bearish',
-                            'timestamp': df.index[i],
-                            'filled': False
-                        })
+                # Check if gap is significant (> 0.1% of price)
+                if (gap_top - gap_bottom) / candle1['close'] > 0.001:
+                    fvg_list.append({
+                        'top': float(gap_top),
+                        'bottom': float(gap_bottom),
+                        'type': 'bearish',
+                        'timestamp': df.index[i],
+                        'filled': False
+                    })
 
         # Check if any FVGs have been filled by subsequent price action
         if fvg_list:
@@ -704,7 +701,7 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
         # 2. Swing Low Liquidity (Buy-side liquidity)
         swing_lows = [df.loc[idx, 'low'] for idx in swing_low_indices]
         for low_level in swing_lows[-10:]:  # Last 10 swing lows
-            touches = sum(1 for l in swing_lows if abs(l - low_level) < low_level * 0.002)  # Within 0.2%
+            touches = sum(1 for low_price in swing_lows if abs(low_price - low_level) < low_level * 0.002)  # Within 0.2%
             if touches >= 2:  # Multiple touches = stronger level
                 liquidity_levels.append({
                     'level': float(low_level),
@@ -787,10 +784,7 @@ def _real_prev_hl(df: pd.DataFrame) -> dict[str, float]:
             return {'previous_high': float(df['high'].iloc[-1]), 'previous_low': float(df['low'].iloc[-1])}
 
         # Determine lookback period based on data frequency
-        if len(df) > 100:  # Likely daily or higher frequency data
-            lookback = min(20, len(df) // 2)  # Previous 20 periods or half the data
-        else:
-            lookback = min(10, len(df) // 2)
+        lookback = min(20, len(df) // 2) if len(df) > 100 else min(10, len(df) // 2)  # Likely daily or higher frequency data
 
         # Get previous period (excluding current bar)
         prev_data = df.iloc[-(lookback+1):-1] if len(df) > lookback else df.iloc[:-1]

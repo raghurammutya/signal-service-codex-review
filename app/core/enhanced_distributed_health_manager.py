@@ -83,7 +83,7 @@ class EnhancedDistributedHealthManager:
                 json.dumps(instance_data)
             )
 
-            # Set expiration for cleanup
+            # set expiration for cleanup
             await self.redis_client.expire(self.redis_keys['instances'], 3600)
 
         except Exception as e:
@@ -116,7 +116,7 @@ class EnhancedDistributedHealthManager:
                 try:
                     size = await self.redis_client.llen(key)
                     total_queue_size += size
-                except:
+                except Exception:
                     # Queue doesn't exist, continue
                     continue
 

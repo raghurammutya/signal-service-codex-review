@@ -109,7 +109,7 @@ class SubscriptionLatencyMonitor:
                 p95_ms=self._calculate_percentile(latencies, 95),
                 p99_ms=self._calculate_percentile(latencies, 99),
                 max_ms=max(latencies),
-                sla_breaches=len([l for l in latencies if l > self.sla_thresholds["p95_critical_ms"]]),
+                sla_breaches=len([latency for latency in latencies if latency > self.sla_thresholds["p95_critical_ms"]]),
                 measurement_window_minutes=self.window_minutes
             )
 

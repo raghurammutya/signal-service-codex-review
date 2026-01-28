@@ -11,7 +11,6 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
 
 
 def run_command(cmd: list[str]) -> tuple[int, str, str]:
@@ -74,7 +73,7 @@ def load_baseline_data() -> dict:
     try:
         with open(latest_file) as f:
             return json.load(f)
-    except:
+    except Exception:
         return {}
 
 
@@ -210,7 +209,7 @@ python scripts/track_syntax_fix_progress.py
 """
     else:
         report += """### Maintenance Tasks:
-1. **Set up monitoring**: Enable nightly violation tracking
+1. **set up monitoring**: Enable nightly violation tracking
 2. **Address P1/P2 violations**: Use standard Ruff workflow
 3. **Prevent regressions**: Ensure pre-commit hooks working
 

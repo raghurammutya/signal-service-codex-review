@@ -148,7 +148,7 @@ class StreamAbuseProtectionService:
             client_metadata: Additional client metadata
 
         Returns:
-            Tuple of (allowed, reason_if_denied)
+            tuple of (allowed, reason_if_denied)
         """
         try:
             # CONSOLIDATED: No legacy fallbacks - all connections must go through unified entitlement
@@ -211,11 +211,11 @@ class StreamAbuseProtectionService:
             client_id: Client identifier
             user_id: User ID (if authenticated)
             stream_type: Stream type being accessed
-            new_subscriptions: List of new symbols to subscribe to
+            new_subscriptions: list of new symbols to subscribe to
             current_subscriptions: Current subscriptions (if available)
 
         Returns:
-            Tuple of (allowed, reason_if_denied)
+            tuple of (allowed, reason_if_denied)
         """
         try:
             # CONSOLIDATED: Get limits via unified entitlement service instead of legacy path
@@ -317,7 +317,7 @@ class StreamAbuseProtectionService:
             message_count: Number of messages being sent
 
         Returns:
-            Tuple of (allowed, reason_if_denied)
+            tuple of (allowed, reason_if_denied)
         """
         try:
             # CONSOLIDATED: Get limits via unified entitlement service instead of legacy path

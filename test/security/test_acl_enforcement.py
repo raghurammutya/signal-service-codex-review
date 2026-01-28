@@ -1,5 +1,5 @@
 """
-Comprehensive ACL (Access Control List) testing for external function execution
+Comprehensive ACL (Access Control list) testing for external function execution
 Tests user permissions, role-based access, and security isolation
 """
 
@@ -7,6 +7,7 @@ import asyncio
 import os
 import shutil
 import tempfile
+from contextlib import suppress
 from datetime import UTC, datetime
 from unittest.mock import patch
 
@@ -406,24 +407,21 @@ def market_indicator(tick_data, parameters):
             memory_limit_mb=32
         )
 
-        with patch('app.services.external_function_executor.ExternalFunctionExecutor._audit_access_attempt') as mock_audit:
-            with patch('app.services.external_function_executor.ExternalFunctionExecutor._check_user_access') as mock_acl:
-                mock_acl.return_value = False  # Access denied
+        with patch('app.services.external_function_executor.ExternalFunctionExecutor._audit_access_attempt') as mock_audit, patch('app.services.external_function_executor.ExternalFunctionExecutor._check_user_access') as mock_acl:
+            mock_acl.return_value = False  # Access denied
 
-                try:
-                    await self._execute_with_acl_check(
-                        executor, unauthorized_config, sample_context, "basic_user_002"
-                    )
-                except SecurityError:
-                    pass  # Expected
+            with suppress(SecurityError):
+                await self._execute_with_acl_check(
+                    executor, unauthorized_config, sample_context, "basic_user_002"
+                )  # Expected
 
-                # Verify audit was called
-                mock_audit.assert_called_once()
-                audit_call = mock_audit.call_args[0]
+            # Verify audit was called
+            mock_audit.assert_called_once()
+            audit_call = mock_audit.call_args[0]
 
-                assert "basic_user_002" in str(audit_call)  # User ID logged
-                assert "access_denied" in str(audit_call) or "unauthorized" in str(audit_call)
-                assert "admin_user_003/secret_function.py" in str(audit_call)  # Attempted path logged
+            assert "basic_user_002" in str(audit_call)  # User ID logged
+            assert "access_denied" in str(audit_call) or "unauthorized" in str(audit_call)
+            assert "admin_user_003/secret_function.py" in str(audit_call)  # Attempted path logged
 
     # Concurrent ACL Tests
 

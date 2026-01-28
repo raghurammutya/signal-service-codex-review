@@ -291,7 +291,7 @@ class CoverageSpotCheck:
                                 has_95_percent = True
                                 print(f"    ✅ 95% threshold configured in {file}")
                                 break
-                        except:
+                        except Exception:
                             continue
                 if has_95_percent:
                     break

@@ -50,7 +50,7 @@ class AlgoEngineClient:
             return algo_url
 
         except Exception as e:
-            raise RuntimeError(f"Failed to get algo_engine URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.")
+            raise RuntimeError(f"Failed to get algo_engine URL from config_service: {e}. No hardcoded fallbacks allowed per architecture.") from e
 
     def _get_internal_api_key(self) -> str:
         """Get internal API key for service-to-service authentication"""
@@ -85,7 +85,7 @@ class AlgoEngineClient:
         limit: int = 100
     ) -> list[dict[str, Any]]:
         """
-        List user's personal signal scripts via API.
+        list user's personal signal scripts via API.
 
         Replaces: from algo_engine.app.services.personal_script_service import PersonalScriptService
 
@@ -95,7 +95,7 @@ class AlgoEngineClient:
             limit: Maximum number of scripts
 
         Returns:
-            List of script information dictionaries
+            list of script information dictionaries
         """
         try:
             await self.initialize()
@@ -121,10 +121,10 @@ class AlgoEngineClient:
 
         except httpx.RequestError as e:
             logger.error(f"algo_engine service request failed: {e}")
-            raise AlgoEngineAPIError(f"Network error contacting algo_engine: {e}")
+            raise AlgoEngineAPIError(f"Network error contacting algo_engine: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error listing personal scripts: {e}")
-            raise AlgoEngineAPIError(f"Failed to list personal scripts: {e}")
+            raise AlgoEngineAPIError(f"Failed to list personal scripts: {e}") from e
 
     async def get_script_details(
         self,
@@ -160,10 +160,10 @@ class AlgoEngineClient:
 
         except httpx.RequestError as e:
             logger.error(f"algo_engine service request failed: {e}")
-            raise AlgoEngineAPIError(f"Network error contacting algo_engine: {e}")
+            raise AlgoEngineAPIError(f"Network error contacting algo_engine: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error getting script details: {e}")
-            raise AlgoEngineAPIError(f"Failed to get script details: {e}")
+            raise AlgoEngineAPIError(f"Failed to get script details: {e}") from e
 
     async def execute_script(
         self,
@@ -202,10 +202,10 @@ class AlgoEngineClient:
 
         except httpx.RequestError as e:
             logger.error(f"algo_engine service request failed: {e}")
-            raise AlgoEngineAPIError(f"Network error contacting algo_engine: {e}")
+            raise AlgoEngineAPIError(f"Network error contacting algo_engine: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error executing script: {e}")
-            raise AlgoEngineAPIError(f"Failed to execute script: {e}")
+            raise AlgoEngineAPIError(f"Failed to execute script: {e}") from e
 
     async def validate_script_access(
         self,

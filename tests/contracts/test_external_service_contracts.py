@@ -423,8 +423,7 @@ class TestExternalConfigServiceContract:
 
         for base_url in EXTERNAL_CONFIG_URLS:
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(
+                async with aiohttp.ClientSession() as session, session.get(
                         f"{base_url}/health",
                         timeout=aiohttp.ClientTimeout(total=10)
                     ) as response:
@@ -533,11 +532,10 @@ class TestExternalConfigServiceContract:
         invalid_headers = {"X-Internal-API-Key": "invalid_key"}
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{base_url}/api/v1/secrets/NONEXISTENT_PARAM/value?environment=dev",
-                    headers=invalid_headers,
-                    timeout=aiohttp.ClientTimeout(total=10)
+            async with aiohttp.ClientSession() as session, session.get(
+                f"{base_url}/api/v1/secrets/NONEXISTENT_PARAM/value?environment=dev",
+                headers=invalid_headers,
+                timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status in [401, 403]:
                         error_data = await response.json()

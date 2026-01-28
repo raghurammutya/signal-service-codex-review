@@ -137,7 +137,7 @@ class MaliciousCodeDetector:
             filename: Name of the file being analyzed
 
         Returns:
-            List of detected security threats
+            list of detected security threats
         """
         self.threats_found = []
 
@@ -334,10 +334,7 @@ class MaliciousCodeDetector:
     def _check_exception_handler(self, node: ast.ExceptHandler, line_no: int):
         """Check exception handlers for malicious patterns"""
         # Bare except clauses that hide errors
-        if node.type is None:
-            # Check if it just passes
-            if (len(node.body) == 1 and
-                isinstance(node.body[0], ast.Pass)):
+        if node.type is None and len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                 self.threats_found.append(SecurityThreat(
                     level=ThreatLevel.MEDIUM,
                     category="error_hiding",
@@ -349,20 +346,20 @@ class MaliciousCodeDetector:
 
     def _check_loop_node(self, node: ast.AST, line_no: int):
         """Check loops for potential infinite loops or resource exhaustion"""
-        if isinstance(node, ast.While):
-            # Check for while True without break
-            if (isinstance(node.test, ast.NameConstant) and
-                node.test.value is True):
-                has_break = any(isinstance(n, ast.Break) for n in ast.walk(node))
-                if not has_break:
-                    self.threats_found.append(SecurityThreat(
-                        level=ThreatLevel.HIGH,
-                        category="infinite_loop",
-                        description="Potential infinite loop: while True without break",
-                        line_number=line_no,
-                        code_snippet="while True: ...",
-                        mitigation="Add break condition or use finite loop"
-                    ))
+        has_break = self._has_break_statement(node)
+        if isinstance(node, ast.While) and not has_break:
+            self.threats_found.append(SecurityThreat(
+                level=ThreatLevel.HIGH,
+                category="infinite_loop",
+                description="Potential infinite loop: while True without break",
+                line_number=line_no,
+                code_snippet="while True: ...",
+                mitigation="Add break condition or use finite loop"
+            ))
+
+    def _has_break_statement(self, node: ast.AST) -> bool:
+        """Check if a loop node contains a break statement"""
+        return any(isinstance(child, ast.Break) for child in ast.walk(node))
 
     def _analyze_string_patterns(self, code: str):
         """Analyze string patterns for malicious content"""

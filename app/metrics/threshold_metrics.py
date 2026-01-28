@@ -162,7 +162,7 @@ class ThresholdMetricsCollector:
         self.start_time = time.time()
         self.metrics = threshold_metrics
 
-        # Set service info
+        # set service info
         self.metrics['service_info'].info({
             'version': '1.0.0',
             'service': 'signal_service',

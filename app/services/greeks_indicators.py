@@ -329,7 +329,7 @@ def calculate_all_greeks(
     library="py_vollib_vectorized",
     description="High-performance vectorized calculation of Greeks for option chains",
     parameters={
-        "option_data": {"type": "list", "required": True, "description": "List of option dictionaries"},
+        "option_data": {"type": "list", "required": True, "description": "list of option dictionaries"},
         "model": {"type": "str", "default": "black_scholes"},
         "chunk_size": {"type": "int", "default": 500, "description": "Batch size for vectorized processing"}
     },

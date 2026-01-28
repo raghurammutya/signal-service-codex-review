@@ -83,11 +83,11 @@ class TestSDKSignalListing:
 
     async def test_list_all_signal_streams(self, client, mock_marketplace_subscriptions, mock_personal_signals):
         """Test listing all available signal streams."""
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-123"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions',
-                      return_value=mock_marketplace_subscriptions):
-                with patch('algo_engine.app.services.personal_script_service.PersonalScriptService.list_scripts',
-                          return_value=mock_personal_signals):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={'user_id': 'user-123'}),
+            patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions', return_value=mock_marketplace_subscriptions),
+            patch('algo_engine.app.services.personal_script_service.PersonalScriptService.list_scripts', return_value=mock_personal_signals)
+        ):
 
                     response = await client.get(
                         "/api/v2/signals/sdk/signals/streams",
@@ -199,9 +199,10 @@ class TestSDKSignalListing:
 
     async def test_marketplace_integration_failure(self, client):
         """Test graceful handling when marketplace service fails."""
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-123"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions',
-                      side_effect=Exception("Marketplace service unavailable")):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={'user_id': 'user-123'}),
+            patch('app.services.marketplace_client.MarketplaceClient.get_user_subscriptions', side_effect=Exception("Marketplace service unavailable"))
+        ):
 
                 response = await client.get(
                     "/api/v2/signals/sdk/signals/streams",
@@ -223,9 +224,10 @@ class TestSDKSignalListing:
 
     async def test_personal_signals_integration_failure(self, client):
         """Test graceful handling when personal script service fails."""
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-123"}):
-            with patch('algo_engine.app.services.personal_script_service.PersonalScriptService.list_scripts',
-                      side_effect=Exception("MinIO unavailable")):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={'user_id': 'user-123'}),
+            patch('algo_engine.app.services.personal_script_service.PersonalScriptService.list_scripts', side_effect=Exception("MinIO unavailable"))
+        ):
 
                 response = await client.get(
                     "/api/v2/signals/sdk/signals/streams",
@@ -257,13 +259,14 @@ class TestTokenValidation:
 
     async def test_validate_valid_token(self, client):
         """Test validating a valid execution token."""
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-123"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',
-                      return_value={
-                          "is_valid": True,
-                          "subscription_id": "sub-123",
-                          "expires_at": "2024-12-31T23:59:59Z"
-                      }):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={'user_id': 'user-123'}),
+            patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token', return_value={
+                "is_valid": True,
+                "subscription_id": "sub-123",
+                "expires_at": "2024-12-31T23:59:59Z"
+            })
+        ):
 
                 response = await client.post(
                     "/api/v2/signals/sdk/signals/validate-token",
@@ -288,9 +291,10 @@ class TestTokenValidation:
 
     async def test_validate_invalid_token(self, client):
         """Test validating an invalid execution token."""
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "user-123"}):
-            with patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token',
-                      return_value={"is_valid": False}):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={'user_id': 'user-123'}),
+            patch('app.services.marketplace_client.MarketplaceClient.verify_execution_token', return_value={"is_valid": False})
+        ):
 
                 response = await client.post(
                     "/api/v2/signals/sdk/signals/validate-token",

@@ -348,10 +348,9 @@ class TestTimescaleDBSessionManager:
         mock_db = AsyncMock()
         mock_db.pool = None
 
-        with patch('common.storage.database.get_database', AsyncMock(return_value=mock_db)):
-            with pytest.raises(DatabaseConnectionError, match="Database connection pool not available"):
-                async with get_async_session():
-                    pass
+        with patch('common.storage.database.get_database', AsyncMock(return_value=mock_db)), pytest.raises(DatabaseConnectionError, match="Database connection pool not available"):
+            async with get_async_session():
+                pass
 
     @pytest.mark.asyncio
     async def test_session_manager_connection_error(self):
@@ -361,10 +360,9 @@ class TestTimescaleDBSessionManager:
         mock_db.pool = mock_pool
         mock_pool.acquire.side_effect = Exception("Connection acquisition failed")
 
-        with patch('common.storage.database.get_database', AsyncMock(return_value=mock_db)):
-            with pytest.raises(Exception, match="Connection acquisition failed"):
-                async with get_async_session():
-                    pass
+        with patch('common.storage.database.get_database', AsyncMock(return_value=mock_db)), pytest.raises(Exception, match="Connection acquisition failed"):
+            async with get_async_session():
+                pass
 
     @pytest.mark.asyncio
     async def test_session_manager_exception_handling(self):

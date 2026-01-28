@@ -15,7 +15,7 @@ import subprocess
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 
 @dataclass
@@ -272,7 +272,7 @@ class TokenUsageScanner:
             priority['estimated_effort_weeks'] += int(finding.migration_effort) * 0.1
 
         # Calculate priority scores
-        for service, priority in service_priorities.items():
+        for _service, priority in service_priorities.items():
             # Priority score based on critical issues, total findings, and effort
             score = (
                 priority['critical_findings'] * 10 +

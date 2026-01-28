@@ -112,12 +112,12 @@ class LocalMoneynessCalculator:
 
         Args:
             spot_price: Current spot price
-            available_strikes: List of available strikes
+            available_strikes: list of available strikes
             moneyness_level: Target moneyness level
             option_type: 'call' or 'put'
 
         Returns:
-            List of strikes matching moneyness
+            list of strikes matching moneyness
         """
         matching_strikes = []
 
@@ -138,7 +138,7 @@ class LocalMoneynessCalculator:
 
         Args:
             spot_price: Current spot price
-            available_strikes: List of available strikes
+            available_strikes: list of available strikes
 
         Returns:
             ATM strike price
@@ -162,7 +162,7 @@ class LocalMoneynessCalculator:
 
         Args:
             spot_price: Current spot price
-            available_strikes: List of available strikes
+            available_strikes: list of available strikes
             target_delta: Target delta (e.g., 0.05 for 5-delta)
             option_type: 'call' or 'put'
             greeks_data: Greeks data by strike {strike: {delta, gamma, ...}}
@@ -198,7 +198,7 @@ class LocalMoneynessCalculator:
         Calculate weights for aggregating Greeks across strikes
 
         Args:
-            strikes: List of strikes in moneyness bucket
+            strikes: list of strikes in moneyness bucket
             spot_price: Current spot price
             option_type: 'call' or 'put'
 

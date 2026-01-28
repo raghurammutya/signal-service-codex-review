@@ -223,7 +223,7 @@ class MockBrokerClient(BaseBrokerClient):
     # =============================================================================
 
     def set_mock_price(self, instrument_key: str, price: float):
-        """Set mock price for testing"""
+        """set mock price for testing"""
         self._mock_prices[instrument_key] = price
         logger.debug(f"Mock price set: {instrument_key} = {price}")
 

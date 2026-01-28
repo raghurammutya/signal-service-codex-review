@@ -49,9 +49,8 @@ class TestServiceIntegrations:
         mock_settings.CALENDAR_SERVICE_URL = None  # Missing URL
         mock_settings.gateway_secret = "test-secret"
 
-        with patch('app.integrations.service_integrations.settings', mock_settings):
-            with pytest.raises(ValueError, match="Calendar service URL not configured"):
-                ServiceIntegrations()
+        with patch('app.integrations.service_integrations.settings', mock_settings), pytest.raises(ValueError, match="Calendar service URL not configured"):
+            ServiceIntegrations()
 
     async def test_calendar_service_integration(self, service_integrations):
         """Test calendar service client integration."""
@@ -199,9 +198,8 @@ class TestCORSConfig:
 
     def test_cors_config_missing_environment_variable(self):
         """Test CORS config failure when environment variable missing."""
-        with patch.dict('os.environ', {}, clear=True):
-            with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS environment variable is required"):
-                CORSConfig()
+        with patch.dict('os.environ', {}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS environment variable is required"):
+            CORSConfig()
 
     def test_cors_config_invalid_origins(self):
         """Test CORS config validation for invalid origins."""
@@ -212,9 +210,8 @@ class TestCORSConfig:
             ""  # Empty string
         ]
 
-        with patch.dict('os.environ', {'CORS_ALLOWED_ORIGINS': ','.join(invalid_origins)}):
-            with pytest.raises(ValueError, match="Invalid CORS origin"):
-                CORSConfig()
+        with patch.dict('os.environ', {'CORS_ALLOWED_ORIGINS': ','.join(invalid_origins)}), pytest.raises(ValueError, match="Invalid CORS origin"):
+            CORSConfig()
 
     def test_cors_origin_validation(self, valid_cors_origins):
         """Test individual origin validation."""
@@ -368,9 +365,8 @@ class TestConfigServiceServiceIntegration:
         mock_config_client = MagicMock()
         mock_config_client.get_service_url.side_effect = Exception("Config service unavailable")
 
-        with patch('app.integrations.service_integrations.get_config_client', return_value=mock_config_client):
-            with pytest.raises(Exception, match="Service URL configuration failed"):
-                ServiceIntegrations()
+        with patch('app.integrations.service_integrations.get_config_client', return_value=mock_config_client), pytest.raises(Exception, match="Service URL configuration failed"):
+            ServiceIntegrations()
 
 
 def main():

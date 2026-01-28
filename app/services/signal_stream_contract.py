@@ -7,6 +7,7 @@ Sprint 5A: Signal execution + delivery contract
 - Provide unified interface for SDK signal subscription
 """
 import logging
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -144,10 +145,8 @@ class StreamKeyFormat:
                 try:
                     value = int(value)
                 except ValueError:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        pass  # Keep as string
+                    with suppress(ValueError):
+                        value = float(value)  # Keep as string if float conversion fails
                 params[key] = value
 
         return params

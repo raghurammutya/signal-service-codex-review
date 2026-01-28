@@ -34,7 +34,7 @@ async def test_leak_detection_blocks_delivery():
 
     manager.watermark_service = mock_watermark_service
 
-    # Set up connections
+    # set up connections
     client1_id = "client_1"
     client2_id = "client_2"
     stream_key = "marketplace:prod_test123:NSE_EQ|RELIANCE:momentum"
@@ -48,7 +48,7 @@ async def test_leak_detection_blocks_delivery():
     manager.active_connections[client2_id] = mock_ws2
     manager.subscription_connections[stream_key] = {client1_id, client2_id}
 
-    # Set up metadata
+    # set up metadata
     manager.connection_metadata[client1_id] = {
         "user_id": "user_123",
         "marketplace_metadata": {
@@ -122,7 +122,7 @@ async def test_log_only_policy_still_delivers():
 
     manager.watermark_service = mock_watermark_service
 
-    # Set up connection
+    # set up connection
     client_id = "client_1"
     stream_key = "marketplace:prod_test123:NSE_EQ|RELIANCE:momentum"
 
@@ -160,7 +160,7 @@ async def test_non_marketplace_signals_not_blocked():
     # No watermark service configured
     manager.watermark_service = None
 
-    # Set up connection for public signal
+    # set up connection for public signal
     client_id = "client_1"
     stream_key = "public:NSE_EQ|RELIANCE:price"
 
@@ -192,7 +192,7 @@ async def test_watermark_service_failure_still_delivers():
 
     manager.watermark_service = mock_watermark_service
 
-    # Set up connection
+    # set up connection
     client_id = "client_1"
     stream_key = "marketplace:prod_test123:NSE_EQ|RELIANCE:momentum"
 

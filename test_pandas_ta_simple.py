@@ -4,17 +4,17 @@ Tests key indicators via direct API calls and validates results
 """
 
 import asyncio
+import importlib.util
+import sys
 from datetime import datetime
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-try:
-    import pandas_ta as ta
-    PANDAS_TA_AVAILABLE = True
-except ImportError:
-    PANDAS_TA_AVAILABLE = False
+from app.services.pandas_ta_executor import PandasTAExecutor
+
+PANDAS_TA_AVAILABLE = bool(importlib.util.find_spec('pandas_ta'))
 
 # Mock the missing modules for testing
 class MockHistoricalDataManager:
@@ -61,13 +61,11 @@ async def get_historical_data_manager():
     return MockHistoricalDataManager()
 
 # Patch the imports
-import sys
 
 sys.modules['app.services.historical_data_manager'] = type(sys)('mock_module')
 sys.modules['app.services.historical_data_manager'].get_historical_data_manager = get_historical_data_manager
 
 # Now import the pandas_ta executor
-from app.services.pandas_ta_executor import PandasTAExecutor
 
 
 class PandasTAIntegrationTest:
@@ -308,7 +306,7 @@ class PandasTAIntegrationTest:
         prices = []
         current_price = base_price
 
-        for i in range(periods):
+        for _i in range(periods):
             # Add trend and random walk
             change = trend + np.random.normal(0, volatility)
             current_price *= (1 + change)

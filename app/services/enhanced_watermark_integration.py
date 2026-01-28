@@ -136,7 +136,7 @@ class EnhancedWatermarkIntegration:
             log_exception(f"Unexpected watermarking error for user {user_id}: {e}")
             self._record_failure(user_id, stream_key, signal_data)
 
-            raise WatermarkError(f"Watermarking failed due to unexpected error: {e}")
+            raise WatermarkError(f"Watermarking failed due to unexpected error: {e}") from e
 
     async def _validate_watermark_prerequisites(self, user_id: str, stream_key: str):
         """Validate prerequisites for watermarking."""
@@ -167,10 +167,10 @@ class EnhancedWatermarkIntegration:
 
             return gateway_secret
 
-        except AttributeError:
-            raise SecurityError("GATEWAY_SECRET not configured in config service")
+        except AttributeError as e:
+            raise SecurityError("GATEWAY_SECRET not configured in config service") from e
         except Exception as e:
-            raise SecurityError(f"Failed to get gateway secret from config service: {e}")
+            raise SecurityError(f"Failed to get gateway secret from config service: {e}") from e
 
     async def _apply_watermark_via_service(
         self,
@@ -217,8 +217,8 @@ class EnhancedWatermarkIntegration:
             # Parse response with validation
             try:
                 result = response.json()
-            except (ValueError, json.JSONDecodeError):
-                raise WatermarkError("Invalid watermark service response - malformed JSON")
+            except (ValueError, json.JSONDecodeError) as e:
+                raise WatermarkError("Invalid watermark service response - malformed JSON") from e
 
             # Validate response structure
             if not isinstance(result, dict):
@@ -241,12 +241,12 @@ class EnhancedWatermarkIntegration:
 
             return watermarked_data
 
-        except httpx.TimeoutException:
-            raise WatermarkError("Watermarking request timeout - service unavailable")
-        except httpx.ConnectError:
-            raise WatermarkError("Watermarking service unavailable - connection failed")
+        except httpx.TimeoutException as e:
+            raise WatermarkError("Watermarking request timeout - service unavailable") from e
+        except httpx.ConnectError as e:
+            raise WatermarkError("Watermarking service unavailable - connection failed") from e
         except httpx.RequestError as e:
-            raise WatermarkError(f"Watermarking request failed: {e}")
+            raise WatermarkError(f"Watermarking request failed: {e}") from e
 
     def _validate_watermark_integrity(
         self,
@@ -411,11 +411,8 @@ class EnhancedWatermarkIntegration:
             return True
 
         # Marketplace signals always require watermarking
-        if "marketplace" in stream_type.lower() or "premium" in stream_type.lower():
-            return True
-
         # Basic users on basic streams may not require watermarking
-        return False
+        return "marketplace" in stream_type.lower() or "premium" in stream_type.lower()
 
     async def close(self):
         """Clean up resources."""

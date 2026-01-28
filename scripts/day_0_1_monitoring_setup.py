@@ -8,7 +8,7 @@ circuit breakers, backpressure events, error rate/latency SLOs, and metrics scra
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 
 class Day01MonitoringSetup:
@@ -931,7 +931,7 @@ def main():
         print(f"📊 {results['dashboards_created']} dashboards created")
         print(f"📁 All files in: {results['monitoring_directory']}")
         print("\\n🚀 Next steps:")
-        print("   1. Set GRAFANA_URL and GRAFANA_API_KEY environment variables")
+        print("   1. set GRAFANA_URL and GRAFANA_API_KEY environment variables")
         print(f"   2. Run: ./{results['import_script']}")
         print("   3. Access dashboards in Grafana")
 

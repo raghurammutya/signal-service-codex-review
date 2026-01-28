@@ -190,7 +190,7 @@ class TestSignalWatermarkService:
 
     async def test_leak_detection_audit_only_mode(self, watermark_service, marketplace_signal_data):
         """Test leak detection in audit-only mode."""
-        # Set audit-only mode
+        # set audit-only mode
         watermark_service._enforcement_policy = "audit-only"
 
         result = await watermark_service.detect_leak_and_enforce(

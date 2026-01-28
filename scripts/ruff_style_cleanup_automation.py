@@ -22,7 +22,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 
 @dataclass
@@ -92,7 +92,7 @@ class RuffStyleCleanupAutomation:
             dry_run: Preview changes without applying fixes
 
         Returns:
-            Dict: Complete cleanup session report
+            dict: Complete cleanup session report
         """
         print("🧹 Ruff Style Cleanup Automation")
         print("=" * 50)

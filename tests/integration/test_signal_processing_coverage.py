@@ -5,6 +5,7 @@ Comprehensive tests to validate >=95% path coverage for signal processing
 including pandas_ta, pyvollib engines, and fail-fast behaviors.
 """
 import os
+from contextlib import suppress
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
@@ -23,13 +24,13 @@ class TestSignalProcessingProductionPaths:
 
     @pytest.fixture
     def production_environment(self):
-        """Set production environment for fail-fast testing."""
+        """set production environment for fail-fast testing."""
         with patch.dict(os.environ, {'ENVIRONMENT': 'production'}):
             yield
 
     @pytest.fixture
     def development_environment(self):
-        """Set development environment for fallback testing."""
+        """set development environment for fallback testing."""
         with patch.dict(os.environ, {'ENVIRONMENT': 'development'}):
             yield
 
@@ -148,7 +149,7 @@ class TestSignalProcessingProductionPaths:
         # Test 2: Invalid indicator (should raise error)
         invalid_config = {'invalid_indicator': {'param': 1}}
 
-        with pytest.raises(Exception):  # Should fail-fast for invalid indicators
+        with pytest.raises(ValueError):  # Should fail-fast for invalid indicators
             await pandas_ta_executor.calculate_indicators(
                 price_data=price_data,
                 indicators_config=invalid_config
@@ -284,15 +285,13 @@ class TestSignalProcessingInstrumentation:
             with patch.object(engine, '_execute_vectorized_calculation_internal') as mock_calc:
                 mock_calc.side_effect = Exception(f"Failure {i+1}")
 
-                try:
+                with suppress(GreeksCalculationError):
                     await engine.calculate_option_chain_greeks(
                         option_chain_data=[{'strike': 100, 'option_type': 'call'}],
                         underlying_price=100.0,
                         greeks_to_calculate=['delta'],
                         enable_fallback=False
-                    )
-                except GreeksCalculationError:
-                    pass  # Expected
+                    )  # Expected
 
         # Circuit breaker should now be open
         assert hasattr(engine, '_vectorized_breaker')

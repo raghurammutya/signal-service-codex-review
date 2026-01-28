@@ -90,7 +90,7 @@ class InstrumentClient:
 
         except Exception as e:
             logger.error(f"Failed to get metadata for {instrument_key}: {e}")
-            raise RuntimeError(f"Metadata retrieval failed: {e}")
+            raise RuntimeError(f"Metadata retrieval failed: {e}") from e
 
     async def search_instruments(self, query: str, limit: int = 50) -> list[InstrumentMetadata]:
         """
@@ -101,7 +101,7 @@ class InstrumentClient:
             limit: Maximum results to return
 
         Returns:
-            List[InstrumentMetadata]: Matching instruments
+            list[InstrumentMetadata]: Matching instruments
         """
         try:
             result = await self.registry_client.search_instruments(query, limit)
@@ -126,7 +126,7 @@ class InstrumentClient:
 
         except Exception as e:
             logger.error(f"Search failed for '{query}': {e}")
-            raise RuntimeError(f"Search failed: {e}")
+            raise RuntimeError(f"Search failed: {e}") from e
 
     async def resolve_broker_token(self, instrument_key: str, broker_id: str) -> str:
         """
@@ -194,7 +194,7 @@ class InstrumentClient:
             instrument_token: Legacy broker token
 
         Returns:
-            Dict: Instrument metadata
+            dict: Instrument metadata
 
         Raises:
             DeprecationWarning: Method is deprecated
@@ -226,7 +226,7 @@ class InstrumentClient:
         return None
 
     def _set_cache(self, key: str, value: Any, ttl: int | None = None) -> None:
-        """Set value in internal cache with TTL"""
+        """set value in internal cache with TTL"""
         ttl = ttl or self._cache_ttl
         self._cache[key] = {
             "value": value,

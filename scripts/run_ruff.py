@@ -12,7 +12,6 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 
 def run_command(cmd: list[str], capture_output: bool = True) -> tuple[int, str, str]:

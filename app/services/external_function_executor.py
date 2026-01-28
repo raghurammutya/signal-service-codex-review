@@ -103,7 +103,7 @@ class ExternalFunctionExecutor:
         except Exception as e:
             error = ExternalFunctionExecutionError(f"External functions execution failed: {str(e)}")
             log_exception(f"Error in external functions execution: {error}")
-            raise error
+            raise error from e
 
     async def execute_single_function(
         self,
@@ -135,14 +135,14 @@ class ExternalFunctionExecutor:
                 log_info(f"External function {func_config.name} executed successfully")
                 return result
 
-            except TimeoutError:
+            except TimeoutError as e:
                 error_msg = f"Function {func_config.name} timed out after {func_config.timeout}s"
                 log_exception(error_msg)
-                raise ExternalFunctionExecutionError(error_msg)
+                raise ExternalFunctionExecutionError(error_msg) from e
             except Exception as e:
                 error_msg = f"Function {func_config.name} execution failed: {str(e)}"
                 log_exception(error_msg)
-                raise ExternalFunctionExecutionError(error_msg)
+                raise ExternalFunctionExecutionError(error_msg) from e
 
     def validate_function_config(self, func_config: ExternalFunctionConfig, user_id: str | None = None):
         """Validate external function configuration"""
@@ -192,7 +192,7 @@ class ExternalFunctionExecutor:
             return await self._load_function_securely(func_config)
 
         except Exception as e:
-            raise ExternalFunctionExecutionError(f"Failed to load function code: {str(e)}")
+            raise ExternalFunctionExecutionError(f"Failed to load function code: {str(e)}") from e
 
     def _is_safe_path(self, path: str) -> bool:
         """Validate function path for security"""
@@ -243,7 +243,7 @@ class ExternalFunctionExecutor:
 
         except Exception as e:
             log_exception(f"Failed to load function securely: {e}")
-            raise SecurityError(f"Secure function loading failed: {str(e)}")
+            raise SecurityError(f"Secure function loading failed: {str(e)}") from e
 
     def _validate_function_code(self, code: str, func_config: ExternalFunctionConfig) -> None:
         """
@@ -305,7 +305,7 @@ class ExternalFunctionExecutor:
             return compiled.code
 
         except Exception as e:
-            raise SecurityError(f"Failed to compile function safely: {str(e)}")
+            raise SecurityError(f"Failed to compile function safely: {str(e)}") from e
 
     def prepare_execution_context(
         self,
@@ -345,7 +345,7 @@ class ExternalFunctionExecutor:
             return restricted_globals
 
         except Exception as e:
-            raise ExternalFunctionExecutionError(f"Failed to prepare execution context: {str(e)}")
+            raise ExternalFunctionExecutionError(f"Failed to prepare execution context: {str(e)}") from e
 
     async def execute_with_limits(
         self,
@@ -355,7 +355,7 @@ class ExternalFunctionExecutor:
     ) -> Any:
         """Execute function with resource limits"""
         try:
-            # Set resource limits in a subprocess/thread
+            # set resource limits in a subprocess/thread
             return await asyncio.get_event_loop().run_in_executor(
                 None,
                 self._execute_in_subprocess,
@@ -366,7 +366,7 @@ class ExternalFunctionExecutor:
 
 
         except Exception as e:
-            raise ExternalFunctionExecutionError(f"Function execution failed: {str(e)}")
+            raise ExternalFunctionExecutionError(f"Function execution failed: {str(e)}") from e
 
     def _execute_in_subprocess(
         self,
@@ -376,11 +376,11 @@ class ExternalFunctionExecutor:
     ) -> Any:
         """Execute in subprocess with resource limits (synchronous)"""
         try:
-            # Set memory limit (in bytes)
+            # set memory limit (in bytes)
             memory_limit = func_config.memory_limit_mb * 1024 * 1024
             resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
 
-            # Set CPU time limit
+            # set CPU time limit
             resource.setrlimit(resource.RLIMIT_CPU, (func_config.timeout, func_config.timeout))
 
             # Execute the compiled code
@@ -397,7 +397,7 @@ class ExternalFunctionExecutor:
             raise ExternalFunctionExecutionError(f"Function {function_name} not found after execution")
 
         except Exception as e:
-            raise ExternalFunctionExecutionError(f"Subprocess execution failed: {str(e)}")
+            raise ExternalFunctionExecutionError(f"Subprocess execution failed: {str(e)}") from e
 
     def _is_safe_path(self, path: str) -> bool:
         """Check if file path is safe (no directory traversal)"""
@@ -427,7 +427,7 @@ class ExternalFunctionExecutor:
 
         except SecurityError as e:
             # Re-raise with enhanced context
-            raise SecurityError(f"Malicious code detected in {config.name}: {str(e)}")
+            raise SecurityError(f"Malicious code detected in {config.name}: {str(e)}") from e
 
         # Check if required function exists
         if f"def {config.function_name}" not in code:
@@ -448,7 +448,7 @@ class ExternalFunctionExecutor:
             if not real_path.startswith(real_storage):
                 raise SecurityError("Function path outside secure storage directory")
         except Exception as e:
-            raise SecurityError(f"Path validation failed: {e}")
+            raise SecurityError(f"Path validation failed: {e}") from e
 
         # Check if file exists and size
         if not os.path.exists(full_path):
@@ -468,7 +468,7 @@ class ExternalFunctionExecutor:
         except SecurityError:
             raise
         except Exception as e:
-            raise SecurityError(f"Failed to load function code: {e}")
+            raise SecurityError(f"Failed to load function code: {e}") from e
 
     # ACL Methods
 
@@ -538,16 +538,14 @@ class ExternalFunctionExecutor:
         # Check cross-user access if needed
         if "/" in config.file_path:
             file_user_id = config.file_path.split("/")[0]
-            if file_user_id != user_id:
-                if not await self._check_cross_user_access(user_id, file_user_id):
-                    self._audit_access_attempt(user_id, config, "access_denied", "Cross-user access denied")
-                    raise SecurityError("Cross-user access denied")
+            if file_user_id != user_id and not await self._check_cross_user_access(user_id, file_user_id):
+                self._audit_access_attempt(user_id, config, "access_denied", "Cross-user access denied")
+                raise SecurityError("Cross-user access denied")
 
         # Check shared function access
-        if config.file_path.startswith("shared/"):
-            if not await self._check_shared_access(user_id, config.file_path):
-                self._audit_access_attempt(user_id, config, "access_denied", "Shared function access denied")
-                raise SecurityError("Shared function access denied")
+        if config.file_path.startswith("shared/") and not await self._check_shared_access(user_id, config.file_path):
+            self._audit_access_attempt(user_id, config, "access_denied", "Shared function access denied")
+            raise SecurityError("Shared function access denied")
 
         # Check role-based resource limits
         user_role = await self._get_user_role(user_id)
@@ -618,11 +616,11 @@ class ExternalFunctionExecutor:
                 self.execution_count += 1
                 return result
 
-            except TimeoutError:
+            except TimeoutError as e:
                 error_msg = f"Function {func_config.name} timed out after {func_config.timeout}s"
                 log_exception(error_msg)
                 self.error_count += 1
-                raise ExternalFunctionExecutionError(error_msg)
+                raise ExternalFunctionExecutionError(error_msg) from e
             except SecurityError:
                 self.error_count += 1
                 raise  # Re-raise security errors as-is
@@ -630,7 +628,7 @@ class ExternalFunctionExecutor:
                 error_msg = f"Function {func_config.name} execution failed: {str(e)}"
                 log_exception(error_msg)
                 self.error_count += 1
-                raise ExternalFunctionExecutionError(error_msg)
+                raise ExternalFunctionExecutionError(error_msg) from e
 
     def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive executor metrics including security and stability"""

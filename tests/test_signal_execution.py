@@ -235,17 +235,18 @@ result = 1 / 0
     async def test_execute_marketplace_signal(self, sample_script):
         """Test end-to-end marketplace signal execution."""
         # Mock script fetch
-        with patch.object(
-            SignalExecutor,
-            'fetch_marketplace_script',
-            return_value={
-                "content": sample_script,
-                "metadata": {},
-                "product_id": "prod-123"
-            }
+        with (
+            patch.object(
+                SignalExecutor,
+                'fetch_marketplace_script',
+                return_value={
+                    "content": sample_script,
+                    "metadata": {},
+                    "product_id": "prod-123"
+                }
+            ),
+            patch.object(SignalExecutor, 'publish_to_redis', return_value=True)
         ):
-            # Mock Redis publish
-            with patch.object(SignalExecutor, 'publish_to_redis', return_value=True):
                 result = await SignalExecutor.execute_marketplace_signal(
                     execution_token="test-token",
                     product_id="prod-123",
@@ -273,9 +274,10 @@ class TestSignalExecutionAPI:
     async def test_execute_marketplace_signal_endpoint(self, client):
         """Test marketplace signal execution endpoint."""
         # Mock authentication
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "123"}):
-            # Mock background task
-            with patch('app.services.signal_executor.SignalExecutor.execute_marketplace_signal'):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "123"}),
+            patch('app.services.signal_executor.SignalExecutor.execute_marketplace_signal')
+        ):
                 response = await client.post(
                     "/api/v2/signals/execute/marketplace",
                     json={
@@ -302,9 +304,10 @@ class TestSignalExecutionAPI:
     async def test_execute_personal_signal_endpoint(self, client):
         """Test personal signal execution endpoint."""
         # Mock authentication
-        with patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "123"}):
-            # Mock background task
-            with patch('app.services.signal_executor.SignalExecutor.execute_personal_signal'):
+        with (
+            patch('app.core.auth.get_current_user_from_gateway', return_value={"user_id": "123"}),
+            patch('app.services.signal_executor.SignalExecutor.execute_personal_signal')
+        ):
                 response = await client.post(
                     "/api/v2/signals/execute/personal",
                     json={

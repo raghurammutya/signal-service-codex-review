@@ -24,7 +24,7 @@ class Cache:
 
     async def set(self, key: str, value: Any, expire: int | None = None) -> bool:
         """
-        Set a value in cache with optional expiration.
+        set a value in cache with optional expiration.
 
         Args:
             key: Cache key

@@ -97,7 +97,7 @@ class TestSchemaValidation:
         with patch('app.core.hot_config.BaseSignalServiceConfig.__init__') as mock_base_init:
             mock_base_init.return_value = None
             config = HotReloadableSignalServiceConfig()
-            config.environment = 'test'  # Set environment for validation
+            config.environment = 'test'  # set environment for validation
             return config
 
     def test_database_url_validation(self, hot_config):
@@ -121,7 +121,7 @@ class TestSchemaValidation:
         ]
 
         for url in invalid_urls:
-            with pytest.raises(Exception):  # Should raise SchemaValidationError
+            with pytest.raises(ValueError):  # Should raise SchemaValidationError
                 hot_config.validate_parameter("DATABASE_URL", url)
 
     def test_redis_url_validation(self, hot_config):
@@ -144,10 +144,10 @@ class TestSchemaValidation:
         assert hot_config.validate_parameter("signal_service.cache_ttl_seconds", "600")  # String conversion
 
         # Invalid cache TTL
-        with pytest.raises(Exception):  # Below minimum
+        with pytest.raises(ValueError):  # Below minimum
             hot_config.validate_parameter("signal_service.cache_ttl_seconds", 10)
 
-        with pytest.raises(Exception):  # Above maximum
+        with pytest.raises(ValueError):  # Above maximum
             hot_config.validate_parameter("signal_service.cache_ttl_seconds", 5000)
 
     def test_service_url_production_validation(self, hot_config):
@@ -167,7 +167,7 @@ class TestSchemaValidation:
 
         # Invalid production URLs (external)
         hot_config.environment = 'production'
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             hot_config.validate_parameter("signal_service.ticker_service_url", "http://external.com")
 
     def test_secret_validation(self, hot_config):
@@ -190,7 +190,7 @@ class TestSchemaValidation:
         ]
 
         for secret in invalid_secrets:
-            with pytest.raises(Exception):
+            with pytest.raises(ValueError):
                 hot_config.validate_parameter("GATEWAY_SECRET", secret)
 
 

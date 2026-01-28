@@ -9,6 +9,7 @@ from typing import Any
 import psutil
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.core.config import settings
 from app.repositories.signal_repository import SignalRepository
 from app.utils.logging_utils import log_error, log_info, log_warning
 
@@ -21,7 +22,7 @@ def verify_admin_token(token: str | None = None) -> str | None:
         from app.core.config import settings
         environment = settings.environment
     except Exception as e:
-        raise RuntimeError(f"Failed to get environment from config_service for admin auth gating: {e}. No environment fallbacks allowed per architecture.")
+        raise RuntimeError(f"Failed to get environment from config_service for admin auth gating: {e}. No environment fallbacks allowed per architecture.") from e
 
     # In production, completely block admin endpoints
     if environment in ['production', 'prod', 'staging']:
@@ -51,7 +52,7 @@ def verify_admin_token(token: str | None = None) -> str | None:
         if not expected_token:
             raise ValueError("ADMIN_TOKEN not found in config_service")
     except Exception as e:
-        raise RuntimeError(f"Failed to get admin token from config_service: {e}. No environment fallbacks allowed per architecture.")
+        raise RuntimeError(f"Failed to get admin token from config_service: {e}. No environment fallbacks allowed per architecture.") from e
     if token != expected_token:
         raise HTTPException(
             status_code=403,
@@ -60,7 +61,6 @@ def verify_admin_token(token: str | None = None) -> str | None:
 
     return token
 
-from app.core.config import settings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -162,7 +162,7 @@ async def get_service_status(
 
     except Exception as e:
         log_error(f"Error getting service status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/metrics/summary")
@@ -200,7 +200,7 @@ async def get_metrics_summary(
 
     except Exception as e:
         log_error(f"Error getting metrics summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/cache/clear")
@@ -254,7 +254,7 @@ async def clear_cache(
 
     except Exception as e:
         log_error(f"Error clearing cache: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/data/cleanup")
@@ -312,7 +312,7 @@ async def cleanup_old_data(
 
     except Exception as e:
         log_error(f"Error cleaning up data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/connections/active")
@@ -349,7 +349,7 @@ async def get_active_connections(
 
     except Exception as e:
         log_error(f"Error getting active connections: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/scaling/trigger")
@@ -373,7 +373,7 @@ async def trigger_scaling_action(
         return {"status": "triggered", "action": "scaling"}
     except Exception as e:
         log_error(f"Error triggering scaling: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/config/current")
@@ -404,7 +404,7 @@ async def get_current_configuration(
 
     except Exception as e:
         log_error(f"Error getting configuration: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/config/reload")
@@ -431,7 +431,7 @@ async def reload_configuration(
 
     except Exception as e:
         log_error(f"Error reloading configuration: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/health/dependencies")
@@ -492,7 +492,7 @@ async def check_dependencies_health(
 
     except Exception as e:
         log_error(f"Error checking dependencies: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def _execute_k8s_scaling_action(action: str, instances: int) -> dict[str, Any]:

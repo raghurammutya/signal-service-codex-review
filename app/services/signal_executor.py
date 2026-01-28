@@ -10,11 +10,8 @@ import json
 import logging
 import os
 import time
-from typing import Any
-
-# Configuration values
-marketplace_url = os.getenv('MARKETPLACE_URL', 'http://marketplace-service:8080')
 from datetime import UTC, datetime
+from typing import Any
 
 from minio import Minio
 from minio.error import S3Error
@@ -22,6 +19,11 @@ from minio.error import S3Error
 from app.core.logging import log_error, log_info, log_warning
 from app.core.redis_manager import get_redis_client
 from app.services.signal_stream_contract import StreamKeyFormat
+
+# Configuration values
+marketplace_url = os.getenv('MARKETPLACE_URL', 'http://marketplace-service:8080')
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,19 +69,19 @@ class SignalExecutor:
         if not cls.MINIO_ENDPOINT:
             raise ValueError(
                 "MINIO_ENDPOINT not configured. Signal execution requires proper MinIO configuration. "
-                "Set MINIO_ENDPOINT environment variable or configure in config service."
+                "set MINIO_ENDPOINT environment variable or configure in config service."
             )
 
         if not cls.MINIO_ACCESS_KEY:
             raise ValueError(
                 "MINIO_ACCESS_KEY not configured. Signal execution requires proper MinIO credentials. "
-                "Set MINIO_ACCESS_KEY environment variable or configure in config service."
+                "set MINIO_ACCESS_KEY environment variable or configure in config service."
             )
 
         if not cls.MINIO_SECRET_KEY:
             raise ValueError(
                 "MINIO_SECRET_KEY not configured. Signal execution requires proper MinIO credentials. "
-                "Set MINIO_SECRET_KEY environment variable or configure in config service."
+                "set MINIO_SECRET_KEY environment variable or configure in config service."
             )
 
         # Validate bucket is properly mapped for environment
@@ -114,7 +116,7 @@ class SignalExecutor:
                 secure=cls.MINIO_USE_SSL
             )
         except Exception as e:
-            raise ValueError(f"Failed to create MinIO client: {e}. Check MinIO configuration.")
+            raise ValueError(f"Failed to create MinIO client: {e}. Check MinIO configuration.") from e
 
     @classmethod
     def _get_personal_path(cls, user_id: str, script_id: str) -> str:
@@ -133,7 +135,7 @@ class SignalExecutor:
         error: str | None = None
     ):
         """
-        Set execution status in Redis with 1-hour TTL.
+        set execution status in Redis with 1-hour TTL.
 
         Args:
             execution_id: Unique execution identifier
@@ -158,7 +160,7 @@ class SignalExecutor:
             if error:
                 status_data["error"] = error
 
-            # Set status with 1-hour TTL
+            # set status with 1-hour TTL
             await redis_client.setex(
                 execution_key,
                 3600,  # 1 hour TTL
@@ -387,7 +389,7 @@ class SignalExecutor:
             timeout: Execution timeout in seconds
 
         Returns:
-            Dict with execution results and any signals generated
+            dict with execution results and any signals generated
         """
         # SECURITY: Disable script execution in production
         # Use environment from config_service (already loaded in _ENVIRONMENT variable)
@@ -416,17 +418,13 @@ class SignalExecutor:
             max_signals = 100  # Limit number of signals
 
             def emit_signal(signal):
-                if len(signals_generated) < max_signals:
-                    # Sanitize signal data
-                    if isinstance(signal, dict):
-                        # Limit signal data size and content
-                        safe_signal = {}
-                        for k, v in signal.items():
-                            if isinstance(k, str) and len(k) < 50:
-                                if isinstance(v, int | float | str | bool):
-                                    if isinstance(v, str) and len(v) < 500 or not isinstance(v, str):
-                                        safe_signal[k] = v
-                        signals_generated.append(safe_signal)
+                if len(signals_generated) < max_signals and isinstance(signal, dict):
+                    # Limit signal data size and content
+                    safe_signal = {}
+                    for k, v in signal.items():
+                        if isinstance(k, str) and len(k) < 50 and isinstance(v, int | float | str | bool) and isinstance(v, str) and len(v) < 500 or not isinstance(v, str):
+                            safe_signal[k] = v
+                    signals_generated.append(safe_signal)
 
             sandbox_globals["emit_signal"] = emit_signal
 
@@ -447,11 +445,11 @@ class SignalExecutor:
                     return await asyncio.get_event_loop().run_in_executor(None, run_script)
 
                 except SyntaxError as e:
-                    raise ValueError(f"Script syntax error: {e}")
+                    raise ValueError(f"Script syntax error: {e}") from e
                 except Exception as e:
                     # Log the error but don't expose internal details
                     log_error(f"Script execution error: {e}")
-                    raise RuntimeError("Script execution failed")
+                    raise RuntimeError("Script execution failed") from e
 
             # Run with timeout
             signals = await asyncio.wait_for(_execute(), timeout=timeout)

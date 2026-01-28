@@ -118,7 +118,7 @@ class DataClient:
             )
         except ValueError as e:
             logger.error(f"Token resolution failed for {instrument_key} on {target_broker}: {e}")
-            raise RuntimeError(f"Data source unavailable: {e}")
+            raise RuntimeError(f"Data source unavailable: {e}") from e
 
         try:
             # Fetch data from broker using resolved token
@@ -151,7 +151,7 @@ class DataClient:
 
         except Exception as e:
             logger.error(f"Historical data fetch failed for {instrument_key}: {e}")
-            raise RuntimeError(f"Data retrieval failed: {e}")
+            raise RuntimeError(f"Data retrieval failed: {e}") from e
 
     async def get_real_time_quote(self, instrument_key: str,
                                 broker_id: str | None = None) -> MarketData:
@@ -198,7 +198,7 @@ class DataClient:
 
         except Exception as e:
             logger.error(f"Quote fetch failed for {instrument_key}: {e}")
-            raise RuntimeError(f"Quote retrieval failed: {e}")
+            raise RuntimeError(f"Quote retrieval failed: {e}") from e
 
     async def subscribe_to_stream(self,
                                 instrument_keys: list[str],
@@ -208,7 +208,7 @@ class DataClient:
         Subscribe to real-time data stream using instrument_keys
 
         Args:
-            instrument_keys: List of primary identifiers
+            instrument_keys: list of primary identifiers
             data_types: Types of data to stream
             broker_id: Override default broker
 
@@ -352,7 +352,7 @@ class DataClient:
         return None
 
     def _set_cache(self, key: str, value: MarketData, timeframe: TimeFrame) -> None:
-        """Set data in cache with appropriate TTL"""
+        """set data in cache with appropriate TTL"""
         ttl = self._cache_ttl.get(timeframe, 300)
         self._data_cache[key] = {
             "value": value,

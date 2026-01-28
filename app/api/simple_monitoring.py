@@ -44,29 +44,13 @@ async def component_status():
     # Check if components can be imported
     components = {}
 
-    try:
-        from app.core.health_checker import get_health_checker
-        components["health_checker"] = "available"
-    except ImportError:
-        components["health_checker"] = "not_available"
+    import importlib.util
 
-    try:
-        from app.core.circuit_breaker import get_circuit_breaker_manager
-        components["circuit_breaker"] = "available"
-    except ImportError:
-        components["circuit_breaker"] = "not_available"
-
-    try:
-        from monitoring.enhanced_metrics import get_enhanced_metrics_collector
-        components["enhanced_metrics"] = "available"
-    except ImportError:
-        components["enhanced_metrics"] = "not_available"
-
-    try:
-        from prometheus_client import generate_latest
-        components["prometheus"] = "available"
-    except ImportError:
-        components["prometheus"] = "not_available"
+    # Check component availability without importing
+    components["health_checker"] = "available" if importlib.util.find_spec("app.core.health_checker") else "not_available"
+    components["circuit_breaker"] = "available" if importlib.util.find_spec("app.core.circuit_breaker") else "not_available"
+    components["enhanced_metrics"] = "available" if importlib.util.find_spec("monitoring.enhanced_metrics") else "not_available"
+    components["prometheus"] = "available" if importlib.util.find_spec("prometheus_client") else "not_available"
 
     return {
         "timestamp": datetime.utcnow().isoformat(),

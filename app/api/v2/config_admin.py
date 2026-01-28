@@ -6,7 +6,7 @@ Allows runtime configuration refresh and validation.
 """
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer
@@ -43,7 +43,7 @@ def verify_admin_token(token: str = Depends(security)) -> str:
 
 def _sanitize_config_response(config_dict: dict[str, Any]) -> dict[str, Any]:
     """Sanitize configuration response to prevent sensitive data exposure."""
-    # List of keys that should be sanitized/redacted
+    # list of keys that should be sanitized/redacted
     sensitive_keys = {
         'password', 'secret', 'key', 'token', 'credential',
         'private', 'cert', 'ssl_key', 'encryption_key'

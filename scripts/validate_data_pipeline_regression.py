@@ -23,7 +23,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -109,7 +109,7 @@ class DataPipelineRegressionValidator:
             regression_suite: Type of regression suite (full, quick, performance)
 
         Returns:
-            Dict: Complete regression validation report
+            dict: Complete regression validation report
         """
         print(f"📋 Starting {regression_suite} regression testing suite")
 

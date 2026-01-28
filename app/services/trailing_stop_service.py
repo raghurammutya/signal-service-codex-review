@@ -140,14 +140,14 @@ class TrailingStopService:
             expires_in_hours: Expiration time in hours
 
         Returns:
-            Dict: Trailing stop creation result with metadata
+            dict: Trailing stop creation result with metadata
         """
         # Get instrument metadata for enrichment
         try:
             metadata = await self.instrument_client.get_instrument_metadata(instrument_key)
         except Exception as e:
             logger.error(f"Failed to get metadata for {instrument_key}: {e}")
-            raise ValueError(f"Invalid instrument: {instrument_key}")
+            raise ValueError(f"Invalid instrument: {instrument_key}") from e
 
         # Get current market price if initial stop price not provided
         if initial_stop_price is None:
@@ -170,12 +170,12 @@ class TrailingStopService:
 
             except Exception as e:
                 logger.error(f"Failed to get current price for {instrument_key}: {e}")
-                raise RuntimeError(f"Unable to determine initial stop price: {e}")
+                raise RuntimeError(f"Unable to determine initial stop price: {e}") from e
 
         # Generate stop ID
         stop_id = f"trail_{instrument_key}_{int(datetime.now().timestamp())}"
 
-        # Set expiration
+        # set expiration
         expires_at = datetime.now() + timedelta(hours=expires_in_hours) if expires_in_hours else None
 
         # Create trailing stop configuration
@@ -485,7 +485,7 @@ class TrailingStopService:
         # Get metadata for response
         try:
             metadata = await self.instrument_client.get_instrument_metadata(config.instrument_key)
-        except:
+        except Exception:
             metadata = type('obj', (object,), {'symbol': 'Unknown', 'exchange': 'Unknown'})()
 
         logger.info(f"Trailing stop cancelled: {stop_id}")
@@ -511,7 +511,7 @@ class TrailingStopService:
         # Get enriched instrument metadata
         try:
             metadata = await self.instrument_client.get_instrument_metadata(config.instrument_key)
-        except:
+        except Exception:
             metadata = type('obj', (object,), {
                 'symbol': 'Unknown', 'exchange': 'Unknown', 'sector': 'Unknown'
             })()
@@ -567,7 +567,7 @@ class TrailingStopService:
             # Get metadata
             try:
                 metadata = await self.instrument_client.get_instrument_metadata(config.instrument_key)
-            except:
+            except Exception:
                 metadata = type('obj', (object,), {'symbol': 'Unknown', 'exchange': 'Unknown'})()
 
             active_stops.append({

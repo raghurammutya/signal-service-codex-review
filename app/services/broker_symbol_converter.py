@@ -180,11 +180,8 @@ class BrokerSymbolConverter:
 
             # Validate exchange
             valid_exchanges = ['NSE', 'BSE', 'NFO', 'MCX', 'CDS', 'NYSE', 'NASDAQ', 'BINANCE']
-            if exchange not in valid_exchanges:
-                return False
-
             # Additional validation can be added here
-            return True
+            return exchange in valid_exchanges
 
         except Exception as e:
             log_error(f"Error validating instrument key: {e}")

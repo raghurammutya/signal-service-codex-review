@@ -96,7 +96,7 @@ class TestStreamAbuseProtectionComprehensive:
 
     async def test_entitlement_verification_fail_fast_no_marketplace(self, abuse_protection):
         """Test fail-fast behavior when marketplace client unavailable."""
-        # Set marketplace client to None (production fail-fast)
+        # set marketplace client to None (production fail-fast)
         abuse_protection.marketplace_client = None
 
         with pytest.raises(RuntimeError, match="Entitlement verification required"):

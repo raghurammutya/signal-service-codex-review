@@ -457,23 +457,20 @@ class TestServiceIntegrations:
         }
 
         # Mock service calls
-        with patch.object(integrations.alert_client, 'send_alert') as mock_alert:
-            with patch.object(integrations.comms_client, 'send_notification') as mock_notification:
-                with patch.object(integrations.subscription_client, 'validate_feature_access') as mock_feature:
+        with patch.object(integrations.alert_client, 'send_alert') as mock_alert, patch.object(integrations.comms_client, 'send_notification') as mock_notification, patch.object(integrations.subscription_client, 'validate_feature_access') as mock_feature:
+                mock_feature.return_value = {"has_access": True}
+                mock_alert.return_value = {"alert_id": "alert_123", "status": "sent"}
+                mock_notification.return_value = {"notification_id": "notif_123", "status": "queued"}
 
-                    mock_feature.return_value = {"has_access": True}
-                    mock_alert.return_value = {"alert_id": "alert_123", "status": "sent"}
-                    mock_notification.return_value = {"notification_id": "notif_123", "status": "queued"}
+                result = await integrations.process_signal_notification(signal_data)
 
-                    result = await integrations.process_signal_notification(signal_data)
+                assert result["alert"]["status"] == "sent"
+                assert result["notification"]["status"] == "queued"
 
-                    assert result["alert"]["status"] == "sent"
-                    assert result["notification"]["status"] == "queued"
-
-                    # Verify all services were called
-                    mock_feature.assert_called_once()
-                    mock_alert.assert_called_once()
-                    mock_notification.assert_called_once()
+                # Verify all services were called
+                mock_feature.assert_called_once()
+                mock_alert.assert_called_once()
+                mock_notification.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_user_onboarding_workflow(self, integrations):
@@ -489,36 +486,30 @@ class TestServiceIntegrations:
             }
         }
 
-        with patch.object(integrations.subscription_client, 'create_subscription') as mock_subscription:
-            with patch.object(integrations.comms_client, 'setup_notification_preferences') as mock_preferences:
-                with patch.object(integrations.comms_client, 'send_welcome_email') as mock_welcome:
+        with patch.object(integrations.subscription_client, 'create_subscription') as mock_subscription, patch.object(integrations.comms_client, 'setup_notification_preferences') as mock_preferences, patch.object(integrations.comms_client, 'send_welcome_email') as mock_welcome:
+                mock_subscription.return_value = {"subscription_id": "sub_123", "status": "active"}
+                mock_preferences.return_value = {"preferences_id": "pref_123"}
+                mock_welcome.return_value = {"email_id": "welcome_123", "status": "sent"}
 
-                    mock_subscription.return_value = {"subscription_id": "sub_123", "status": "active"}
-                    mock_preferences.return_value = {"preferences_id": "pref_123"}
-                    mock_welcome.return_value = {"email_id": "welcome_123", "status": "sent"}
+                result = await integrations.process_user_onboarding(user_data)
 
-                    result = await integrations.process_user_onboarding(user_data)
-
-                    assert result["subscription"]["status"] == "active"
-                    assert result["welcome_email"]["status"] == "sent"
+                assert result["subscription"]["status"] == "active"
+                assert result["welcome_email"]["status"] == "sent"
 
     @pytest.mark.asyncio
     async def test_service_health_monitoring(self, integrations):
         """Test service health monitoring"""
-        with patch.object(integrations.alert_client, 'health_check') as mock_alert_health:
-            with patch.object(integrations.comms_client, 'health_check') as mock_comms_health:
-                with patch.object(integrations.subscription_client, 'health_check') as mock_sub_health:
+        with patch.object(integrations.alert_client, 'health_check') as mock_alert_health, patch.object(integrations.comms_client, 'health_check') as mock_comms_health, patch.object(integrations.subscription_client, 'health_check') as mock_sub_health:
+                mock_alert_health.return_value = {"status": "healthy", "response_time": 45}
+                mock_comms_health.return_value = {"status": "healthy", "response_time": 67}
+                mock_sub_health.return_value = {"status": "degraded", "response_time": 890}
 
-                    mock_alert_health.return_value = {"status": "healthy", "response_time": 45}
-                    mock_comms_health.return_value = {"status": "healthy", "response_time": 67}
-                    mock_sub_health.return_value = {"status": "degraded", "response_time": 890}
+                result = await integrations.check_service_health()
 
-                    result = await integrations.check_service_health()
-
-                    assert result["alert_service"]["status"] == "healthy"
-                    assert result["comms_service"]["status"] == "healthy"
-                    assert result["subscription_service"]["status"] == "degraded"
-                    assert result["overall_status"] == "degraded"  # Any degraded service affects overall
+                assert result["alert_service"]["status"] == "healthy"
+                assert result["comms_service"]["status"] == "healthy"
+                assert result["subscription_service"]["status"] == "degraded"
+                assert result["overall_status"] == "degraded"  # Any degraded service affects overall
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_integration(self, integrations):
@@ -529,18 +520,16 @@ class TestServiceIntegrations:
         }
 
         # Simulate alert service failure
-        with patch.object(integrations.alert_client, 'send_alert') as mock_alert:
-            with patch.object(integrations.comms_client, 'send_notification') as mock_notification:
+        with patch.object(integrations.alert_client, 'send_alert') as mock_alert, patch.object(integrations.comms_client, 'send_notification') as mock_notification:
+            mock_alert.side_effect = ServiceUnavailableError("Alert service down")
+            mock_notification.return_value = {"notification_id": "notif_123", "status": "queued"}
 
-                mock_alert.side_effect = ServiceUnavailableError("Alert service down")
-                mock_notification.return_value = {"notification_id": "notif_123", "status": "queued"}
+            result = await integrations.process_signal_notification(signal_data)
 
-                result = await integrations.process_signal_notification(signal_data)
-
-                # Should continue with other services even if one fails
-                assert result["alert"]["status"] == "failed"
-                assert result["notification"]["status"] == "queued"
-                assert result["overall_status"] == "partial_success"
+            # Should continue with other services even if one fails
+            assert result["alert"]["status"] == "failed"
+            assert result["notification"]["status"] == "queued"
+            assert result["overall_status"] == "partial_success"
 
 
 class TestServiceFailureRecovery:

@@ -118,7 +118,7 @@ class UniversalCalculator:
         Args:
             asset_type: Type of asset
             instrument_key: Unique instrument identifier
-            computations: List of computation requests
+            computations: list of computation requests
             data: Optional pre-fetched data
             context: Additional context (spot price, risk-free rate, etc.)
 
@@ -198,7 +198,7 @@ class UniversalCalculator:
 
         except Exception as e:
             log_exception(f"Error in universal computation: {str(e)}")
-            raise CalculationError(f"Universal computation failed: {str(e)}")
+            raise CalculationError(f"Universal computation failed: {str(e)}") from e
 
     async def _compute_indicator(
         self,
@@ -502,7 +502,7 @@ class UniversalCalculator:
             }
 
         except Exception as e:
-            raise ValueError(f"Error evaluating formula: {str(e)}")
+            raise ValueError(f"Error evaluating formula: {str(e)}") from e
 
     async def _compute_price_analytics(
         self,

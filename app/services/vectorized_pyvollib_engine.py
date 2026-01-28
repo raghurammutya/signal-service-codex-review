@@ -150,7 +150,7 @@ class VectorizedPyvolibGreeksEngine:
             raise GreeksCalculationError(
                 f"Failed to import pyvollib functions for model '{model_name}': {str(e)}",
                 details={"model": model_name, "import_error": str(e)}
-            )
+            ) from e
 
     def _call_greek_function(self, greek_name: str, arrays: dict[str, np.ndarray], i: int) -> float:
         """Helper to call the appropriate Greek function with correct parameters"""
@@ -188,19 +188,19 @@ class VectorizedPyvolibGreeksEngine:
         [AGENT-1] Calculate Greeks for entire option chain using vectorized operations.
 
         Args:
-            option_chain_data: List of option data dicts with keys:
+            option_chain_data: list of option data dicts with keys:
                 - strike: float
                 - expiry_date: str/date/datetime
                 - option_type: str ('CE'/'CALL' or 'PE'/'PUT')
                 - volatility: float (optional, will calculate if missing)
                 - price: float (for IV calculation if volatility missing)
             underlying_price: Current underlying asset price
-            greeks_to_calculate: List of Greeks ['delta', 'gamma', 'theta', 'vega', 'rho']
+            greeks_to_calculate: list of Greeks ['delta', 'gamma', 'theta', 'vega', 'rho']
             enable_fallback: Whether to fallback to single-option mode on errors
 
         Returns:
-            Dict with:
-                - results: List of dicts with Greeks for each option
+            dict with:
+                - results: list of dicts with Greeks for each option
                 - performance: Benchmark metrics
                 - method_used: 'vectorized' or 'fallback'
         """
@@ -239,7 +239,7 @@ class VectorizedPyvolibGreeksEngine:
                 )
             # Production fail-fast: raise error to ensure visibility of issues
             log_exception("[AGENT-1] PRODUCTION MODE: Vectorized calculation failed, no fallback allowed")
-            raise GreeksCalculationError(f"Vectorized Greeks calculation failed: {e}. Fallback disabled for production reliability.")
+            raise GreeksCalculationError(f"Vectorized Greeks calculation failed: {e}. Fallback disabled for production reliability.") from e
 
     async def _execute_vectorized_calculation_internal(
         self,
@@ -301,12 +301,12 @@ class VectorizedPyvolibGreeksEngine:
         [AGENT-1] Calculate Greeks for term structure across multiple symbols and expiries.
 
         Args:
-            symbols_expiries_data: Dict mapping symbols to lists of option data
-            underlying_prices: Dict mapping symbols to current prices
-            greeks_to_calculate: List of Greeks to calculate
+            symbols_expiries_data: dict mapping symbols to lists of option data
+            underlying_prices: dict mapping symbols to current prices
+            greeks_to_calculate: list of Greeks to calculate
 
         Returns:
-            Dict with results organized by symbol and performance metrics
+            dict with results organized by symbol and performance metrics
         """
         start_time = time.perf_counter()
 
@@ -351,7 +351,7 @@ class VectorizedPyvolibGreeksEngine:
 
         except Exception as e:
             log_exception(f"[AGENT-1] Term structure calculation failed: {e}")
-            raise GreeksCalculationError(f"Term structure calculation failed: {e}")
+            raise GreeksCalculationError(f"Term structure calculation failed: {e}") from e
 
     async def calculate_bulk_greeks_with_performance_metrics(
         self,
@@ -362,7 +362,7 @@ class VectorizedPyvolibGreeksEngine:
         [AGENT-1] Calculate Greeks for bulk data with detailed performance comparison.
 
         Args:
-            bulk_data: List of option data with required fields
+            bulk_data: list of option data with required fields
             compare_with_legacy: Whether to run legacy calculation for comparison
 
         Returns:
@@ -411,7 +411,7 @@ class VectorizedPyvolibGreeksEngine:
 
         except Exception as e:
             log_exception(f"[AGENT-1] Bulk Greeks calculation failed: {e}")
-            raise GreeksCalculationError(f"Bulk calculation failed: {e}")
+            raise GreeksCalculationError(f"Bulk calculation failed: {e}") from e
 
     async def _prepare_vectorized_arrays(
         self,
@@ -422,7 +422,7 @@ class VectorizedPyvolibGreeksEngine:
         Prepare numpy arrays for vectorized calculation.
 
         Returns:
-            Dict with numpy arrays: strikes, times_to_expiry, volatilities, flags, etc.
+            dict with numpy arrays: strikes, times_to_expiry, volatilities, flags, etc.
         """
         try:
             n_options = len(option_data)
@@ -455,7 +455,7 @@ class VectorizedPyvolibGreeksEngine:
                     else:
                         volatilities[i] = 0.2  # Default volatility
 
-                    # Set option type flag
+                    # set option type flag
                     flags[i] = 'c' if option['option_type'].upper() in ['CE', 'CALL'] else 'p'
 
                 except (ValueError, KeyError) as e:
@@ -803,7 +803,7 @@ class VectorizedPyvolibGreeksEngine:
 
         except Exception as e:
             log_exception(f"[AGENT-1] Fallback calculation failed: {e}")
-            raise GreeksCalculationError(f"Fallback calculation failed: {e}")
+            raise GreeksCalculationError(f"Fallback calculation failed: {e}") from e
 
     async def _legacy_bulk_calculation(self, bulk_data: list[dict]) -> dict[str, Any]:
         """Run legacy calculation for performance comparison using single-option loop approach."""

@@ -92,7 +92,7 @@ class PremiumDiscountCalculator:
             include_greeks: Whether to include Greeks in response
 
         Returns:
-            Dict with premium analysis results and performance metrics
+            dict with premium analysis results and performance metrics
         """
         start_time = time.perf_counter()
 
@@ -148,7 +148,7 @@ class PremiumDiscountCalculator:
 
         except Exception as e:
             log_exception(f"[AGENT-2] Premium analysis failed: {e}")
-            raise GreeksCalculationError(f"Premium analysis failed: {e}")
+            raise GreeksCalculationError(f"Premium analysis failed: {e}") from e
 
     async def analyze_option_chain_mispricing(
         self,
@@ -220,7 +220,7 @@ class PremiumDiscountCalculator:
 
         except Exception as e:
             log_exception(f"[AGENT-2] Chain mispricing analysis failed: {e}")
-            raise GreeksCalculationError(f"Chain mispricing analysis failed: {e}")
+            raise GreeksCalculationError(f"Chain mispricing analysis failed: {e}") from e
 
     async def calculate_arbitrage_opportunities(
         self,
@@ -233,7 +233,7 @@ class PremiumDiscountCalculator:
             chain_data: Option chain with premium/discount analysis
 
         Returns:
-            List of arbitrage opportunity dicts
+            list of arbitrage opportunity dicts
         """
         try:
             arbitrage_opportunities = []
@@ -293,7 +293,7 @@ class PremiumDiscountCalculator:
             underlying_price: Current underlying price
 
         Returns:
-            List of theoretical prices
+            list of theoretical prices
         """
         try:
             theoretical_prices = []
@@ -342,7 +342,7 @@ class PremiumDiscountCalculator:
             greeks_results: Optional Greeks calculation results
 
         Returns:
-            List of premium analysis results
+            list of premium analysis results
         """
         try:
             results = []

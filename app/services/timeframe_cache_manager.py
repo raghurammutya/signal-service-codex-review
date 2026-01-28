@@ -36,7 +36,7 @@ class TimeframeCache:
         return None
 
     async def set(self, key: str, value: Any, ttl: int = 300):
-        """Set in cache"""
+        """set in cache"""
         self.local_cache[key] = {
             'value': value,
             'expires': datetime.now() + timedelta(seconds=ttl)
@@ -168,7 +168,7 @@ class TimeframeCacheManager:
 
     async def set_cached_data(self, instrument_key: str, timeframe: str,
                             data: list[dict], data_type: str = 'ohlcv'):
-        """Set cached timeframe data"""
+        """set cached timeframe data"""
 
         cache = await self.get_or_create_cache(instrument_key, timeframe)
 

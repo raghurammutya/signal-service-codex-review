@@ -58,7 +58,7 @@ class RedundancyDuplicationScan:
                                     "patterns": found_patterns,
                                     "lines": len(content.splitlines())
                                 })
-                        except:
+                        except Exception:
                             continue
 
             # Analyze for duplicates
@@ -184,7 +184,7 @@ class RedundancyDuplicationScan:
 
                             if "entitlement" in content.lower() or "entitled" in content.lower():
                                 entitlement_files.append(file_path)
-                        except:
+                        except Exception:
                             continue
 
             # Analyze entitlement patterns
@@ -216,7 +216,7 @@ class RedundancyDuplicationScan:
                             "check_count": len(found_checks)
                         })
                         print(f"    ✅ {file_path}: {len(found_checks)} entitlement checks")
-                except:
+                except Exception:
                     continue
 
             # Look for potential duplicates
@@ -252,9 +252,8 @@ class RedundancyDuplicationScan:
 
             for root, _dirs, files in os.walk("."):
                 for file in files:
-                    if any(pattern in file.lower() for pattern in config_patterns):
-                        if file.endswith(('.py', '.json', '.yaml', '.yml', '.ini', '.toml')):
-                            config_files.append(os.path.join(root, file))
+                    if any(pattern in file.lower() for pattern in config_patterns) and file.endswith(('.py', '.json', '.yaml', '.yml', '.ini', '.toml')):
+                        config_files.append(os.path.join(root, file))
 
             # Analyze configuration patterns
             config_analysis = []

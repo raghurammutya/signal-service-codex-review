@@ -121,7 +121,7 @@ class WorkerAffinityManager:
         # Register worker using cluster-aware manager
         await self.redis_manager.register_worker(self.worker_id, worker_info)
 
-        # Set initial heartbeat
+        # set initial heartbeat
         await self._update_heartbeat()
 
     async def _update_heartbeat(self):

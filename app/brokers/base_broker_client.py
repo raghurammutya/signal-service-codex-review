@@ -157,7 +157,7 @@ class BaseBrokerClient(ABC):
 
             except Exception as e:
                 logger.error(f"Order placement failed for {instrument_key}: {e}")
-                raise RuntimeError(f"Broker order failed: {e}")
+                raise RuntimeError(f"Broker order failed: {e}") from e
 
     async def get_quote(self, instrument_key: str) -> BrokerQuote:
         """
@@ -196,7 +196,7 @@ class BaseBrokerClient(ABC):
 
             except Exception as e:
                 logger.error(f"Quote retrieval failed for {instrument_key}: {e}")
-                raise RuntimeError(f"Quote failed: {e}")
+                raise RuntimeError(f"Quote failed: {e}") from e
 
     async def get_order_status(self, order_id: str) -> BrokerOrder | None:
         """

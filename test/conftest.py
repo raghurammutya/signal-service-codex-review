@@ -11,7 +11,7 @@ import pytest
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
-# Set test environment
+# set test environment
 os.environ["ENVIRONMENT"] = "test"
 os.environ["PYTEST_CURRENT_TEST"] = "true"
 
@@ -24,7 +24,7 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 async def test_database():
-    """Set up test TimescaleDB container."""
+    """set up test TimescaleDB container."""
     postgres = PostgresContainer(
         "timescale/timescaledb:latest-pg14",
         dbname="signal_service_test",
@@ -46,7 +46,7 @@ async def test_database():
 
 @pytest.fixture(scope="session")
 async def test_redis():
-    """Set up test Redis container."""
+    """set up test Redis container."""
     redis = RedisContainer("redis:7-alpine")
     redis.start()
 

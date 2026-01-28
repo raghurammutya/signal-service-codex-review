@@ -63,7 +63,7 @@ class FlexibleTimeframeManager:
             timeframe: Timeframe string (e.g., "5m", "7m", "custom_13")
 
         Returns:
-            Tuple of (TimeframeType, minutes)
+            tuple of (TimeframeType, minutes)
         """
         # Check standard timeframes
         if timeframe in self.STANDARD_TIMEFRAMES:
@@ -110,7 +110,7 @@ class FlexibleTimeframeManager:
             fields: Optional list of fields to return
 
         Returns:
-            List of aggregated data points
+            list of aggregated data points
         """
         try:
             tf_type, minutes = self.parse_timeframe(timeframe)
@@ -201,7 +201,7 @@ class FlexibleTimeframeManager:
             signal_type: Type of signal
 
         Returns:
-            List of available timeframe strings
+            list of available timeframe strings
         """
         available = list(self.STANDARD_TIMEFRAMES.keys())
 
@@ -289,7 +289,7 @@ class FlexibleTimeframeManager:
         # Convert to DataFrame for easier aggregation
         df = pd.DataFrame(base_data)
 
-        # Set timestamp as index
+        # set timestamp as index
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df.set_index('timestamp', inplace=True)
 

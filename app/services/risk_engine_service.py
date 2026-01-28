@@ -160,7 +160,7 @@ class RiskEngineService:
 
         Args:
             portfolio_id: Portfolio identifier
-            positions: List of positions with instrument_key
+            positions: list of positions with instrument_key
 
         Returns:
             PortfolioRiskMetrics: Risk metrics with metadata breakdowns
@@ -281,7 +281,7 @@ class RiskEngineService:
             positions: Current positions with instrument_key
 
         Returns:
-            List[RiskAlert]: Active risk limit breaches
+            list[RiskAlert]: Active risk limit breaches
         """
         # Calculate current portfolio metrics
         metrics = await self.calculate_portfolio_risk(portfolio_id, positions)
@@ -400,7 +400,7 @@ class RiskEngineService:
             current_positions: Current portfolio positions
 
         Returns:
-            Dict: Validation result with risk assessment
+            dict: Validation result with risk assessment
         """
         # Get instrument metadata
         try:
@@ -503,7 +503,7 @@ class RiskEngineService:
             portfolio_id: Portfolio identifier
 
         Returns:
-            Dict: Risk summary with metadata breakdowns
+            dict: Risk summary with metadata breakdowns
         """
         metrics = self._portfolio_metrics.get(portfolio_id)
         if not metrics:

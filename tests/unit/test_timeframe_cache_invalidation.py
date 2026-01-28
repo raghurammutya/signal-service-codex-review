@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import sys
+from contextlib import suppress
 from datetime import datetime
 from unittest.mock import AsyncMock
 
@@ -327,7 +328,8 @@ class TestTimeframeCacheInvalidation:
 
         # Test all cases
         for instrument_key, signal_type, timeframe in test_cases:
-            try:
+            with suppress(Exception):
+                # Some may fail due to missing setup, but cache key should still be generated
                 await timeframe_manager.get_aggregated_data(
                     instrument_key=instrument_key,
                     signal_type=signal_type,
@@ -335,9 +337,6 @@ class TestTimeframeCacheInvalidation:
                     start_time=start_time,
                     end_time=end_time
                 )
-            except Exception:
-                # Some may fail due to missing setup, but cache key should still be generated
-                pass
 
         # Verify all cache keys are unique
         assert len(cache_keys_used) == len(test_cases)

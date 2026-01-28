@@ -117,9 +117,8 @@ class TestCORSWildcardValidation:
         ]
 
         for wildcard in wildcard_origins:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_production_subdomain_wildcard_forbidden(self):
         """Test that production forbids subdomain wildcard patterns."""
@@ -131,9 +130,8 @@ class TestCORSWildcardValidation:
         ]
 
         for wildcard in subdomain_wildcards:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": wildcard}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_production_mixed_origins_with_wildcard_forbidden(self):
         """Test that production forbids any wildcard in a mixed list."""
@@ -144,9 +142,8 @@ class TestCORSWildcardValidation:
         ]
 
         for mixed in mixed_origins:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": mixed}, clear=True):
-                with pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": mixed}, clear=True), pytest.raises(ValueError, match="Wildcard origins not permitted in production"):
+                get_allowed_origins("production")
 
     def test_staging_wildcard_handling(self):
         """Test staging environment wildcard handling (should also forbid for security)."""
@@ -248,42 +245,40 @@ class TestCORSMiddlewareSetup:
         app = FastAPI()
         origins = "https://app.stocksblitz.com,https://dashboard.stocksblitz.com"
 
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as mock_cors:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": origins}, clear=True), patch('common.cors_config.CORSMiddleware') as mock_cors:
+            add_cors_middleware(app, "production")
 
-                # Verify CORS middleware was called with correct parameters
-                mock_cors.assert_called_once()
-                call_kwargs = mock_cors.call_args[1]
+            # Verify CORS middleware was called with correct parameters
+            mock_cors.assert_called_once()
+            call_kwargs = mock_cors.call_args[1]
 
-                # Verify origins
-                expected_origins = ["https://app.stocksblitz.com", "https://dashboard.stocksblitz.com"]
-                assert call_kwargs["allow_origins"] == expected_origins
+            # Verify origins
+            expected_origins = ["https://app.stocksblitz.com", "https://dashboard.stocksblitz.com"]
+            assert call_kwargs["allow_origins"] == expected_origins
 
-                # Verify credentials
-                assert call_kwargs["allow_credentials"] is True
+            # Verify credentials
+            assert call_kwargs["allow_credentials"] is True
 
-                # Verify methods
-                expected_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-                assert all(method in call_kwargs["allow_methods"] for method in expected_methods)
+            # Verify methods
+            expected_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            assert all(method in call_kwargs["allow_methods"] for method in expected_methods)
 
-                # Verify headers
-                expected_headers = [
-                    "Authorization", "Content-Type", "X-User-ID",
-                    "X-Gateway-Secret", "X-API-Key", "X-Internal-API-Key", "Accept"
-                ]
-                assert all(header in call_kwargs["allow_headers"] for header in expected_headers)
+            # Verify headers
+            expected_headers = [
+                "Authorization", "Content-Type", "X-User-ID",
+                "X-Gateway-Secret", "X-API-Key", "X-Internal-API-Key", "Accept"
+            ]
+            assert all(header in call_kwargs["allow_headers"] for header in expected_headers)
 
     def test_cors_middleware_exposed_headers(self):
         """Test CORS middleware exposed headers configuration."""
         app = FastAPI()
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as mock_cors:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as mock_cors:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = mock_cors.call_args[1]
-                expected_exposed = ["X-Total-Count", "X-Page-Count", "X-Rate-Limit-Remaining"]
-                assert all(header in call_kwargs["expose_headers"] for header in expected_exposed)
+            call_kwargs = mock_cors.call_args[1]
+            expected_exposed = ["X-Total-Count", "X-Page-Count", "X-Rate-Limit-Remaining"]
+            assert all(header in call_kwargs["expose_headers"] for header in expected_exposed)
 
     def test_cors_middleware_environment_detection(self):
         """Test CORS middleware environment detection."""
@@ -313,9 +308,8 @@ class TestCORSMiddlewareSetup:
         """Test CORS middleware configuration error handling."""
         app = FastAPI()
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CORS configuration failed"):
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORS configuration failed"):
+            add_cors_middleware(app, "production")
 
 
 class TestCORSEnvironmentValidation:
@@ -323,30 +317,26 @@ class TestCORSEnvironmentValidation:
 
     def test_production_missing_origins_fails_fast(self):
         """Test production environment fails fast when CORS_ALLOWED_ORIGINS is missing."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for production environment"):
-                get_allowed_origins("production")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for production environment"):
+            get_allowed_origins("production")
 
     def test_staging_missing_origins_fails_fast(self):
         """Test staging environment fails fast when CORS_ALLOWED_ORIGINS is missing."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for staging environment"):
-                get_allowed_origins("staging")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for staging environment"):
+            get_allowed_origins("staging")
 
     def test_development_missing_origins_fails_fast(self):
         """Test development environment fails fast when CORS_ALLOWED_ORIGINS is missing."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for development environment"):
-                get_allowed_origins("development")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured for development environment"):
+            get_allowed_origins("development")
 
     def test_empty_origins_fails_fast(self):
         """Test that empty CORS_ALLOWED_ORIGINS fails fast."""
         empty_values = ["", "   ", "\t", "\n"]
 
         for empty_value in empty_values:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": empty_value}, clear=True):
-                with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured"):
-                    get_allowed_origins("production")
+            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": empty_value}, clear=True), pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be configured"):
+                get_allowed_origins("production")
 
     def test_unknown_environment_fails_fast(self):
         """Test that unknown environments fail fast."""
@@ -423,12 +413,11 @@ class TestCORSProductionVsDevelopmentBehavior:
 
     def test_environment_specific_logging(self):
         """Test environment-specific logging behavior."""
-        with patch('common.cors_config.logger') as mock_logger:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-                get_allowed_origins("production")
+        with patch('common.cors_config.logger') as mock_logger, patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
+            get_allowed_origins("production")
 
-                # Should log production configuration
-                mock_logger.info.assert_called_with("Production CORS origins configured: 1 origins")
+            # Should log production configuration
+            mock_logger.info.assert_called_with("Production CORS origins configured: 1 origins")
 
 
 class TestCORSSecurityHeaders:
@@ -437,56 +426,53 @@ class TestCORSSecurityHeaders:
     def test_cors_credential_handling(self):
         """Test CORS credential handling configuration."""
         app = FastAPI()
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as mock_cors:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as mock_cors:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = mock_cors.call_args[1]
-                # Credentials should be enabled for authentication
-                assert call_kwargs["allow_credentials"] is True
+            call_kwargs = mock_cors.call_args[1]
+            # Credentials should be enabled for authentication
+            assert call_kwargs["allow_credentials"] is True
 
     def test_cors_method_restrictions(self):
         """Test CORS HTTP method restrictions."""
         app = FastAPI()
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as mock_cors:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as mock_cors:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = mock_cors.call_args[1]
-                allowed_methods = call_kwargs["allow_methods"]
+            call_kwargs = mock_cors.call_args[1]
+            allowed_methods = call_kwargs["allow_methods"]
 
-                # Should include standard methods
-                required_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-                for method in required_methods:
-                    assert method in allowed_methods
+            # Should include standard methods
+            required_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            for method in required_methods:
+                assert method in allowed_methods
 
-                # Should not include dangerous methods
-                dangerous_methods = ["TRACE", "CONNECT"]
-                for method in dangerous_methods:
-                    assert method not in allowed_methods
+            # Should not include dangerous methods
+            dangerous_methods = ["TRACE", "CONNECT"]
+            for method in dangerous_methods:
+                assert method not in allowed_methods
 
     def test_cors_header_restrictions(self):
         """Test CORS header restrictions."""
         app = FastAPI()
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            with patch('common.cors_config.CORSMiddleware') as mock_cors:
-                add_cors_middleware(app, "production")
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('common.cors_config.CORSMiddleware') as mock_cors:
+            add_cors_middleware(app, "production")
 
-                call_kwargs = mock_cors.call_args[1]
-                allowed_headers = call_kwargs["allow_headers"]
+            call_kwargs = mock_cors.call_args[1]
+            allowed_headers = call_kwargs["allow_headers"]
 
-                # Should include required headers for application
-                required_headers = [
-                    "Authorization",      # Authentication
-                    "Content-Type",       # Request content type
-                    "X-User-ID",         # User identification
-                    "X-Gateway-Secret",  # Gateway authentication
-                    "X-API-Key",         # API key authentication
-                    "Accept"             # Response content type
-                ]
+            # Should include required headers for application
+            required_headers = [
+                "Authorization",      # Authentication
+                "Content-Type",       # Request content type
+                "X-User-ID",         # User identification
+                "X-Gateway-Secret",  # Gateway authentication
+                "X-API-Key",         # API key authentication
+                "Accept"             # Response content type
+            ]
 
-                for header in required_headers:
-                    assert header in allowed_headers, f"Required header missing: {header}"
+            for header in required_headers:
+                assert header in allowed_headers, f"Required header missing: {header}"
 
 
 class TestCORSErrorHandling:
@@ -494,52 +480,45 @@ class TestCORSErrorHandling:
 
     def test_cors_configuration_error_logging(self):
         """Test CORS configuration error logging."""
-        with patch('common.cors_config.logger') as mock_logger:
-            with patch.dict(os.environ, {}, clear=True):
-                with pytest.raises(ValueError):
-                    get_allowed_origins("production")
+        with patch('common.cors_config.logger') as mock_logger, patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError):
+            get_allowed_origins("production")
 
-                # Should log critical error
-                mock_logger.critical.assert_called_with(
-                    "CORS_ALLOWED_ORIGINS not configured for production"
-                )
+        # Should log critical error
+        mock_logger.critical.assert_called_with(
+            "CORS_ALLOWED_ORIGINS not configured for production"
+        )
 
     def test_cors_wildcard_error_logging(self):
         """Test CORS wildcard error logging."""
-        with patch('common.cors_config.logger') as mock_logger:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True):
-                with pytest.raises(ValueError):
-                    get_allowed_origins("production")
+        with patch('common.cors_config.logger') as mock_logger, patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True), pytest.raises(ValueError):
+            get_allowed_origins("production")
 
-                # Should log critical wildcard error
-                mock_logger.critical.assert_called_with(
-                    "Wildcard origin * not allowed in production"
-                )
+        # Should log critical wildcard error
+        mock_logger.critical.assert_called_with(
+            "Wildcard origin * not allowed in production"
+            )
 
     def test_cors_middleware_error_logging(self):
         """Test CORS middleware configuration error logging."""
         app = FastAPI()
 
-        with patch('common.cors_config.logger') as mock_logger:
-            with patch.dict(os.environ, {}, clear=True):
-                with pytest.raises(ValueError):
-                    add_cors_middleware(app, "production")
+        with patch('common.cors_config.logger') as mock_logger, patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError):
+            add_cors_middleware(app, "production")
 
-                # Should log critical error
-                mock_logger.critical.assert_called()
+        # Should log critical error
+        mock_logger.critical.assert_called()
 
     def test_cors_success_logging(self):
         """Test CORS success configuration logging."""
         app = FastAPI()
 
-        with patch('common.cors_config.logger') as mock_logger:
-            with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-                add_cors_middleware(app, "production")
+        with patch('common.cors_config.logger') as mock_logger, patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
+            add_cors_middleware(app, "production")
 
-                # Should log successful configuration
-                mock_logger.info.assert_called_with(
-                    "CORS middleware configured for production with 1 allowed origins"
-                )
+            # Should log successful configuration
+            mock_logger.info.assert_called_with(
+                "CORS middleware configured for production with 1 allowed origins"
+            )
 
 
 class TestCORSIntegrationWithFastAPI:
@@ -587,16 +566,14 @@ class TestCORSIntegrationWithFastAPI:
     def test_cors_main_application_integration(self):
         """Test CORS integration with main Signal Service application."""
         # Test that CORS middleware can be added to the main app structure
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True):
-            # Mock the main app setup
-            with patch('app.main.app') as mock_main_app:
-                mock_main_app.add_middleware = Mock()
+        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "https://app.stocksblitz.com"}, clear=True), patch('app.main.app') as mock_main_app:
+            mock_main_app.add_middleware = Mock()
 
-                # Should be able to configure CORS on main app
-                add_cors_middleware(mock_main_app, "production")
+            # Should be able to configure CORS on main app
+            add_cors_middleware(mock_main_app, "production")
 
-                # Verify middleware was added
-                assert len(mock_main_app.middleware_stack) > 0
+            # Verify middleware was added
+            assert len(mock_main_app.middleware_stack) > 0
 
 
 class TestCORSDeploymentValidation:

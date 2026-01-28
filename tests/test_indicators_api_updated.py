@@ -54,26 +54,23 @@ async def test_instrument_key_parameter_usage(mock_registry_client, mock_http_re
     calculator = IndicatorCalculator()
     await calculator.initialize()
 
-    with patch('app.api.v2.indicators.create_registry_client', return_value=mock_registry_client):
-        with patch.object(calculator._http_client, 'get', return_value=mock_http_response):
+    with patch('app.api.v2.indicators.create_registry_client', return_value=mock_registry_client), patch.object(calculator._http_client, 'get', return_value=mock_http_response):
+        instrument_key = "AAPL_NASDAQ_EQUITY"
+        df = await calculator.get_historical_data(
+            instrument_key=instrument_key,
+            timeframe="5minute",
+            periods=2
+        )
 
-            # Test with instrument_key format
-            instrument_key = "AAPL_NASDAQ_EQUITY"
-            df = await calculator.get_historical_data(
-                instrument_key=instrument_key,
-                timeframe="5minute",
-                periods=2
-            )
+        # Verify registry client was called with correct parameters
+        mock_registry_client.get_broker_token.assert_called_once_with(instrument_key, "kite")
 
-            # Verify registry client was called with correct parameters
-            mock_registry_client.get_broker_token.assert_called_once_with(instrument_key, "kite")
-
-            # Verify DataFrame structure
-            assert not df.empty
-            assert len(df) == 2
-            assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume']
-            assert df.iloc[0]['close'] == 151.50
-            assert df.iloc[1]['close'] == 152.75
+        # Verify DataFrame structure
+        assert not df.empty
+        assert len(df) == 2
+        assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume']
+        assert df.iloc[0]['close'] == 151.50
+        assert df.iloc[1]['close'] == 152.75
 
 @pytest.mark.asyncio
 async def test_instrument_key_resolution_error(mock_registry_client):
@@ -103,21 +100,19 @@ async def test_backward_compatibility_maintained(mock_registry_client, mock_http
     calculator = IndicatorCalculator()
     await calculator.initialize()
 
-    with patch('app.api.v2.indicators.create_registry_client', return_value=mock_registry_client):
-        with patch.object(calculator._http_client, 'get', return_value=mock_http_response) as mock_get:
+    with patch('app.api.v2.indicators.create_registry_client', return_value=mock_registry_client), patch.object(calculator._http_client, 'get', return_value=mock_http_response) as mock_get:
+        instrument_key = "GOOGL_NASDAQ_EQUITY"
+        await calculator.get_historical_data(
+            instrument_key=instrument_key,
+            timeframe="1minute",
+            periods=5
+        )
 
-            instrument_key = "GOOGL_NASDAQ_EQUITY"
-            await calculator.get_historical_data(
-                instrument_key=instrument_key,
-                timeframe="1minute",
-                periods=5
-            )
-
-            # Verify that ticker_service is still called with instrument_token
-            call_args = mock_get.call_args
-            params = call_args[1]['params']  # kwargs params
-            assert 'instrument_token' in params
-            assert params['instrument_token'] == 12345  # The resolved token
+        # Verify that ticker_service is still called with instrument_token
+        call_args = mock_get.call_args
+        params = call_args[1]['params']  # kwargs params
+        assert 'instrument_token' in params
+        assert params['instrument_token'] == 12345  # The resolved token
 
 @pytest.mark.asyncio
 async def test_contract_compliance():
@@ -137,7 +132,7 @@ async def test_contract_compliance():
 
     # Verify parameter type annotation
     instrument_key_param = sig.parameters['instrument_key']
-    assert instrument_key_param.annotation == str
+    assert instrument_key_param.annotation is str
 
 def test_documentation_updated():
     """Test that documentation properly reflects instrument_key usage"""
@@ -159,21 +154,18 @@ async def test_logging_uses_instrument_key(mock_registry_client, mock_http_respo
     calculator = IndicatorCalculator()
     await calculator.initialize()
 
-    with patch('app.api.v2.indicators.create_registry_client', return_value=mock_registry_client):
-        with patch.object(calculator._http_client, 'get', return_value=mock_http_response):
-            with patch('app.api.v2.indicators.log_info') as mock_log:
+    with patch('app.api.v2.indicators.create_registry_client', return_value=mock_registry_client), patch.object(calculator._http_client, 'get', return_value=mock_http_response), patch('app.api.v2.indicators.log_info') as mock_log:
+            instrument_key = "MSFT_NASDAQ_EQUITY"
+            await calculator.get_historical_data(
+                instrument_key=instrument_key,
+                timeframe="day",
+                periods=1
+            )
 
-                instrument_key = "MSFT_NASDAQ_EQUITY"
-                await calculator.get_historical_data(
-                    instrument_key=instrument_key,
-                    timeframe="day",
-                    periods=1
-                )
-
-                # Verify logging includes instrument_key
-                log_calls = [call.args[0] for call in mock_log.call_args_list]
-                instrument_key_logged = any(instrument_key in log_msg for log_msg in log_calls)
-                assert instrument_key_logged, f"instrument_key not found in log messages: {log_calls}"
+            # Verify logging includes instrument_key
+            log_calls = [call.args[0] for call in mock_log.call_args_list]
+            instrument_key_logged = any(instrument_key in log_msg for log_msg in log_calls)
+            assert instrument_key_logged, f"instrument_key not found in log messages: {log_calls}"
 
 @pytest.mark.integration
 async def test_end_to_end_api_contract():

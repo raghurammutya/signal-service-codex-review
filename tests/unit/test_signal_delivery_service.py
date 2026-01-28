@@ -409,9 +409,10 @@ def main():
     print("🔍 Running Signal Delivery Service Tests...")
 
     # Create mock implementation for testing
-    try:
-        from app.services.signal_delivery_service import SignalDeliveryService
-    except ImportError:
+    import importlib.util
+    if importlib.util.find_spec('app.services.signal_delivery_service'):
+        pass
+    else:
         print("⚠️ SignalDeliveryService not found - creating mock for testing")
 
         # Create mock classes

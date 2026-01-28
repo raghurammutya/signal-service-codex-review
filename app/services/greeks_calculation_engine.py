@@ -326,13 +326,13 @@ class GreeksCalculationEngine:
         [AGENT-1] Calculate Greeks for entire option chain with automatic vectorized/legacy switching.
 
         Args:
-            option_chain_data: List of option data dicts
+            option_chain_data: list of option data dicts
             underlying_price: Current underlying asset price
-            greeks_to_calculate: List of Greeks to calculate
+            greeks_to_calculate: list of Greeks to calculate
             force_vectorized: Force use of vectorized mode regardless of threshold
 
         Returns:
-            Dict with results and performance metrics
+            dict with results and performance metrics
         """
         n_options = len(option_chain_data)
 
@@ -368,7 +368,7 @@ class GreeksCalculationEngine:
         [AGENT-1] Calculate Greeks for bulk options data with performance tracking.
 
         Args:
-            bulk_options_data: List of options with underlying_price included
+            bulk_options_data: list of options with underlying_price included
             include_performance_metrics: Whether to include detailed performance metrics
 
         Returns:
@@ -524,10 +524,7 @@ class GreeksCalculationEngine:
             if volatility > 5.0:  # 500% volatility is unreasonable
                 return False
 
-            if time_to_expiry > 10.0:  # More than 10 years is unreasonable
-                return False
-
-            return True
+            return not (time_to_expiry > 10.0)  # More than 10 years is unreasonable
 
         except Exception:
             return False

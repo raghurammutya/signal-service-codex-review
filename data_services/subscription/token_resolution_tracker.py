@@ -78,16 +78,12 @@ class TokenResolutionTracker:
         current_time = datetime.now()
 
         for unresolved in self.unresolved_tokens.values():
-            if (unresolved.resolution_status == "pending" and
-                unresolved.attempts < self.max_auto_attempts):
+            if unresolved.resolution_status == "pending" and unresolved.last_attempt:
+                interval_hours = self.retry_intervals[min(unresolved.attempts - 1, len(self.retry_intervals) - 1)]
+                next_retry = unresolved.last_attempt + timedelta(hours=interval_hours)
 
-                # Check if enough time has passed for retry
-                if unresolved.last_attempt:
-                    interval_hours = self.retry_intervals[min(unresolved.attempts - 1, len(self.retry_intervals) - 1)]
-                    next_retry = unresolved.last_attempt + timedelta(hours=interval_hours)
-
-                    if current_time >= next_retry:
-                        candidates.append(unresolved)
+                if current_time >= next_retry:
+                    candidates.append(unresolved)
 
         return candidates
 

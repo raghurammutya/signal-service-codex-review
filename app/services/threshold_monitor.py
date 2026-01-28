@@ -208,7 +208,7 @@ class ThresholdMonitor:
             monitoring_strategy=monitoring_strategy
         )
 
-        # Set check interval based on strategy
+        # set check interval based on strategy
         job.check_interval_seconds = self._strategy_to_interval(monitoring_strategy)
 
         # Add to appropriate monitoring tier

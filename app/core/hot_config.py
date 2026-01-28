@@ -285,7 +285,7 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
 
         try:
             # Type validation
-            if schema.parameter_type == bool and isinstance(new_value, str):
+            if schema.parameter_type is bool and isinstance(new_value, str):
                 new_value = new_value.lower() in ('true', '1', 'yes', 'on')
             elif schema.parameter_type in (int, float) and isinstance(new_value, str):
                 new_value = schema.parameter_type(new_value)
@@ -783,15 +783,12 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
                     new_value = await self.notification_client.refresh_parameter(parameter_key)
                     if new_value:
                         # Update watermark configuration
-                        if parameter_key == "WATERMARK_SECRET":
-                            if new_value != self.WATERMARK_SECRET:
-                                self.WATERMARK_SECRET = new_value
-                        elif parameter_key == "WATERMARK_ENFORCEMENT_ENABLED":
-                            if new_value != self.WATERMARK_ENFORCEMENT_ENABLED:
-                                self.WATERMARK_ENFORCEMENT_ENABLED = new_value
-                        elif parameter_key == "WATERMARK_ENFORCEMENT_POLICY":
-                            if new_value != self.WATERMARK_ENFORCEMENT_POLICY:
-                                self.WATERMARK_ENFORCEMENT_POLICY = new_value
+                        if parameter_key == "WATERMARK_SECRET" and new_value != self.WATERMARK_SECRET:
+                            self.WATERMARK_SECRET = new_value
+                        elif parameter_key == "WATERMARK_ENFORCEMENT_ENABLED" and new_value != self.WATERMARK_ENFORCEMENT_ENABLED:
+                            self.WATERMARK_ENFORCEMENT_ENABLED = new_value
+                        elif parameter_key == "WATERMARK_ENFORCEMENT_POLICY" and new_value != self.WATERMARK_ENFORCEMENT_POLICY:
+                            self.WATERMARK_ENFORCEMENT_POLICY = new_value
 
                         # Notify watermark service of configuration changes
                         await self._execute_reload_handler("watermark_config_refresh", {

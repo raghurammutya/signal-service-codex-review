@@ -58,13 +58,13 @@ class SignalWatermarkService:
 
                 log_info(f"Watermark service configured from config service - policy: {self._enforcement_policy}")
 
-            except ImportError:
+            except ImportError as e:
                 log_error("Config service not available - watermark service cannot operate")
-                raise RuntimeError("Config service required for watermark configuration")
+                raise RuntimeError("Config service required for watermark configuration") from e
         except Exception as e:
             log_error(f"Failed to load watermark config: {e}")
             # FAIL SECURE: Cannot operate without proper watermark configuration
-            raise RuntimeError(f"Watermark service configuration failed - cannot operate without proper config: {e}")
+            raise RuntimeError(f"Watermark service configuration failed - cannot operate without proper config: {e}") from e
 
     def is_enabled(self) -> bool:
         """Check if watermarking is enabled and configured"""
@@ -180,7 +180,7 @@ class SignalWatermarkService:
         except Exception as e:
             log_error(f"Failed to watermark signal via marketplace service: {e}")
             # Fail secure - do not return unwatermarked data on unexpected errors
-            raise WatermarkError(f"Watermarking service error: {e} - failing secure to preserve business trust")
+            raise WatermarkError(f"Watermarking service error: {e} - failing secure to preserve business trust") from e
 
     async def _get_gateway_secret(self) -> str | None:
         """Get gateway secret for authentication"""
@@ -265,7 +265,7 @@ class SignalWatermarkService:
         except Exception as e:
             log_error(f"Failed to verify watermark: {e}")
             # FAIL SECURE: Verification failures should block signal delivery
-            raise WatermarkError(f"Watermark verification failed - failing secure to preserve business trust: {e}")
+            raise WatermarkError(f"Watermark verification failed - failing secure to preserve business trust: {e}") from e
 
     async def detect_leak_and_enforce(
         self,
@@ -282,7 +282,7 @@ class SignalWatermarkService:
             receiving_user_id: User receiving the signal
 
         Returns:
-            Dict with detection results and enforcement actions taken
+            dict with detection results and enforcement actions taken
         """
         if not self.is_enabled():
             return {"leak_detected": False, "reason": "watermarking_disabled"}
@@ -412,7 +412,7 @@ class SignalWatermarkService:
             violator_user_id: User who received the signal
 
         Returns:
-            Dict with leak detection result
+            dict with leak detection result
         """
         try:
             import httpx

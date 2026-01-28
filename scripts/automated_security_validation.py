@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ class AutomatedSecurityValidator:
                 test_logger.removeHandler(test_handler)
                 test_handler.close()
                 os.unlink(tmp_log_path)
-            except:
+            except Exception:
                 pass
 
         redaction_success_rate = (redaction_results["properly_redacted"] /

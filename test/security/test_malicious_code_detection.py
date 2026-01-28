@@ -395,7 +395,7 @@ class TestCrashPrevention:
 
     def test_concurrent_execution_limits(self, crash_prevention, basic_limits):
         """Test concurrent execution limits"""
-        # Set low limit for testing
+        # set low limit for testing
         crash_prevention.max_concurrent_executions = 2
 
         contexts = []
@@ -409,9 +409,8 @@ class TestCrashPrevention:
             contexts[1].__enter__()
 
             # Third should fail
-            with pytest.raises(ExternalFunctionExecutionError, match="Too many concurrent executions"):
-                with crash_prevention.safe_execution_context("exec_3", basic_limits):
-                    pass
+            with pytest.raises(ExternalFunctionExecutionError, match="Too many concurrent executions"), crash_prevention.safe_execution_context("exec_3", basic_limits):
+                pass
 
         finally:
             # Cleanup
@@ -544,11 +543,8 @@ class TestCrashPrevention:
             pass  # 3 levels deep - should work
 
         # Should fail beyond limits
-        with pytest.raises(RecursionError, match="Stack overflow protection"), protection:
-            with protection:
-                with protection:
-                    with protection:  # 4 levels deep - should fail
-                        pass
+        with pytest.raises(RecursionError, match="Stack overflow protection"), protection, protection, protection, protection:
+                    pass
 
 
 class TestIntegratedSecuritySystem:

@@ -4,7 +4,7 @@ Requires actual config service endpoint and credentials but provides graceful de
 """
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import httpx
 

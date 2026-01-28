@@ -8,7 +8,7 @@ breaker open count, backpressure activation, and 5xx/latency SLO breaches.
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 
 class OnCallAlertsSetup:
@@ -805,7 +805,7 @@ def main():
         print(f"🚨 {results['total_alert_rules']} alert rules created")
         print(f"📁 All files in: {results['alerting_directory']}")
         print("\\n🚀 Next steps:")
-        print("   1. Set environment variables:")
+        print("   1. set environment variables:")
         print("      - PAGERDUTY_SERVICE_KEY")
         print("      - SLACK_WEBHOOK_URL")
         print("      - ON_CALL_EMAIL")

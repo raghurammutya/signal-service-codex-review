@@ -54,9 +54,8 @@ class IndicatorRegistryTester:
         print(f"{status_emoji} {test_name}: {status}")
         if error:
             print(f"   Error: {error}")
-        if details and status == "PASS":
-            if isinstance(details, dict) and "count" in details:
-                print(f"   Count: {details['count']}")
+        if details and status == "PASS" and isinstance(details, dict) and "count" in details:
+            print(f"   Count: {details['count']}")
 
     async def test_service_health(self) -> bool:
         """Test if the signal service is running and healthy"""

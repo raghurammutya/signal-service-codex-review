@@ -22,14 +22,10 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 try:
-    import pandas_ta as ta
 
     from app.errors import TechnicalIndicatorError
-    from app.schemas.config_schema import (
-        SignalConfigData,
-        TechnicalIndicatorConfig,
-        TickProcessingContext,
-    )
+
+    # Schema imports removed as unused
     from app.services.pandas_ta_executor import PandasTAExecutor
     PANDAS_TA_AVAILABLE = True
 except ImportError:

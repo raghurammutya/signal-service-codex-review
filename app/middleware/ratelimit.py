@@ -11,12 +11,12 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from app.core.config import settings
 from app.utils.redis import get_redis_client
 
 log_info = logging.getLogger(__name__).info
 log_warning = logging.getLogger(__name__).warning
 log_error = logging.getLogger(__name__).error
-from app.core.config import settings
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -123,7 +123,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Check rate limit for a key
 
         Returns:
-            Tuple of (allowed, remaining_requests)
+            tuple of (allowed, remaining_requests)
         """
         try:
             # Use Redis pipeline for atomic operations
@@ -131,7 +131,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             # Increment counter
             pipe.incr(key)
-            # Set expiry if new key
+            # set expiry if new key
             pipe.expire(key, self.window_seconds)
             # Get current value
             pipe.get(key)

@@ -32,11 +32,9 @@ class DatabaseSanityValidation:
 
             for root, _dirs, files in os.walk("app"):
                 for file in files:
-                    if file.endswith('.py'):
-                        # Check if filename suggests database models
-                        if any(pattern in file.lower() for pattern in schema_patterns):
-                            file_path = os.path.join(root, file)
-                            model_files.append(file_path)
+                    if file.endswith('.py') and any(pattern in file.lower() for pattern in schema_patterns):
+                        file_path = os.path.join(root, file)
+                        model_files.append(file_path)
 
             model_structures = []
             for file_path in model_files:
@@ -117,7 +115,7 @@ class DatabaseSanityValidation:
                                     "patterns": found_patterns
                                 })
                                 print(f"    ✅ {file_path}: {len(found_patterns)} TimescaleDB patterns")
-                        except:
+                        except Exception:
                             continue
 
             # Check for SQL migration files
@@ -251,7 +249,7 @@ class DatabaseSanityValidation:
                                     if table not in table_references:
                                         table_references[table] = []
                                     table_references[table].append(file_path)
-                        except:
+                        except Exception:
                             continue
 
             # Analyze table usage

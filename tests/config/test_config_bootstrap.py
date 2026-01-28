@@ -26,24 +26,21 @@ class TestSecureConfigBootstrap:
     def test_missing_environment_variable_fails_fast(self):
         """Test that missing ENVIRONMENT variable causes immediate failure."""
         # Clear environment variables
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="ENVIRONMENT environment variable is required"):
-                from app.core.config import SignalServiceConfig
-                SignalServiceConfig()
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="ENVIRONMENT environment variable is required"):
+            from app.core.config import SignalServiceConfig
+            SignalServiceConfig()
 
     def test_missing_config_service_url_fails_fast(self):
         """Test that missing CONFIG_SERVICE_URL causes immediate failure."""
         with patch.dict(os.environ, {
             'ENVIRONMENT': 'test',
             'CONFIG_SERVICE_API_KEY': 'test-key'
-        }, clear=True):
-            # Mock the config client to fail on URL
-            with patch('common.config_service.client.ConfigServiceClient') as mock_client:
-                mock_client.side_effect = Exception("CONFIG_SERVICE_URL not configured")
+        }, clear=True), patch('common.config_service.client.ConfigServiceClient') as mock_client:
+            mock_client.side_effect = Exception("CONFIG_SERVICE_URL not configured")
 
-                with pytest.raises(SystemExit):
-                    from app.core.config import SignalServiceConfig
-                    SignalServiceConfig()
+            with pytest.raises(SystemExit):
+                from app.core.config import SignalServiceConfig
+                SignalServiceConfig()
 
     def test_secure_config_service_bootstrap(self):
         """Test secure config service bootstrap with proper mocking."""
@@ -179,35 +176,34 @@ class TestSecureHotReloadConfiguration:
             mock_config_client.get_config.side_effect = mock_get_config
             mock_config_client.get_secret.side_effect = mock_get_secret
 
-            with patch('common.config_service.client.ConfigServiceClient', return_value=mock_config_client):
-                with patch('common.config_service.notification_client.ConfigNotificationClient') as mock_notification:
-                    mock_notification_instance = MagicMock()
-                    mock_notification.return_value = mock_notification_instance
+            with patch('common.config_service.client.ConfigServiceClient', return_value=mock_config_client), patch('common.config_service.notification_client.ConfigNotificationClient') as mock_notification:
+                mock_notification_instance = MagicMock()
+                mock_notification.return_value = mock_notification_instance
 
-                    # Test hot reloadable config
-                    from app.core.hot_config import get_hot_reloadable_settings
-                    config = get_hot_reloadable_settings(environment='test')
+                # Test hot reloadable config
+                from app.core.hot_config import get_hot_reloadable_settings
+                config = get_hot_reloadable_settings(environment='test')
 
-                    # Initialize hot reload
-                    await config.initialize_hot_reload(enable_hot_reload=True)
+                # Initialize hot reload
+                await config.initialize_hot_reload(enable_hot_reload=True)
 
-                    # Verify initialization
-                    assert hasattr(config, '_hot_reload_enabled')
-                    assert hasattr(config, '_security_context')
-                    assert config._security_context['auth_required'] is True
+                # Verify initialization
+                assert hasattr(config, '_hot_reload_enabled')
+                assert hasattr(config, '_security_context')
+                assert config._security_context['auth_required'] is True
 
-                    # Test security validation
-                    security_valid = config._validate_security_context()
-                    assert isinstance(security_valid, bool)
+                # Test security validation
+                security_valid = config._validate_security_context()
+                assert isinstance(security_valid, bool)
 
-                    # Test health monitoring (no external dependencies)
-                    health_data = await config.get_hot_reload_health()
-                    assert "hot_reload_enabled" in health_data
-                    assert "security_context_valid" in health_data
-                    assert "handlers_registered" in health_data
+                # Test health monitoring (no external dependencies)
+                health_data = await config.get_hot_reload_health()
+                assert "hot_reload_enabled" in health_data
+                assert "security_context_valid" in health_data
+                assert "handlers_registered" in health_data
 
-                    # Cleanup
-                    await config.shutdown_hot_reload()
+                # Cleanup
+                await config.shutdown_hot_reload()
 
     @pytest.mark.asyncio
     async def test_hot_reload_security_validation(self):
@@ -254,9 +250,8 @@ class TestConfigServiceClient:
         """Test that ConfigServiceClient requires secure bootstrap only."""
         from common.config_service.client import ConfigServiceClient, ConfigServiceError
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ConfigServiceError, match="Config service URL is required"):
-                ConfigServiceClient()
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ConfigServiceError, match="Config service URL is required"):
+            ConfigServiceClient()
 
     def test_config_client_health_check(self):
         """Test config service health check functionality."""

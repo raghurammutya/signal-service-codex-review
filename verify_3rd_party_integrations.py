@@ -481,7 +481,7 @@ class IntegrationVerifier:
                 if success:
                     print(f"{Colors.GREEN}✓ Service is ready{Colors.END}")
                     break
-            except:
+            except Exception:
                 pass
 
             if i == max_retries - 1:

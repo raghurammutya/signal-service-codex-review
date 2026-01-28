@@ -75,7 +75,7 @@ class UnifiedHistoricalDataService:
 
         except Exception as e:
             log_error(f"Failed to fetch indicator data for {instrument_key}: {e}")
-            raise DataAccessError(f"Historical data fetch failed: {e}")
+            raise DataAccessError(f"Historical data fetch failed: {e}") from e
 
     # === TIMEFRAME DATA METHODS (from historical_data_client) ===
 
@@ -110,7 +110,7 @@ class UnifiedHistoricalDataService:
 
         except Exception as e:
             log_error(f"Failed to fetch timeframe data for {instrument_key}: {e}")
-            raise DataAccessError(f"Timeframe data fetch failed: {e}")
+            raise DataAccessError(f"Timeframe data fetch failed: {e}") from e
 
     async def get_historical_moneyness_data(
         self,
@@ -148,7 +148,7 @@ class UnifiedHistoricalDataService:
 
         except Exception as e:
             log_error(f"Failed to fetch moneyness data for {underlying}: {e}")
-            raise DataAccessError(f"Moneyness data fetch failed: {e}")
+            raise DataAccessError(f"Moneyness data fetch failed: {e}") from e
 
     # === CORE FETCHING METHODS ===
 
@@ -175,7 +175,7 @@ class UnifiedHistoricalDataService:
             raise DataAccessError(f"Ticker service error: {error_msg}")
 
         except httpx.HTTPError as e:
-            raise DataAccessError(f"HTTP error fetching from ticker service: {e}")
+            raise DataAccessError(f"HTTP error fetching from ticker service: {e}") from e
 
     async def _fetch_ohlcv_data(
         self,

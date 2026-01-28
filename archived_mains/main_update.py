@@ -132,7 +132,7 @@ async def get_timeframe_aggregation_status():
         available = [ind for ind in custom_indicators if ind in ta.CUSTOM_TA]
         status["custom_indicators"]["registered"] = len(available) > 0
         status["custom_indicators"]["available"] = available
-    except:
+    except Exception:
         pass
 
     # Check cache manager

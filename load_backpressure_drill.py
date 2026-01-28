@@ -200,7 +200,7 @@ class BackpressureDrill:
                     db_config = await budget_manager.get_database_pool_config()
                     print(f"  ✅ Database pool config available: min={db_config.min_connections}, max={db_config.max_connections}")
                     config_available = True
-                except:
+                except Exception:
                     print("  ⚠️ Config service unavailable, testing fallback behavior")
                     config_available = False
 
@@ -241,7 +241,7 @@ class BackpressureDrill:
                 # Simulate resource usage
                 original_concurrent = getattr(collector, 'concurrent_operations', 0)
 
-                # Set simulated load
+                # set simulated load
                 collector.concurrent_operations = scenario['concurrent_ops']
 
                 # Check if this would trigger backpressure

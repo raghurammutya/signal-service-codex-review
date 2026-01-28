@@ -75,11 +75,9 @@ class UnusedImportFixer:
                     if from_match:
                         import_name = from_match.group(1)
                         # Be more conservative with from imports
-                        if len(import_name) > 3 and not self.is_import_used(import_name, original_content, lines):
-                            # Double-check it's not used in any way
-                            if import_name not in original_content.replace(stripped, ''):
-                                imports_removed.append(stripped)
-                                continue  # Skip this line
+                        if len(import_name) > 3 and not self.is_import_used(import_name, original_content, lines) and import_name not in original_content.replace(stripped, ''):
+                            imports_removed.append(stripped)
+                            continue  # Skip this line
 
                 new_lines.append(line)
 

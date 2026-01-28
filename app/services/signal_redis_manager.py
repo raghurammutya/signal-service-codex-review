@@ -5,6 +5,7 @@ Provides cluster-aware Redis operations with proper key patterns
 
 import json
 import logging
+from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
@@ -45,7 +46,7 @@ class RedisClusterManager:
             return None
 
     async def hash_set(self, key: str, field: str, value: Any) -> bool:
-        """Set hash field."""
+        """set hash field."""
         try:
             await self.redis_client.hset(key, field, value)
             return True
@@ -100,7 +101,7 @@ class RedisClusterManager:
                     items = json.loads(current)
                     if not isinstance(items, list):
                         items = []
-                except:
+                except Exception:
                     items = []
             else:
                 items = []
@@ -141,7 +142,7 @@ class RedisClusterManager:
                 try:
                     items = json.loads(current)
                     return items if isinstance(items, list) else []
-                except:
+                except Exception:
                     return []
             return []
         except Exception as e:
@@ -395,12 +396,9 @@ class SignalRedisManager:
         try:
             stream_key = self.streams["indicator_requests"].format(priority=priority)
 
-            # Create consumer group if needed
-            try:
+            # Create consumer group if needed (suppress if already exists)
+            with suppress(Exception):
                 await self.redis_client.xgroup_create(stream_key, consumer_group, id="0")
-            except Exception:
-                # Consumer group already exists, continue
-                pass
             # Read messages
             messages = await self.redis_client.xreadgroup(
                 consumer_group,

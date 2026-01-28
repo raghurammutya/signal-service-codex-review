@@ -289,9 +289,9 @@ class TestMarketProfileCalculator:
             )
 
         # Repository error handling
-        mock_repository.get_ohlcv_data.side_effect = Exception("Database error")
+        mock_repository.get_ohlcv_data.side_effect = RuntimeError("Database error")
 
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             await calculator.calculate_market_profile(
                 instrument_key='NSE@NIFTY@equity_spot',
                 interval='30m',

@@ -8,7 +8,6 @@ Ensures universal client factory adoption for consistent circuit breakers, retri
 import os
 import re
 import sys
-from typing import List, Tuple
 
 
 def find_direct_client_instantiations(root_dir: str) -> list[tuple[str, int, str]]:
@@ -16,7 +15,7 @@ def find_direct_client_instantiations(root_dir: str) -> list[tuple[str, int, str
     Find direct client instantiations in Python files.
 
     Returns:
-        List of (file_path, line_number, line_content) tuples
+        list of (file_path, line_number, line_content) tuples
     """
     violations = []
 
@@ -93,10 +92,8 @@ def find_direct_client_instantiations(root_dir: str) -> list[tuple[str, int, str
 
                     # Check for direct instantiation patterns
                     for pattern in all_patterns:
-                        if pattern.search(line):
-                            # Additional validation - ensure it's actual instantiation
-                            if ' = ' in line or 'return ' in line or '(' in line:
-                                violations.append((relative_path, line_num, line))
+                        if pattern.search(line) and ' = ' in line or 'return ' in line or '(' in line:
+                            violations.append((relative_path, line_num, line))
 
             except (OSError, UnicodeDecodeError) as e:
                 print(f"Warning: Could not read {file_path}: {e}")
@@ -109,7 +106,7 @@ def check_client_factory_usage(root_dir: str) -> list[tuple[str, int, str]]:
     Check that get_client_manager() is used instead of direct instantiation.
 
     Returns:
-        List of violations
+        list of violations
     """
     suggestions = []
 

@@ -103,7 +103,7 @@ class CrashPrevention:
                     f"{self.system_baseline.active_threads} threads")
         except Exception as e:
             log_warning(f"Could not establish system baseline: {e}")
-            # Set reasonable defaults
+            # set reasonable defaults
             self.system_baseline = SystemState(
                 memory_usage_mb=100.0,
                 cpu_percent=5.0,
@@ -141,7 +141,7 @@ class CrashPrevention:
         )
 
         try:
-            # Set initial resource limits
+            # set initial resource limits
             self._set_resource_limits(limits)
 
             # Track execution
@@ -179,7 +179,7 @@ class CrashPrevention:
             log_info(f"Safe execution context ended for {execution_id}")
 
     def _set_resource_limits(self, limits: ResourceLimits):
-        """Set OS-level resource limits"""
+        """set OS-level resource limits"""
         try:
             # Memory limit (virtual memory)
             memory_bytes = limits.max_memory_mb * 1024 * 1024
@@ -477,7 +477,7 @@ class CrashPrevention:
         """Clean shutdown of crash prevention system"""
         log_info("Shutting down crash prevention system")
 
-        # Set emergency stop
+        # set emergency stop
         self.emergency_stop.set()
 
         # Terminate all active executions

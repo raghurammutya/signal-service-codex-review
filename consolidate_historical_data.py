@@ -33,7 +33,7 @@ Consolidates functionality from historical_data_manager_production.py and histor
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
+from typing import Optional, Any, Union
 import httpx
 import pandas as pd
 from contextlib import asynccontextmanager
@@ -76,7 +76,7 @@ class UnifiedHistoricalDataService:
         start_time: datetime,
         end_time: datetime,
         interval: str = "1m"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get historical data optimized for indicator calculations.
         Replaces ProductionHistoricalDataManager.get_historical_data_for_indicator()
@@ -114,7 +114,7 @@ class UnifiedHistoricalDataService:
         start_time: datetime,
         end_time: datetime,
         timeframe: str = "1m"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get OHLCV timeframe data.
         Replaces HistoricalDataClient.get_historical_timeframe_data()
@@ -148,7 +148,7 @@ class UnifiedHistoricalDataService:
         expiry: str,
         start_time: datetime,
         end_time: datetime
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get moneyness-specific historical data.
         """
@@ -188,7 +188,7 @@ class UnifiedHistoricalDataService:
         start_time: datetime,
         end_time: datetime,
         interval: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Core ticker service fetching logic."""
         try:
             response = await client.get_historical_data(
@@ -214,7 +214,7 @@ class UnifiedHistoricalDataService:
         start_time: datetime,
         end_time: datetime,
         timeframe: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Fetch OHLCV data with specific formatting."""
         raw_data = await self._fetch_from_ticker_service(
             client, instrument_key, start_time, end_time, timeframe
@@ -236,10 +236,10 @@ class UnifiedHistoricalDataService:
 
     def _calculate_moneyness_metrics(
         self,
-        price_data: List[Dict[str, Any]],
+        price_data: list[dict[str, Any]],
         strike: float,
         expiry: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Calculate moneyness metrics for historical data."""
         enhanced_data = []
 
@@ -268,7 +268,7 @@ class UnifiedHistoricalDataService:
             self._cache.clear()
             log_info("Historical data cache cleared")
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             'cache_size': len(self._cache),
@@ -369,10 +369,9 @@ Prevents duplicate historical data services and unused imports.
 """
 import os
 import re
-from typing import List, Tuple
 
 
-def check_historical_data_duplication() -> List[str]:
+def check_historical_data_duplication() -> list[str]:
     """Check for duplicate historical data services."""
     violations = []
 
@@ -400,7 +399,7 @@ def check_historical_data_duplication() -> List[str]:
     return violations
 
 
-def check_unused_imports() -> List[str]:
+def check_unused_imports() -> list[str]:
     """Check for obvious unused imports."""
     violations = []
 

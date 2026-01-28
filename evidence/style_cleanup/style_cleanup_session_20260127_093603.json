@@ -1,0 +1,26 @@
+{
+  "cleanup_session": {
+    "session_id": "style_cleanup_1769506563",
+    "timestamp": "2026-01-27T09:36:03.665260",
+    "session_complete": true,
+    "baseline_metrics": {
+      "initial_violations": 658,
+      "initial_auto_fixable": 0,
+      "final_violations": 658,
+      "final_auto_fixable": 0
+    },
+    "cleanup_impact": {
+      "total_violations_fixed": 0,
+      "directories_processed": 0,
+      "files_modified": 0,
+      "cleanup_rate": 0
+    },
+    "batch_details": []
+  },
+  "automation_metrics": {
+    "batch_size": 100,
+    "total_processing_time": 0,
+    "avg_batch_time": 0,
+    "efficiency_score": 0
+  }
+}

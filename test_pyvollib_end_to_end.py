@@ -73,10 +73,10 @@ def test_pyvollib_direct_import():
         print("   ✅ py_vollib imported successfully")
 
         # Test py_vollib_vectorized import
-        try:
-            import py_vollib_vectorized
+        import importlib.util
+        if importlib.util.find_spec('py_vollib_vectorized'):
             print("   ✅ py_vollib_vectorized imported successfully")
-        except ImportError:
+        else:
             print("   ⚠️ py_vollib_vectorized not available (optional)")
 
         # Test basic Greeks calculation

@@ -13,7 +13,7 @@ class TestServiceIntegration:
 
     @pytest.fixture(scope="class")
     async def test_infrastructure(self):
-        """Set up test infrastructure containers."""
+        """set up test infrastructure containers."""
         # Start PostgreSQL
         postgres = PostgreSqlContainer(
             "timescale/timescaledb:latest-pg14",
@@ -27,7 +27,7 @@ class TestServiceIntegration:
         redis = RedisContainer("redis:7-alpine")
         redis.start()
 
-        # Set environment variables for test
+        # set environment variables for test
         os.environ["DATABASE_URL"] = postgres.get_connection_url()
         os.environ["REDIS_URL"] = redis.get_connection_url()
 
@@ -49,10 +49,10 @@ class TestServiceIntegration:
 
         # Test with mock config service unavailable
         with patch('app.core.config._get_config_client') as mock_get_client:
-            mock_get_client.side_effect = Exception("Config service unavailable")
+            mock_get_client.side_effect = ConnectionError("Config service unavailable")
 
             # Should raise exception when config service unavailable
-            with pytest.raises(Exception):
+            with pytest.raises(ConnectionError):
                 await _get_config_client()
 
     @pytest.mark.integration
@@ -340,10 +340,10 @@ class TestServiceIntegration:
 
         # Simulate temporary database unavailability
         with patch('app.repositories.signal_repository.get_timescaledb_session') as mock_session:
-            mock_session.side_effect = Exception("Temporary database unavailability")
+            mock_session.side_effect = ConnectionError("Temporary database unavailability")
 
             # Should raise proper exception, not fail silently
-            with pytest.raises(Exception):
+            with pytest.raises(ConnectionError):
                 await repo.initialize()
 
     @pytest.mark.integration

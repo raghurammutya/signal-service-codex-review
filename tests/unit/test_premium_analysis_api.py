@@ -374,13 +374,12 @@ class TestPremiumAnalysisAPI:
             'speedup_ratio': 8.5
         }
 
-        with patch('app.api.v2.premium_analysis.premium_calculator', mock_premium_calculator):
-            with patch('app.api.v2.premium_analysis.vectorized_engine') as mock_engine:
-                mock_engine.get_performance_metrics.return_value = mock_vectorized_metrics
+        with patch('app.api.v2.premium_analysis.premium_calculator', mock_premium_calculator), patch('app.api.v2.premium_analysis.vectorized_engine') as mock_engine:
+            mock_engine.get_performance_metrics.return_value = mock_vectorized_metrics
 
-                response = client.get(
-                    "/api/v2/signals/fo/premium-analysis/performance-metrics"
-                )
+            response = client.get(
+                "/api/v2/signals/fo/premium-analysis/performance-metrics"
+            )
 
         assert response.status_code == 200
         data = response.json()

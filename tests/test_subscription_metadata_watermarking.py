@@ -149,7 +149,7 @@ async def test_watermarking_receives_subscription_metadata():
     manager = ConnectionManager()
     manager.watermark_service = mock_watermark_service
 
-    # Set up connection metadata
+    # set up connection metadata
     client_id = "test_client"
     stream_key = "marketplace:prod_test123:NSE_EQ|RELIANCE:momentum"
 

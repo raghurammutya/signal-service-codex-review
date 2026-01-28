@@ -6,7 +6,6 @@ Prevents duplicate historical data services and unused imports.
 """
 import os
 import re
-from typing import List, Tuple
 
 
 def check_historical_data_duplication() -> list[str]:
@@ -31,7 +30,7 @@ def check_historical_data_duplication() -> list[str]:
                     for pattern, message in restricted_patterns:
                         if re.search(pattern, content, re.IGNORECASE):
                             violations.append(f"{file_path}: {message}")
-                except:
+                except Exception:
                     continue
 
     return violations
@@ -65,7 +64,7 @@ def check_unused_imports() -> list[str]:
                                     file_content = ''.join(lines[i+1:])  # Skip the import line itself
                                     if import_name not in file_content:
                                         violations.append(f"{file_path}:{i+1}: Potentially unused import: {line.strip()}")
-                except:
+                except Exception:
                     continue
 
     return violations

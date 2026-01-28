@@ -6,7 +6,7 @@ Manages database, Redis, and HTTP client pools with configuration from config se
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
     import httpx

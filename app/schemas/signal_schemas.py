@@ -230,22 +230,22 @@ class TimeframeRequest(BaseModel):
                 minutes = int(v[:-1])
                 if not 1 <= minutes <= 1440:
                     raise ValueError("Minutes must be between 1 and 1440")
-            except ValueError:
-                raise ValueError("Invalid minute format")
+            except ValueError as e:
+                raise ValueError("Invalid minute format") from e
         elif v.endswith('h'):
             try:
                 hours = int(v[:-1])
                 if not 1 <= hours <= 24:
                     raise ValueError("Hours must be between 1 and 24")
-            except ValueError:
-                raise ValueError("Invalid hour format")
+            except ValueError as e:
+                raise ValueError("Invalid hour format") from e
         elif v.endswith('d'):
             try:
                 days = int(v[:-1])
                 if not 1 <= days <= 30:
                     raise ValueError("Days must be between 1 and 30")
-            except ValueError:
-                raise ValueError("Invalid day format")
+            except ValueError as e:
+                raise ValueError("Invalid day format") from e
         else:
             raise ValueError("Timeframe must end with 'm', 'h', or 'd'")
         return v

@@ -285,7 +285,7 @@ class TestFrequencyFeedManager:
     @pytest.mark.asyncio
     async def test_concurrent_processing(self, manager, mock_signal_processor):
         """Test concurrent processing of different frequencies"""
-        # Set up subscriptions for different frequencies
+        # set up subscriptions for different frequencies
         await manager.update_subscription_frequency('user1', 'NIFTY', 'greeks', '1m')
         await manager.update_subscription_frequency('user2', 'NIFTY', 'greeks', '5m')
         await manager.update_subscription_frequency('user3', 'NIFTY', 'greeks', '15m')

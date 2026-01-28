@@ -135,7 +135,7 @@ class FormulaEngine:
 
         except Exception as e:
             log_exception(f"Error evaluating formula '{formula}': {str(e)}")
-            raise ValueError(f"Formula evaluation failed: {str(e)}")
+            raise ValueError(f"Formula evaluation failed: {str(e)}") from e
 
     def validate(self, formula: str) -> dict[str, Any]:
         """
@@ -156,11 +156,11 @@ class FormulaEngine:
             functions = set()
 
             class Visitor(ast.NodeVisitor):
-                def visit_Name(self, node):
+                def visit_Name(self, node):  # noqa: N802
                     variables.add(node.id)
                     self.generic_visit(node)
 
-                def visit_Call(self, node):
+                def visit_Call(self, node):  # noqa: N802
                     if isinstance(node.func, ast.Name):
                         functions.add(node.func.id)
                     self.generic_visit(node)
@@ -197,9 +197,9 @@ class FormulaEngine:
             return parsed.body
 
         except SyntaxError as e:
-            raise ValueError(f"Invalid formula syntax: {str(e)}")
+            raise ValueError(f"Invalid formula syntax: {str(e)}") from e
         except Exception as e:
-            raise ValueError(f"Formula parsing failed: {str(e)}")
+            raise ValueError(f"Formula parsing failed: {str(e)}") from e
 
     def _validate_node(self, node: ast.AST):
         """Recursively validate AST nodes for safety"""
@@ -263,12 +263,12 @@ class FormulaEngine:
             # Strings are allowed
             pass
 
-        elif isinstance(node, ast.List):
+        elif isinstance(node, ast.list):
             # Lists are allowed
             for elt in node.elts:
                 self._validate_node(elt)
 
-        elif isinstance(node, ast.Tuple):
+        elif isinstance(node, ast.tuple):
             # Tuples are allowed
             for elt in node.elts:
                 self._validate_node(elt)
@@ -359,10 +359,10 @@ class FormulaEngine:
         if isinstance(node, ast.Num | ast.Str):  # For Python < 3.8
             return node.n if isinstance(node, ast.Num) else node.s
 
-        if isinstance(node, ast.List):
+        if isinstance(node, ast.list):
             return [self._eval_node(elt, context) for elt in node.elts]
 
-        if isinstance(node, ast.Tuple):
+        if isinstance(node, ast.tuple):
             return tuple(self._eval_node(elt, context) for elt in node.elts)
 
         if isinstance(node, ast.Subscript):

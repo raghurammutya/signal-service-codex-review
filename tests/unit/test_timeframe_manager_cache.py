@@ -73,29 +73,27 @@ class TestTimeframeManagerCache:
         redis_client.get.return_value = None
 
         # Mock base data fetch
-        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data), patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            result = await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                result = await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
+            # Verify fresh data was fetched
+            assert result == sample_data
 
-                # Verify fresh data was fetched
-                assert result == sample_data
+            # Verify cache key was queried
+            cache_key = f"signal:timeframe:AAPL:greeks:5m:{start_time.timestamp():.0f}:{end_time.timestamp():.0f}"
+            redis_client.get.assert_called_with(cache_key)
 
-                # Verify cache key was queried
-                cache_key = f"signal:timeframe:AAPL:greeks:5m:{start_time.timestamp():.0f}:{end_time.timestamp():.0f}"
-                redis_client.get.assert_called_with(cache_key)
-
-                # Verify data was cached after fetch
-                redis_client.setex.assert_called()
+            # Verify data was cached after fetch
+            redis_client.setex.assert_called()
 
     async def test_cache_hit_returns_cached_data(self, timeframe_manager, redis_client, sample_data):
         """Test that cache hit returns cached data without fetch."""
@@ -139,26 +137,24 @@ class TestTimeframeManagerCache:
         """Test that correct TTL is applied when caching data."""
         redis_client.get.return_value = None
 
-        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data), patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            # Test 5-minute timeframe
+            await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                # Test 5-minute timeframe
-                await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                # Verify 5-minute TTL was used
-                expected_ttl = timeframe_manager._cache_ttl[5]  # 300 seconds
-                redis_client.setex.assert_called()
-                call_args = redis_client.setex.call_args
-                assert call_args[0][1] == expected_ttl  # TTL argument
+            # Verify 5-minute TTL was used
+            expected_ttl = timeframe_manager._cache_ttl[5]  # 300 seconds
+            redis_client.setex.assert_called()
+            call_args = redis_client.setex.call_args
+            assert call_args[0][1] == expected_ttl  # TTL argument
 
     async def test_cache_invalidation_on_redis_failure(self, timeframe_manager, sample_data):
         """Test graceful handling when Redis cache fails."""
@@ -168,71 +164,65 @@ class TestTimeframeManagerCache:
         failed_redis.setex.side_effect = Exception("Redis connection failed")
         timeframe_manager.redis_client = failed_redis
 
-        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data), patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            # Should still return data despite cache failure
+            result = await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                # Should still return data despite cache failure
-                result = await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                assert result == sample_data
+            assert result == sample_data
 
     async def test_cache_key_format_consistency(self, timeframe_manager, redis_client):
         """Test that cache keys are consistently formatted."""
         redis_client.get.return_value = None
 
-        with patch.object(timeframe_manager, '_get_base_data', return_value=[]):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=[]):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=[]), patch.object(timeframe_manager, '_aggregate_data', return_value=[]):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                # Verify expected cache key format
-                expected_key = f"signal:timeframe:AAPL:greeks:5m:{start_time.timestamp():.0f}:{end_time.timestamp():.0f}"
-                redis_client.get.assert_called_with(expected_key)
+            # Verify expected cache key format
+            expected_key = f"signal:timeframe:AAPL:greeks:5m:{start_time.timestamp():.0f}:{end_time.timestamp():.0f}"
+            redis_client.get.assert_called_with(expected_key)
 
     async def test_cache_data_serialization(self, timeframe_manager, redis_client, sample_data):
         """Test that data is properly serialized when cached."""
         redis_client.get.return_value = None
 
-        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data), patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
+            # Verify data was JSON serialized
+            redis_client.setex.assert_called()
+            call_args = redis_client.setex.call_args
+            cached_data = call_args[0][2]
 
-                # Verify data was JSON serialized
-                redis_client.setex.assert_called()
-                call_args = redis_client.setex.call_args
-                cached_data = call_args[0][2]
-
-                # Should be valid JSON
-                parsed_data = json.loads(cached_data)
-                assert parsed_data == sample_data
+            # Should be valid JSON
+            parsed_data = json.loads(cached_data)
+            assert parsed_data == sample_data
 
     async def test_cache_data_deserialization(self, timeframe_manager, redis_client, sample_data):
         """Test that cached data is properly deserialized."""
@@ -260,26 +250,24 @@ class TestTimeframeManagerCache:
         """Test that custom timeframes use default TTL."""
         redis_client.get.return_value = None
 
-        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data), patch.object(timeframe_manager, '_aggregate_data', return_value=sample_data):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            # Test custom 7-minute timeframe
+            await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="7m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                # Test custom 7-minute timeframe
-                await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="7m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                # Verify default TTL was used
-                expected_ttl = timeframe_manager._default_ttl  # 300 seconds
-                redis_client.setex.assert_called()
-                call_args = redis_client.setex.call_args
-                assert call_args[0][1] == expected_ttl
+            # Verify default TTL was used
+            expected_ttl = timeframe_manager._default_ttl  # 300 seconds
+            redis_client.setex.assert_called()
+            call_args = redis_client.setex.call_args
+            assert call_args[0][1] == expected_ttl
 
     async def test_cache_invalidation_manual_refresh(self, timeframe_manager, redis_client, sample_data):
         """Test manual cache refresh bypasses cached data."""
@@ -290,35 +278,32 @@ class TestTimeframeManagerCache:
         # Mock fresh data
         fresh_data = [{'fresh': 'data'}]
 
-        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=fresh_data):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=sample_data), patch.object(timeframe_manager, '_aggregate_data', return_value=fresh_data):
+            async def get_fresh_data(self, *args, **kwargs):
+                """Force fresh data fetch bypassing cache."""
+                self.redis_client = None  # Temporarily disable cache
+                try:
+                    return await self.get_aggregated_data(*args, **kwargs)
+                finally:
+                    self.redis_client = redis_client  # Restore cache
 
-                # Add manual refresh method
-                async def get_fresh_data(self, *args, **kwargs):
-                    """Force fresh data fetch bypassing cache."""
-                    self.redis_client = None  # Temporarily disable cache
-                    try:
-                        return await self.get_aggregated_data(*args, **kwargs)
-                    finally:
-                        self.redis_client = redis_client  # Restore cache
+            # Bind method to instance
+            timeframe_manager.get_fresh_data = get_fresh_data.__get__(timeframe_manager)
 
-                # Bind method to instance
-                timeframe_manager.get_fresh_data = get_fresh_data.__get__(timeframe_manager)
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            result = await timeframe_manager.get_fresh_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                result = await timeframe_manager.get_fresh_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                # Should return fresh data, not cached
-                assert result == fresh_data
-                assert result != [{'old': 'data'}]
+            # Should return fresh data, not cached
+            assert result == fresh_data
+            assert result != [{'old': 'data'}]
 
     async def test_cache_metrics_and_monitoring(self, timeframe_manager, redis_client):
         """Test cache hit/miss metrics for monitoring."""
@@ -346,23 +331,21 @@ class TestTimeframeManagerCache:
 
         # Test cache miss
         redis_client.get.return_value = None
-        with patch.object(timeframe_manager, '_get_base_data', return_value=[]):
-            with patch.object(timeframe_manager, '_aggregate_data', return_value=[]):
+        with patch.object(timeframe_manager, '_get_base_data', return_value=[]), patch.object(timeframe_manager, '_aggregate_data', return_value=[]):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            await timeframe_manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                await timeframe_manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                # Verify cache miss was recorded
-                assert cache_stats['misses'] == 1
-                assert cache_stats['hits'] == 0
+            # Verify cache miss was recorded
+            assert cache_stats['misses'] == 1
+            assert cache_stats['hits'] == 0
 
 
 class TestCacheInvalidationScenarios:
@@ -409,23 +392,21 @@ class TestCacheInvalidationScenarios:
 
         manager.redis_client.get.return_value = json.dumps(stale_cache)
 
-        with patch.object(manager, '_get_base_data', return_value=[{'fresh': 'data'}]):
-            with patch.object(manager, '_aggregate_data', return_value=[{'fresh': 'data'}]):
+        with patch.object(manager, '_get_base_data', return_value=[{'fresh': 'data'}]), patch.object(manager, '_aggregate_data', return_value=[{'fresh': 'data'}]):
+            start_time = datetime(2023, 1, 1, 10, 0)
+            end_time = datetime(2023, 1, 1, 11, 0)
 
-                start_time = datetime(2023, 1, 1, 10, 0)
-                end_time = datetime(2023, 1, 1, 11, 0)
+            # Should fetch fresh data despite cache hit
+            result = await manager.get_aggregated_data(
+                instrument_key="AAPL",
+                signal_type="greeks",
+                timeframe="5m",
+                start_time=start_time,
+                end_time=end_time
+            )
 
-                # Should fetch fresh data despite cache hit
-                result = await manager.get_aggregated_data(
-                    instrument_key="AAPL",
-                    signal_type="greeks",
-                    timeframe="5m",
-                    start_time=start_time,
-                    end_time=end_time
-                )
-
-                # Verify fresh data was fetched
-                assert result == [{'fresh': 'data'}]
+            # Verify fresh data was fetched
+            assert result == [{'fresh': 'data'}]
 
     async def test_cache_warming_for_popular_instruments(self, manager_with_real_ttl_logic):
         """Test cache warming strategy for frequently requested instruments."""
@@ -455,14 +436,11 @@ class TestCacheInvalidationScenarios:
         # Bind method to instance
         manager.warm_cache_for_instruments = warm_cache_for_instruments
 
-        with patch.object(manager, '_get_base_data', return_value=[]):
-            with patch.object(manager, '_aggregate_data', return_value=[]):
+        with patch.object(manager, '_get_base_data', return_value=[]), patch.object(manager, '_aggregate_data', return_value=[]):
+            await manager.warm_cache_for_instruments(popular_instruments[:2])  # Test subset
 
-                # Test cache warming
-                await manager.warm_cache_for_instruments(popular_instruments[:2])  # Test subset
-
-                # Verify cache calls were made
-                assert manager.redis_client.setex.call_count >= 2  # At least 2 instruments * timeframes
+            # Verify cache calls were made
+            assert manager.redis_client.setex.call_count >= 2  # At least 2 instruments * timeframes
 
 
 def main():

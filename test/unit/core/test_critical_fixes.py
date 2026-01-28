@@ -87,9 +87,8 @@ class TestCriticalFixesCompliance:
         client = InstrumentServiceClient()
 
         # Test service unavailable scenario
-        with patch.object(client, '_service_available', False):
-            with pytest.raises(ServiceUnavailableError):
-                await client.get_instrument("test_instrument")
+        with patch.object(client, '_service_available', False), pytest.raises(ServiceUnavailableError):
+            await client.get_instrument("test_instrument")
 
     def test_proper_exception_hierarchy(self):
         """Test that all custom exceptions inherit properly."""
@@ -194,7 +193,7 @@ class TestSandboxSecurity:
             # Test that dangerous imports are blocked
             dangerous_script = "import os; os.system('echo test')"
 
-            with pytest.raises(Exception):  # Should raise security exception
+            with pytest.raises(PermissionError):  # Should raise security exception
                 sandbox.execute_code(dangerous_script)
         except ImportError:
             pytest.skip("Sandbox implementation not available")
@@ -213,7 +212,7 @@ for i in range(1000000):
     data.append('x' * 1000)
 """
 
-            with pytest.raises(Exception):  # Should raise resource limit exception
+            with pytest.raises((MemoryError, RuntimeError)):  # Should raise resource limit exception
                 sandbox.execute_code(memory_heavy_script, memory_limit_mb=10)
         except ImportError:
             pytest.skip("Sandbox implementation not available")

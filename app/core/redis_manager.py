@@ -56,7 +56,7 @@ async def get_redis_client(redis_url: str | None = None) -> aioredis.Redis:
         if not url:
             raise RedisConnectionError(
                 "Redis URL not configured in config_service. "
-                    "Set REDIS_URL environment variable or configure in settings."
+                    "set REDIS_URL environment variable or configure in settings."
                 )
 
             # Development fallback - use fake Redis

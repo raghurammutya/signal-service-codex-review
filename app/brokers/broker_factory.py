@@ -69,7 +69,7 @@ class BrokerFactory:
             # Cache the client
             self._clients[broker_type] = client
 
-            # Set as default if it's the first one
+            # set as default if it's the first one
             if self._default_broker is None:
                 self._default_broker = broker_type
 
@@ -78,7 +78,7 @@ class BrokerFactory:
 
         except Exception as e:
             logger.error(f"Failed to create {broker_type.value} client: {e}")
-            raise RuntimeError(f"Broker client creation failed: {e}")
+            raise RuntimeError(f"Broker client creation failed: {e}") from e
 
     async def _create_client_impl(self, credentials: BrokerCredentials) -> BaseBrokerClient:
         """Internal client creation implementation"""
@@ -134,7 +134,7 @@ class BrokerFactory:
         return self._default_broker
 
     def set_default_broker(self, broker_type: BrokerType):
-        """Set default broker"""
+        """set default broker"""
         if broker_type not in self._clients:
             raise ValueError(f"Broker client not available: {broker_type.value}")
 
@@ -150,7 +150,7 @@ class BrokerFactory:
         Health check all broker connections
 
         Returns:
-            Dict: Health status for each broker
+            dict: Health status for each broker
         """
         health_results = {}
 
@@ -279,7 +279,7 @@ class MultiBrokerClient:
                         continue
 
             # All brokers failed
-            raise RuntimeError(f"Order placement failed on all available brokers: {e}")
+            raise RuntimeError(f"Order placement failed on all available brokers: {e}") from e
 
     async def get_best_quote(self, instrument_key: str) -> dict[str, Any]:
         """
@@ -289,7 +289,7 @@ class MultiBrokerClient:
             instrument_key: Primary identifier
 
         Returns:
-            Dict: Best quote with broker information
+            dict: Best quote with broker information
         """
         available_brokers = self.factory.get_available_brokers()
 
@@ -357,7 +357,7 @@ async def create_multi_broker_client(credentials_list: list[BrokerCredentials]) 
     Create multi-broker client with multiple broker connections
 
     Args:
-        credentials_list: List of broker credentials
+        credentials_list: list of broker credentials
 
     Returns:
         MultiBrokerClient: Ready-to-use multi-broker client

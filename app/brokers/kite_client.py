@@ -60,7 +60,7 @@ class KiteBrokerClient(BaseBrokerClient):
             **kwargs: Additional Kite parameters
 
         Returns:
-            Dict: Kite API response
+            dict: Kite API response
         """
         logger.debug(f"Placing Kite order: token={broker_token[:8]}*** {side} {quantity}")
 
@@ -123,7 +123,7 @@ class KiteBrokerClient(BaseBrokerClient):
             broker_token: Kite instrument token
 
         Returns:
-            Dict: Quote data in unified format
+            dict: Quote data in unified format
         """
         try:
             session = await self._get_session()

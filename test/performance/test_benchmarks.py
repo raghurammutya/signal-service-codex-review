@@ -3,6 +3,7 @@ import asyncio
 import gc
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 
 import psutil
 import pytest
@@ -65,9 +66,9 @@ class TestPerformanceBenchmarks:
             for i in range(100):
                 spot = 20000 + i * 10
 
-                async def calc_single():
+                async def calc_single(current_spot=spot):
                     return calculator.calculate_greeks(
-                        spot_price=spot,
+                        spot_price=current_spot,
                         strike_price=20000,
                         time_to_expiry=0.25,
                         risk_free_rate=0.06,
@@ -320,10 +321,8 @@ class TestPerformanceBenchmarks:
                         task = repo.get_latest_indicator(f"NSE@TEST{i}", "RSI")
                     tasks.append(task)
 
-                try:
-                    await asyncio.gather(*tasks, return_exceptions=True)
-                except:
-                    pass  # Expected with mocked exceptions
+                with suppress(Exception):
+                    await asyncio.gather(*tasks, return_exceptions=True)  # Expected with mocked exceptions
 
                 return time.time() - start_time
 

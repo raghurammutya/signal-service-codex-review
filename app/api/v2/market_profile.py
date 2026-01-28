@@ -54,13 +54,13 @@ async def get_market_profile(
 
     except Exception as e:
         log_error(f"Error calculating market profile: {e}")
-        raise HTTPException(status_code=500, detail="Failed to calculate market profile")
+        raise HTTPException(status_code=500, detail="Failed to calculate market profile") from e
 
 
 @router.get("/{instrument_key}/composite")
 async def get_composite_profile(
     instrument_key: str,
-    sessions: list[str] = Query(..., description="List of session dates (YYYY-MM-DD)"),
+    sessions: list[str] = Query(..., description="list of session dates (YYYY-MM-DD)"),
     profile_type: str = Query("volume", regex="^(volume|tpo)$"),
     calculator: MarketProfileCalculator = Depends(get_market_profile_calculator)
 ) -> dict[str, Any]:
@@ -69,7 +69,7 @@ async def get_composite_profile(
 
     Args:
         instrument_key: Instrument identifier
-        sessions: List of dates to include in composite
+        sessions: list of dates to include in composite
         profile_type: Type of profile to calculate
 
     Returns:
@@ -85,7 +85,7 @@ async def get_composite_profile(
 
     except Exception as e:
         log_error(f"Error calculating composite profile: {e}")
-        raise HTTPException(status_code=500, detail="Failed to calculate composite profile")
+        raise HTTPException(status_code=500, detail="Failed to calculate composite profile") from e
 
 
 @router.get("/{instrument_key}/developing")
@@ -113,7 +113,7 @@ async def get_developing_profile(
 
     except Exception as e:
         log_error(f"Error getting developing profile: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get developing profile")
+        raise HTTPException(status_code=500, detail="Failed to get developing profile") from e
 
 
 @router.post("/{instrument_key}/patterns")
@@ -143,4 +143,4 @@ async def identify_profile_patterns(
 
     except Exception as e:
         log_error(f"Error identifying patterns: {e}")
-        raise HTTPException(status_code=500, detail="Failed to identify patterns")
+        raise HTTPException(status_code=500, detail="Failed to identify patterns") from e

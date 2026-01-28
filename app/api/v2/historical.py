@@ -8,7 +8,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-logger = logging.getLogger(__name__)
 from app.dependencies import (
     get_moneyness_calculator,
     get_moneyness_processor,
@@ -23,6 +22,8 @@ from app.schemas.signal_schemas import (
 from app.services.flexible_timeframe_manager import FlexibleTimeframeManager
 from app.services.moneyness_greeks_calculator import MoneynessAwareGreeksCalculator
 from app.services.moneyness_historical_processor import MoneynessHistoricalProcessor
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/historical", tags=["historical"])
 
@@ -149,7 +150,7 @@ async def get_historical_greeks(
         raise
     except Exception as e:
         logger.error(f"Error getting historical Greeks: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error") from e from e
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/indicators/{instrument_key}/{indicator}", response_model=HistoricalIndicatorResponse)
@@ -312,7 +313,7 @@ async def get_available_timeframes(
         signal_type: Type of signal data
 
     Returns:
-        List of available timeframes
+        list of available timeframes
     """
     try:
         timeframes = await manager.get_available_timeframes(

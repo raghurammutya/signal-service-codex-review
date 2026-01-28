@@ -404,26 +404,24 @@ class TestConfigUpdateManager:
 
     def test_config_rollback(self, update_manager, mock_config_cache):
         """Test configuration rollback functionality"""
-        with patch.object(update_manager, '_current_config', mock_config_cache.copy()):
-            with patch.object(update_manager, '_config_history', []):
+        with patch.object(update_manager, '_current_config', mock_config_cache.copy()), patch.object(update_manager, '_config_history', []):
+            original_value = mock_config_cache["signal_processing.batch_size"]
 
-                original_value = mock_config_cache["signal_processing.batch_size"]
+            # Apply update
+            update = {
+                "key": "signal_processing.batch_size",
+                "new_value": "2000"
+            }
+            update_manager.process_config_update(update)
 
-                # Apply update
-                update = {
-                    "key": "signal_processing.batch_size",
-                    "new_value": "2000"
-                }
-                update_manager.process_config_update(update)
+            # Verify update applied
+            assert update_manager._current_config["signal_processing.batch_size"] == 2000
 
-                # Verify update applied
-                assert update_manager._current_config["signal_processing.batch_size"] == 2000
+            # Rollback
+            update_manager.rollback_config_update("signal_processing.batch_size")
 
-                # Rollback
-                update_manager.rollback_config_update("signal_processing.batch_size")
-
-                # Verify rollback
-                assert update_manager._current_config["signal_processing.batch_size"] == original_value
+            # Verify rollback
+            assert update_manager._current_config["signal_processing.batch_size"] == original_value
 
     def test_config_update_callbacks(self, update_manager):
         """Test configuration update callbacks"""

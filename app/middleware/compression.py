@@ -110,7 +110,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         Compress response body
 
         Returns:
-            Tuple of (compressed_body, encoding)
+            tuple of (compressed_body, encoding)
         """
         # Prefer gzip
         if "gzip" in accept_encoding:

@@ -57,7 +57,7 @@ class ComputationRegistry:
             name: Unique computation name
             handler: Function to handle the computation
             description: Human-readable description
-            asset_types: List of supported asset types
+            asset_types: list of supported asset types
             parameters: Parameter schema
             returns: Return value schema
             examples: Usage examples
@@ -113,14 +113,14 @@ class ComputationRegistry:
         tags: list[str] | None = None
     ) -> list[ComputationMetadata]:
         """
-        List available computations with optional filtering
+        list available computations with optional filtering
 
         Args:
             asset_type: Filter by asset type
             tags: Filter by tags
 
         Returns:
-            List of computation metadata
+            list of computation metadata
         """
         computations = set(self._computations.keys())
 
@@ -372,7 +372,7 @@ class ComputationRegistry:
                     "type": "list",
                     "required": False,
                     "default": ["var", "sharpe", "max_drawdown"],
-                    "description": "List of risk metrics to calculate"
+                    "description": "list of risk metrics to calculate"
                 },
                 "period": {
                     "type": "int",

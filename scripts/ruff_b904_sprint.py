@@ -19,13 +19,13 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 
 class B904SprintAutomation:
     """
     B904 Exception Chaining Sprint Automation
-    
+
     Systematically processes B904 violations to support focused
     sprint work with evidence collection and progress tracking.
     """
@@ -35,59 +35,59 @@ class B904SprintAutomation:
         self.evidence_dir = self.project_root / "evidence" / "b904_sprint"
         self.evidence_dir.mkdir(parents=True, exist_ok=True)
 
-    def run_sprint_automation(self, generate_issues: bool = False, 
-                            progress_only: bool = False) -> Dict[str, Any]:
+    def run_sprint_automation(self, generate_issues: bool = False,
+                            progress_only: bool = False) -> dict[str, Any]:
         """
         Run complete B904 sprint automation cycle
-        
+
         Args:
             generate_issues: Create GitHub issue templates
             progress_only: Only analyze progress from existing data
-            
+
         Returns:
-            Dict: Complete sprint automation results
+            dict: Complete sprint automation results
         """
         print("🎯 B904 Exception Chaining Sprint Automation")
         print("=" * 60)
-        
+
         if progress_only:
             return self.generate_progress_report()
-        
+
         # Collect B904 violations
         b904_violations = self.collect_b904_violations()
-        
+
         # Analyze violations by file
         file_analysis = self.analyze_violations_by_file(b904_violations)
-        
+
         # Generate sprint targets
         sprint_targets = self.generate_sprint_targets(file_analysis)
-        
+
         # Create fix templates and guides
         fix_templates = self.generate_fix_templates(b904_violations)
-        
+
         # Generate sprint summary
         sprint_summary = self.generate_sprint_summary(sprint_targets, file_analysis)
-        
+
         # Save all evidence
         evidence_data = self.save_sprint_evidence(
-            b904_violations, file_analysis, sprint_targets, 
+            b904_violations, file_analysis, sprint_targets,
             fix_templates, sprint_summary
         )
-        
+
         # Generate GitHub issues if requested
         if generate_issues:
             issue_templates = self.generate_github_issues(file_analysis)
             evidence_data["github_issues"] = issue_templates
-        
+
         # Display results
         self.display_sprint_results(sprint_targets, file_analysis)
-        
+
         return evidence_data
 
-    def collect_b904_violations(self) -> List[Dict[str, Any]]:
+    def collect_b904_violations(self) -> list[dict[str, Any]]:
         """Collect all B904 violations using Ruff"""
         print("📊 Collecting B904 exception chaining violations...")
-        
+
         try:
             result = subprocess.run(
                 ["python3", "-m", "ruff", "check", ".", "--select", "B904", "--output-format=json"],
@@ -95,37 +95,37 @@ class B904SprintAutomation:
                 text=True,
                 cwd=self.project_root
             )
-            
+
             violations = json.loads(result.stdout) if result.stdout.strip() else []
-            
+
             print(f"✅ Found {len(violations)} B904 violations")
             return violations
-            
+
         except Exception as e:
             print(f"❌ Error collecting B904 violations: {e}")
             return []
 
-    def analyze_violations_by_file(self, violations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def analyze_violations_by_file(self, violations: list[dict[str, Any]]) -> dict[str, Any]:
         """Analyze B904 violations grouped by file"""
         by_file = defaultdict(list)
-        
+
         for violation in violations:
             filename = violation.get("filename", "unknown")
             by_file[filename].append(violation)
-        
+
         # Sort files by violation count (descending)
         sorted_files = sorted(by_file.items(), key=lambda x: len(x[1]), reverse=True)
-        
+
         # Calculate sprint statistics
         total_files = len(sorted_files)
         total_violations = len(violations)
         avg_violations_per_file = total_violations / total_files if total_files > 0 else 0
-        
+
         # Categorize files by effort required
         high_effort_files = [(f, v) for f, v in sorted_files if len(v) >= 10]
         medium_effort_files = [(f, v) for f, v in sorted_files if 5 <= len(v) < 10]
         low_effort_files = [(f, v) for f, v in sorted_files if 1 <= len(v) < 5]
-        
+
         return {
             "sorted_files": sorted_files,
             "statistics": {
@@ -133,7 +133,7 @@ class B904SprintAutomation:
                 "total_violations": total_violations,
                 "avg_violations_per_file": avg_violations_per_file,
                 "high_effort_files": len(high_effort_files),
-                "medium_effort_files": len(medium_effort_files),  
+                "medium_effort_files": len(medium_effort_files),
                 "low_effort_files": len(low_effort_files)
             },
             "effort_categories": {
@@ -144,16 +144,16 @@ class B904SprintAutomation:
             "top_10_files": sorted_files[:10]
         }
 
-    def generate_sprint_targets(self, file_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_sprint_targets(self, file_analysis: dict[str, Any]) -> dict[str, Any]:
         """Generate sprint planning targets"""
         stats = file_analysis["statistics"]
         effort_cats = file_analysis["effort_categories"]
-        
+
         # Sprint planning suggestions
         sprint_plan = {
             "sprint_1_quick_wins": {
                 "target": "Low effort files (1-4 violations per file)",
-                "files": len(effort_cats["low_effort"]), 
+                "files": len(effort_cats["low_effort"]),
                 "violations": sum(len(v) for _, v in effort_cats["low_effort"]),
                 "estimated_days": 1,
                 "description": "Quick wins to build momentum and establish patterns"
@@ -166,14 +166,14 @@ class B904SprintAutomation:
                 "description": "Systematic processing of moderate complexity files"
             },
             "sprint_3_high_impact": {
-                "target": "High effort files (10+ violations per file)", 
+                "target": "High effort files (10+ violations per file)",
                 "files": len(effort_cats["high_effort"]),
                 "violations": sum(len(v) for _, v in effort_cats["high_effort"]),
                 "estimated_days": 3,
                 "description": "Deep refactoring of exception handling patterns"
             }
         }
-        
+
         return {
             "sprint_overview": {
                 "total_violations": stats["total_violations"],
@@ -186,13 +186,13 @@ class B904SprintAutomation:
                 "target_reduction": stats["total_violations"],
                 "completion_rate_target": 100,
                 "quality_improvement": "Better error traceability in production",
-                "progress_toward_goal": f"Reduces total violations from 780 to ~502 (36% reduction)"
+                "progress_toward_goal": "Reduces total violations from 780 to ~502 (36% reduction)"
             }
         }
 
-    def generate_fix_templates(self, violations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def generate_fix_templates(self, violations: list[dict[str, Any]]) -> dict[str, Any]:
         """Generate fix templates and examples for B904 violations"""
-        
+
         # Common B904 patterns and their fixes
         fix_patterns = {
             "basic_reraise": {
@@ -207,7 +207,7 @@ except Exception as e:
     raise ValueError(f"Operation failed: {e}") from e""",
                 "explanation": "Add 'from e' to preserve exception chain"
             },
-            
+
             "conditional_reraise": {
                 "description": "Conditional re-raising with different exceptions",
                 "before": """try:
@@ -224,7 +224,7 @@ except httpx.HTTPStatusError as e:
     raise APIError("Request failed") from e""",
                 "explanation": "Add 'from e' to both exception paths"
             },
-            
+
             "suppress_chain": {
                 "description": "Suppress exception chain when original error isn't relevant",
                 "before": """try:
@@ -238,27 +238,27 @@ except Exception as e:
                 "explanation": "Use 'from None' when original exception should be suppressed"
             }
         }
-        
+
         # File-specific examples from actual violations
         example_fixes = []
         seen_files = set()
-        
+
         for violation in violations[:10]:  # Show examples from first 10 violations
             filename = violation.get("filename", "")
             if filename in seen_files:
                 continue
             seen_files.add(filename)
-            
+
             line_number = violation.get("location", {}).get("row", 0)
             message = violation.get("message", "")
-            
+
             example_fixes.append({
                 "file": filename,
                 "line": line_number,
                 "issue": message,
                 "fix_approach": "Add 'from e' or 'from None' to preserve/suppress exception chain"
             })
-        
+
         return {
             "fix_patterns": fix_patterns,
             "example_fixes": example_fixes,
@@ -270,7 +270,7 @@ except Exception as e:
                 ],
                 "during_fix": [
                     "✏️ Add 'from e' to preserve exception chain",
-                    "🚫 Use 'from None' to suppress irrelevant original exceptions", 
+                    "🚫 Use 'from None' to suppress irrelevant original exceptions",
                     "🔗 Ensure exception message is still informative"
                 ],
                 "after_fix": [
@@ -281,13 +281,13 @@ except Exception as e:
             }
         }
 
-    def generate_sprint_summary(self, sprint_targets: Dict[str, Any], 
-                              file_analysis: Dict[str, Any]) -> str:
+    def generate_sprint_summary(self, sprint_targets: dict[str, Any],
+                              file_analysis: dict[str, Any]) -> str:
         """Generate comprehensive sprint summary in Markdown"""
         timestamp = datetime.now()
         stats = file_analysis["statistics"]
-        
-        summary = f"""# B904 Exception Chaining Sprint Summary
+
+        return f"""# B904 Exception Chaining Sprint Summary
 ## {timestamp.strftime('%B %d, %Y')}
 
 ### 🎯 Sprint Objectives
@@ -310,13 +310,13 @@ except Exception as e:
 - **Violations**: {sprint_targets['sprint_breakdown']['sprint_1_quick_wins']['violations']} total
 - **Goal**: Build momentum and establish fix patterns
 
-#### Sprint 2: Medium Files (Days 2-3) 
+#### Sprint 2: Medium Files (Days 2-3)
 - **Target**: {sprint_targets['sprint_breakdown']['sprint_2_medium_files']['files']} files with 5-9 violations each
 - **Violations**: {sprint_targets['sprint_breakdown']['sprint_2_medium_files']['violations']} total
 - **Goal**: Systematic processing of moderate complexity
 
 #### Sprint 3: High Impact (Days 4-6)
-- **Target**: {sprint_targets['sprint_breakdown']['sprint_3_high_impact']['files']} files with 10+ violations each  
+- **Target**: {sprint_targets['sprint_breakdown']['sprint_3_high_impact']['files']} files with 10+ violations each
 - **Violations**: {sprint_targets['sprint_breakdown']['sprint_3_high_impact']['violations']} total
 - **Goal**: Deep refactoring of exception patterns
 
@@ -327,7 +327,7 @@ except Exception as e:
 # Before
 raise ValueError(f"Error: {{e}}")
 
-# After  
+# After
 raise ValueError(f"Error: {{e}}") from e
 ```
 
@@ -359,30 +359,29 @@ raise CustomError("Clean error message") from None
 4. **Monitor Impact**: Weekly pipeline will capture improvements
 
 ---
-**Sprint Generated**: {timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC  
-**Sprint Automation**: B904 Sprint Tool v1.0  
+**Sprint Generated**: {timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC
+**Sprint Automation**: B904 Sprint Tool v1.0
 **Evidence Location**: `evidence/b904_sprint/`
 """
-        return summary
 
-    def generate_github_issues(self, file_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def generate_github_issues(self, file_analysis: dict[str, Any]) -> list[dict[str, Any]]:
         """Generate GitHub issue templates for sprint work"""
         issues = []
-        
+
         for category, files in file_analysis["effort_categories"].items():
             if not files:
                 continue
-                
+
             # Create one issue per category
             effort_map = {
                 "low_effort": {"title": "Quick Wins", "estimate": "1 day", "priority": "P2"},
-                "medium_effort": {"title": "Medium Files", "estimate": "2 days", "priority": "P1"}, 
+                "medium_effort": {"title": "Medium Files", "estimate": "2 days", "priority": "P1"},
                 "high_effort": {"title": "High Impact", "estimate": "3 days", "priority": "P0"}
             }
-            
+
             meta = effort_map[category]
             violation_count = sum(len(v) for _, v in files)
-            
+
             issue = {
                 "title": f"B904 Sprint: {meta['title']} - {len(files)} files ({violation_count} violations)",
                 "labels": ["code-quality", "b904-sprint", meta["priority"]],
@@ -390,16 +389,16 @@ raise CustomError("Clean error message") from None
                 "body": self.generate_issue_body(category, files, meta),
                 "category": category
             }
-            
+
             issues.append(issue)
-        
+
         return issues
 
-    def generate_issue_body(self, category: str, files: List[Tuple[str, List]], 
-                          meta: Dict[str, str]) -> str:
+    def generate_issue_body(self, category: str, files: list[tuple[str, list]],
+                          meta: dict[str, str]) -> str:
         """Generate GitHub issue body for a sprint category"""
         violation_count = sum(len(v) for _, v in files)
-        
+
         body = f"""## B904 Exception Chaining Sprint - {meta['title']}
 
 ### 🎯 Objective
@@ -409,12 +408,12 @@ Fix B904 exception chaining violations in {len(files)} files ({violation_count} 
 
 | File | Violations | Lines |
 |------|------------|-------|"""
-        
+
         for filename, violations in files:
             lines = [str(v.get("location", {}).get("row", "?")) for v in violations]
             line_summary = f"{lines[0]}" if len(lines) == 1 else f"{lines[0]}...+{len(lines)-1} more"
             body += f"\n| `{filename}` | {len(violations)} | {line_summary} |"
-        
+
         body += f"""
 
 ### 🔧 Fix Pattern
@@ -426,7 +425,7 @@ Apply exception chaining to preserve error context:
 except Exception as e:
     raise ValueError(f"Operation failed: {{e}}")
 
-# After  
+# After
 except Exception as e:
     raise ValueError(f"Operation failed: {{e}}") from e
 ```
@@ -441,36 +440,36 @@ except Exception as e:
 ### 🔗 Resources
 
 - **Sprint Tool**: `python scripts/ruff_b904_sprint.py`
-- **Fix Examples**: `evidence/b904_sprint/fix_templates.json` 
+- **Fix Examples**: `evidence/b904_sprint/fix_templates.json`
 - **Weekly Monitor**: Tracks progress automatically
 
 ---
-**Estimate**: {meta['estimate']}  
+**Estimate**: {meta['estimate']}
 **Sprint Category**: {category.replace('_', ' ').title()}
 """
-        
+
         return body
 
-    def generate_progress_report(self) -> Dict[str, Any]:
+    def generate_progress_report(self) -> dict[str, Any]:
         """Generate progress report from existing sprint data"""
         print("📈 Generating B904 sprint progress report...")
-        
+
         # Get current B904 count
         current_violations = self.collect_b904_violations()
-        
+
         # Load baseline from latest sprint target file
         baseline_files = list(self.evidence_dir.glob("b904_targets_*.json"))
         baseline_count = 278  # Default if no baseline found
-        
+
         if baseline_files:
             latest_baseline = sorted(baseline_files)[-1]
             try:
-                with open(latest_baseline, 'r') as f:
+                with open(latest_baseline) as f:
                     baseline_data = json.load(f)
                     baseline_count = baseline_data.get("total_violations", 278)
             except Exception:
                 pass
-        
+
         progress = {
             "baseline_violations": baseline_count,
             "current_violations": len(current_violations),
@@ -479,29 +478,29 @@ except Exception as e:
             "remaining_work": len(current_violations),
             "report_timestamp": datetime.now().isoformat()
         }
-        
+
         # Save progress report
         progress_file = self.evidence_dir / f"progress_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(progress_file, 'w') as f:
             json.dump(progress, f, indent=2, default=str)
-        
+
         print(f"📊 Progress: {progress['violations_fixed']}/{baseline_count} violations fixed ({progress['completion_rate']:.1f}%)")
-        
+
         return progress
 
-    def save_sprint_evidence(self, violations: List[Dict[str, Any]], 
-                           file_analysis: Dict[str, Any],
-                           sprint_targets: Dict[str, Any],
-                           fix_templates: Dict[str, Any], 
-                           sprint_summary: str) -> Dict[str, Any]:
+    def save_sprint_evidence(self, violations: list[dict[str, Any]],
+                           file_analysis: dict[str, Any],
+                           sprint_targets: dict[str, Any],
+                           fix_templates: dict[str, Any],
+                           sprint_summary: str) -> dict[str, Any]:
         """Save all sprint evidence to evidence directory"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         # Save violations data
         violations_file = self.evidence_dir / f"b904_violations_{timestamp}.json"
         with open(violations_file, 'w') as f:
             json.dump(violations, f, indent=2, default=str)
-        
+
         # Save sprint targets
         targets_file = self.evidence_dir / f"b904_targets_{timestamp}.json"
         targets_data = {
@@ -512,19 +511,19 @@ except Exception as e:
         }
         with open(targets_file, 'w') as f:
             json.dump(targets_data, f, indent=2, default=str)
-        
+
         # Save fix templates
         templates_file = self.evidence_dir / "fix_templates.json"
         with open(templates_file, 'w') as f:
             json.dump(fix_templates, f, indent=2, default=str)
-        
+
         # Save sprint summary
         summary_file = self.evidence_dir / "b904_sprint_summary.md"
         with open(summary_file, 'w') as f:
             f.write(sprint_summary)
-        
-        print(f"💾 Sprint evidence saved to evidence/b904_sprint/")
-        
+
+        print("💾 Sprint evidence saved to evidence/b904_sprint/")
+
         return {
             "violations_file": str(violations_file),
             "targets_file": str(targets_file),
@@ -533,30 +532,30 @@ except Exception as e:
             "evidence_dir": str(self.evidence_dir)
         }
 
-    def display_sprint_results(self, sprint_targets: Dict[str, Any], 
-                             file_analysis: Dict[str, Any]):
+    def display_sprint_results(self, sprint_targets: dict[str, Any],
+                             file_analysis: dict[str, Any]):
         """Display sprint automation results"""
         stats = file_analysis["statistics"]
-        
-        print(f"\n🎯 B904 Sprint Automation Results")
+
+        print("\n🎯 B904 Sprint Automation Results")
         print("=" * 50)
         print(f"📊 Total B904 Violations: {stats['total_violations']}")
         print(f"📁 Files Affected: {stats['total_files']}")
         print(f"📈 Average per File: {stats['avg_violations_per_file']:.1f}")
-        print(f"🎯 Impact: 780 → ~502 total violations (36% reduction)")
-        
-        print(f"\n📋 Sprint Breakdown:")
+        print("🎯 Impact: 780 → ~502 total violations (36% reduction)")
+
+        print("\n📋 Sprint Breakdown:")
         for sprint_name, sprint_data in sprint_targets['sprint_breakdown'].items():
             print(f"   {sprint_name}: {sprint_data['files']} files, {sprint_data['violations']} violations")
-        
-        print(f"\n📁 Top Files by Violation Count:")
+
+        print("\n📁 Top Files by Violation Count:")
         for filename, violations in file_analysis['top_10_files'][:5]:
             print(f"   {filename}: {len(violations)} violations")
-        
-        print(f"\n🔗 Resources:")
-        print(f"   Sprint Summary: evidence/b904_sprint/b904_sprint_summary.md")
-        print(f"   Fix Templates: evidence/b904_sprint/fix_templates.json")
-        print(f"   Progress Check: python scripts/ruff_b904_sprint.py --progress-report")
+
+        print("\n🔗 Resources:")
+        print("   Sprint Summary: evidence/b904_sprint/b904_sprint_summary.md")
+        print("   Fix Templates: evidence/b904_sprint/fix_templates.json")
+        print("   Progress Check: python scripts/ruff_b904_sprint.py --progress-report")
 
 
 def main():
@@ -564,27 +563,27 @@ def main():
     parser = argparse.ArgumentParser(description="B904 Exception Chaining Sprint Automation")
     parser.add_argument("--generate-issues", action="store_true",
                        help="Generate GitHub issue templates")
-    parser.add_argument("--progress-report", action="store_true", 
+    parser.add_argument("--progress-report", action="store_true",
                        help="Generate progress report from existing data")
     parser.add_argument("--project-root", default=".",
                        help="Project root directory")
-    
+
     args = parser.parse_args()
-    
+
     automation = B904SprintAutomation(args.project_root)
-    
+
     try:
-        results = automation.run_sprint_automation(
+        automation.run_sprint_automation(
             generate_issues=args.generate_issues,
             progress_only=args.progress_report
         )
-        
+
         if args.progress_report:
-            print(f"\n✅ Progress report generated")
+            print("\n✅ Progress report generated")
         else:
-            print(f"\n✅ B904 sprint automation complete")
-            print(f"📁 Evidence: evidence/b904_sprint/")
-            
+            print("\n✅ B904 sprint automation complete")
+            print("📁 Evidence: evidence/b904_sprint/")
+
     except KeyboardInterrupt:
         print("\n⚠️ Sprint automation interrupted by user")
         exit(1)

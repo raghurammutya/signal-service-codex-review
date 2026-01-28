@@ -11,7 +11,7 @@ import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 # Setup logging
 logging.basicConfig(
@@ -81,7 +81,7 @@ class ConfigServiceDeploymentValidator:
                     message=f"Bootstrap variable {var} not set: {description}",
                     critical=True,
                     suggestions=[
-                        f"Set {var} in docker-compose.production.yml environment section",
+                        f"set {var} in docker-compose.production.yml environment section",
                         f"Value should be: {description}",
                         "Follow StocksBlitz docker-compose production pattern"
                     ]
@@ -127,7 +127,7 @@ class ConfigServiceDeploymentValidator:
                             passed=False,
                             message=f"SERVICE_NAME should be 'signal_service', got: {value}",
                             critical=False,
-                            suggestions=["Set SERVICE_NAME=signal_service"]
+                            suggestions=["set SERVICE_NAME=signal_service"]
                         ))
                     else:
                         results.append(ValidationResult(

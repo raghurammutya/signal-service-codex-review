@@ -331,7 +331,7 @@ async def create_enrichment_template(
 @router.get("/templates")
 async def list_enrichment_templates() -> dict[str, Any]:
     """
-    List available enrichment templates
+    list available enrichment templates
 
     Returns predefined templates that can be used for common enrichment patterns.
     """

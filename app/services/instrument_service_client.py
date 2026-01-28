@@ -135,8 +135,9 @@ class InstrumentServiceClient:
         instrument_data["enriched_at"] = datetime.utcnow().isoformat()
         return instrument_data
 
+    @staticmethod
     @lru_cache(maxsize=1000)
-    def parse_instrument_key(self, instrument_key: str) -> InstrumentKey | None:
+    def parse_instrument_key(instrument_key: str) -> InstrumentKey | None:
         """Parse and validate instrument key."""
         try:
             return InstrumentKey.parse(instrument_key)

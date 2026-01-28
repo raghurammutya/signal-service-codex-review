@@ -76,7 +76,7 @@ class IndicatorCalculator:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid instrument_key: {instrument_key}"
-            )
+            ) from e
 
         # Map timeframe to ticker_service interval format
         timeframe_map = {
@@ -159,13 +159,13 @@ class IndicatorCalculator:
             raise HTTPException(
                 status_code=502,
                 detail=f"Error fetching data from ticker_service: {e.response.status_code}"
-            )
+            ) from e
         except Exception as e:
             log_error(f"Unexpected error fetching historical data: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to fetch historical data: {str(e)}"
-            )
+            ) from e
 
     def calculate_sma(self, df: pd.DataFrame, period: int) -> pd.Series:
         """Calculate Simple Moving Average"""
@@ -358,7 +358,7 @@ async def get_cache_stats():
         )
     except Exception as e:
         log_exception(f"Error getting cache stats: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/cache/invalidate/{symbol}")
@@ -373,7 +373,7 @@ async def invalidate_symbol_cache(symbol: str):
         )
     except Exception as e:
         log_exception(f"Error invalidating cache: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/sma")
@@ -498,7 +498,7 @@ async def calculate_sma_endpoint(
         raise
     except Exception as e:
         log_exception(f"Error calculating SMA: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/ema")
@@ -543,7 +543,7 @@ async def calculate_ema_endpoint(
         raise
     except Exception as e:
         log_exception(f"Error calculating EMA: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/rsi")
@@ -587,7 +587,7 @@ async def calculate_rsi_endpoint(
         raise
     except Exception as e:
         log_exception(f"Error calculating RSI: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/macd")
@@ -639,7 +639,7 @@ async def calculate_macd_endpoint(
         raise
     except Exception as e:
         log_exception(f"Error calculating MACD: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/bollinger_bands")
@@ -689,7 +689,7 @@ async def calculate_bollinger_bands_endpoint(
         raise
     except Exception as e:
         log_exception(f"Error calculating Bollinger Bands: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/batch")
@@ -806,7 +806,7 @@ async def calculate_batch_indicators(
         raise
     except Exception as e:
         log_exception(f"Error in batch calculation: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/worker-affinity/status")
@@ -824,7 +824,7 @@ async def get_worker_affinity_status():
 
     except Exception as e:
         log_exception(f"Error getting worker affinity status: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/worker-affinity/check/{symbol}")
@@ -848,7 +848,7 @@ async def check_symbol_affinity(symbol: str):
 
     except Exception as e:
         log_exception(f"Error checking symbol affinity: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/available-indicators")
@@ -873,7 +873,7 @@ async def get_available_indicators():
 
     except Exception as e:
         log_exception(f"Error getting available indicators: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/dynamic/{indicator}")
@@ -1009,7 +1009,7 @@ async def calculate_dynamic_indicator(
         raise
     except Exception as e:
         log_exception(f"Error calculating {indicator}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/calculate/dynamic-batch")
@@ -1122,4 +1122,4 @@ async def calculate_dynamic_batch(
         raise
     except Exception as e:
         log_exception(f"Error in dynamic batch calculation: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
