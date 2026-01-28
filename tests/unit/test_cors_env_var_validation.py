@@ -335,9 +335,7 @@ class TestCORSConfigurationManagement:
                 return False
 
             if '*' in allowed_origins:
-                if allow_credentials:
-                    return False  # Cannot use wildcard with credentials
-                return True
+                return not allow_credentials  # Cannot use wildcard with credentials
 
             origins_list = [o.strip() for o in allowed_origins.split(',')]
             return origin in origins_list

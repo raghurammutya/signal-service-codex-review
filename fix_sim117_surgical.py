@@ -221,7 +221,7 @@ def main():
 
     # Check initial violations
     result = subprocess.run(['ruff', 'check', '--select=SIM117'], capture_output=True, text=True)
-    initial_count = len([l for l in result.stdout.split('\n') if 'SIM117' in l and not l.startswith(' ')])
+    initial_count = len([line for line in result.stdout.split('\n') if 'SIM117' in line and not line.startswith(' ')])
     logger.info(f"Initial violations: {initial_count}")
 
     # Apply fixes
@@ -234,7 +234,7 @@ def main():
 
         # Check final violations
         result = subprocess.run(['ruff', 'check', '--select=SIM117'], capture_output=True, text=True)
-        final_count = len([l for l in result.stdout.split('\n') if 'SIM117' in l and not l.startswith(' ')])
+        final_count = len([line for line in result.stdout.split('\n') if 'SIM117' in line and not line.startswith(' ')])
 
         logger.info(f"Final violations: {final_count}")
 

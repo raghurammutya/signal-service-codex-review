@@ -670,9 +670,7 @@ class AggregationServiceValidator:
             # Check for NaN, infinity, or unreasonable values
             if math.isnan(result) or math.isinf(result):
                 return False
-            if abs(result) > 1e6:  # Extremely large values
-                return False
-            return True
+            return not (abs(result) > 1e6)  # Extremely large values
 
         if isinstance(result, dict):
             # Check OHLC or other dictionary results

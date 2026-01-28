@@ -151,10 +151,7 @@ class ProductionReadinessBundle:
                             # Extract percentage
                             import re
                             percentages = re.findall(r'(\d+\.?\d*)%', content)
-                            if percentages:
-                                score = percentages[-1]  # Last percentage found
-                            else:
-                                score = "N/A"
+                            score = percentages[-1] if percentages else "N/A"  # Last percentage found
                         else:
                             score = "N/A"
                     elif "INSUFFICIENT" in content or "NEEDS ATTENTION" in content:

@@ -156,11 +156,11 @@ class FormulaEngine:
             functions = set()
 
             class Visitor(ast.NodeVisitor):
-                def visit_Name(self, node):
+                def visit_Name(self, node):  # noqa: N802
                     variables.add(node.id)
                     self.generic_visit(node)
 
-                def visit_Call(self, node):
+                def visit_Call(self, node):  # noqa: N802
                     if isinstance(node.func, ast.Name):
                         functions.add(node.func.id)
                     self.generic_visit(node)

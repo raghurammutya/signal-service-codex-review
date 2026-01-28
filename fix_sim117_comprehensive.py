@@ -99,11 +99,11 @@ class SIM117Fixer:
             nested_with_statements = []
 
             class WithStatementVisitor(ast.NodeVisitor):
-                def visit_With(self, node):
+                def visit_With(self, node):  # noqa: N802
                     self.check_for_nested_with(node, lines)
                     self.generic_visit(node)
 
-                def visit_AsyncWith(self, node):
+                def visit_AsyncWith(self, node):  # noqa: N802
                     self.check_for_nested_with(node, lines, is_async=True)
                     self.generic_visit(node)
 

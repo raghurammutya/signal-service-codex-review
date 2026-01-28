@@ -285,7 +285,7 @@ class HotReloadableSignalServiceConfig(BaseSignalServiceConfig):
 
         try:
             # Type validation
-            if schema.parameter_type == bool and isinstance(new_value, str):
+            if schema.parameter_type is bool and isinstance(new_value, str):
                 new_value = new_value.lower() in ('true', '1', 'yes', 'on')
             elif schema.parameter_type in (int, float) and isinstance(new_value, str):
                 new_value = schema.parameter_type(new_value)

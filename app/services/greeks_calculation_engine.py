@@ -524,10 +524,7 @@ class GreeksCalculationEngine:
             if volatility > 5.0:  # 500% volatility is unreasonable
                 return False
 
-            if time_to_expiry > 10.0:  # More than 10 years is unreasonable
-                return False
-
-            return True
+            return not (time_to_expiry > 10.0)  # More than 10 years is unreasonable
 
         except Exception:
             return False

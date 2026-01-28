@@ -347,7 +347,7 @@ class HealthChecker:
                 'ticker_service': f"{getattr(settings, 'TICKER_SERVICE_URL', 'http://ticker-service:8089')}/health",
                 'subscription_service': f"{getattr(settings, 'SUBSCRIPTION_SERVICE_URL', 'http://subscription-service:8098')}/health"
             }
-        except Exception as e:
+        except (ImportError, AttributeError) as e:
             logger.warning(f"Failed to load external services for health check: {e}")
             # Use Docker network alias fallbacks
             external_services = {

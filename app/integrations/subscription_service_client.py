@@ -14,11 +14,11 @@ class SignalSubscriptionError(Exception):
     """Exception raised for subscription service errors"""
 
 
-class QuotaExceededException(SignalSubscriptionError):
+class QuotaExceededError(SignalSubscriptionError):
     """Exception raised when user exceeds quotas"""
 
 
-class PermissionDeniedException(SignalSubscriptionError):
+class PermissionDeniedError(SignalSubscriptionError):
     """Exception raised when user lacks permissions"""
 
 

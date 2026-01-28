@@ -12,7 +12,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+
+# Modern type annotations (Python 3.9+)
 
 
 def run_ruff_json(select_rules: str) -> list[dict]:

@@ -701,7 +701,7 @@ def _real_liquidity(df: pd.DataFrame) -> pd.DataFrame:
         # 2. Swing Low Liquidity (Buy-side liquidity)
         swing_lows = [df.loc[idx, 'low'] for idx in swing_low_indices]
         for low_level in swing_lows[-10:]:  # Last 10 swing lows
-            touches = sum(1 for l in swing_lows if abs(l - low_level) < low_level * 0.002)  # Within 0.2%
+            touches = sum(1 for low_price in swing_lows if abs(low_price - low_level) < low_level * 0.002)  # Within 0.2%
             if touches >= 2:  # Multiple touches = stronger level
                 liquidity_levels.append({
                     'level': float(low_level),
@@ -784,10 +784,7 @@ def _real_prev_hl(df: pd.DataFrame) -> dict[str, float]:
             return {'previous_high': float(df['high'].iloc[-1]), 'previous_low': float(df['low'].iloc[-1])}
 
         # Determine lookback period based on data frequency
-        if len(df) > 100:  # Likely daily or higher frequency data
-            lookback = min(20, len(df) // 2)  # Previous 20 periods or half the data
-        else:
-            lookback = min(10, len(df) // 2)
+        lookback = min(20, len(df) // 2) if len(df) > 100 else min(10, len(df) // 2)  # Likely daily or higher frequency data
 
         # Get previous period (excluding current bar)
         prev_data = df.iloc[-(lookback+1):-1] if len(df) > lookback else df.iloc[:-1]

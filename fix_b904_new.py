@@ -97,12 +97,8 @@ def fix_b904_violation(lines, violation_line_num):
         # Find the except variable
         except_var = find_except_variable(lines, line_idx)
 
-        if not except_var:
-            # No except variable found, use 'from None' for suppression
-            new_line = stripped + ' from None'
-        else:
-            # Use the except variable for chaining
-            new_line = stripped + f' from {except_var}'
+        # No except variable found, use 'from None' for suppression, otherwise use except variable for chaining
+        new_line = stripped + ' from None' if not except_var else stripped + f' from {except_var}'
 
         # Reconstruct line with original indentation
         lines[line_idx] = ' ' * indentation + new_line + '\n'

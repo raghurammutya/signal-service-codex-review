@@ -132,7 +132,7 @@ async def test_contract_compliance():
 
     # Verify parameter type annotation
     instrument_key_param = sig.parameters['instrument_key']
-    assert instrument_key_param.annotation == str
+    assert instrument_key_param.annotation is str
 
 def test_documentation_updated():
     """Test that documentation properly reflects instrument_key usage"""

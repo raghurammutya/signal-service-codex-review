@@ -14,10 +14,7 @@ import pandas as pd
 
 from app.services.pandas_ta_executor import PandasTAExecutor
 
-if importlib.util.find_spec('pandas_ta'):
-    PANDAS_TA_AVAILABLE = True
-else:
-    PANDAS_TA_AVAILABLE = False
+PANDAS_TA_AVAILABLE = bool(importlib.util.find_spec('pandas_ta'))
 
 # Mock the missing modules for testing
 class MockHistoricalDataManager:

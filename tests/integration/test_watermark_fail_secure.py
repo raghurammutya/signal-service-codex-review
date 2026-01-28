@@ -17,6 +17,7 @@ if importlib.util.find_spec('fastapi.testclient'):
     try:
         from fastapi import HTTPException
 
+        from app.api.v2.sdk_signals import router as sdk_router
         from app.errors.watermark_error import WatermarkError
         from app.services.enhanced_watermark_integration import EnhancedWatermarkService
         from app.services.signal_delivery_service import SignalDeliveryService
@@ -26,8 +27,9 @@ if importlib.util.find_spec('fastapi.testclient'):
         SignalDeliveryService = MagicMock
         WatermarkError = Exception
         HTTPException = Exception
-        class sdk_router:
+        class MockSdkRouter:
             dependencies = [MagicMock()]
+        sdk_router = MockSdkRouter()
 else:
     WATERMARK_SERVICE_AVAILABLE = False
     # Create mock classes for testing
@@ -35,8 +37,9 @@ else:
     SignalDeliveryService = MagicMock
     WatermarkError = Exception
     HTTPException = Exception
-    class sdk_router:
+    class MockSdkRouter:
         dependencies = [MagicMock()]
+    sdk_router = MockSdkRouter()
 
 
 class TestWatermarkFailSecureIntegration:

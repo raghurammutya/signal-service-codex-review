@@ -877,10 +877,8 @@ class SignalProcessor:
                 return timestamp.second != getattr(self, '_last_second', -1)
             if frequency.value == "every_minute":
                 return timestamp.minute != getattr(self, '_last_minute', -1)
-            if frequency.value == "on_close":
-                # Logic for market close detection
-                return False  # Placeholder
-            return True
+            # Logic for market close detection
+            return frequency.value != "on_close"  # Placeholder
 
         except Exception as e:
             log_exception(f"Error in should_execute: {e}")

@@ -476,10 +476,10 @@ class TestCORSSecurityCompliance:
             assert len(audit["validation_errors"]) == 0
 
         # Test security audit with invalid configuration
-        with patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True):
-            with suppress(ValueError):
-                audit = create_cors_security_audit("production")
-                # May fail at get_allowed_origins step due to wildcard validation - Expected - security validation working
+        with (patch.dict(os.environ, {"CORS_ALLOWED_ORIGINS": "*"}, clear=True),
+              suppress(ValueError)):
+            audit = create_cors_security_audit("production")
+            # May fail at get_allowed_origins step due to wildcard validation - Expected - security validation working
 
     def test_cors_penetration_testing_scenarios(self):
         """Test CORS configuration against penetration testing scenarios."""
